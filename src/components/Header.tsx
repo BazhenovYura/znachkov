@@ -48,12 +48,27 @@ const Header = () => {
     { name: 'Контакты', href: '#contact' },
   ];
 
-  // Универсальная функция навигации
+  // Функция для перехода на главную и скролла наверх
+  const goToHome = () => {
+    if (location.pathname === '/') {
+      // Если уже на главной - просто скроллим наверх
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Если на другой странице - переходим на главную
+      navigate('/');
+      // Небольшая задержка, чтобы страница загрузилась, затем скролл наверх
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 100);
+    }
+  };
+
+  // Универсальная функция навигации по разделам
   const handleNavClick = (href: string) => {
     const sectionId = href.substring(1); // убираем #
     
     if (location.pathname === '/') {
-      // Если мы на главной - просто скроллим
+      // Если мы на главной - просто скроллим к секции
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
@@ -173,9 +188,9 @@ const Header = () => {
       >
         <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
           <div className="flex items-center justify-between">
-            {/* Logo - ведет на главную */}
+            {/* Logo - ведет на главную и скроллит наверх */}
             <button 
-              onClick={() => navigate('/')} 
+              onClick={goToHome}
               className="flex items-center gap-2"
             >
               <span className="font-serif text-2xl md:text-3xl font-bold text-gold-gradient">
