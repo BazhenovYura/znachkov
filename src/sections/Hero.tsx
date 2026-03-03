@@ -112,9 +112,9 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* Right column - Image (cropped from top to square) */}
-          <div className="reveal opacity-0 animation-delay-300 relative">
-            <div className="relative aspect-square max-w-md mx-auto">
+          {/* Right column - Image (cropped from top to square, larger on big screens) */}
+          <div className="reveal opacity-0 animation-delay-300 relative lg:col-span-1">
+            <div className="relative aspect-square max-w-md mx-auto lg:max-w-2xl xl:max-w-3xl">
               {/* Glow effect */}
               <div className="absolute inset-0 bg-gold/20 rounded-full blur-3xl transform scale-75" />
               
@@ -127,9 +127,9 @@ const Hero = () => {
                 />
               </div>
               
-              {/* Decorative elements */}
-              <div className="absolute -top-4 -right-4 w-16 h-16 border border-gold/30 rounded-lg" />
-              <div className="absolute -bottom-4 -left-4 w-20 h-20 border border-gold/20 rounded-lg" />
+              {/* Decorative elements - increased size proportionally */}
+              <div className="absolute -top-6 -right-6 w-20 h-20 lg:w-24 lg:h-24 border border-gold/30 rounded-lg" />
+              <div className="absolute -bottom-6 -left-6 w-24 h-24 lg:w-28 lg:h-28 border border-gold/20 rounded-lg" />
             </div>
           </div>
         </div>
