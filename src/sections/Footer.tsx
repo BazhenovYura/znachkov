@@ -77,10 +77,15 @@ const Footer = () => {
                 </a>
               </li>
               <li>
-                <div className="flex items-center gap-2 text-gray-400 text-sm">
+                <a
+                  href="https://yandex.ru/maps/org/uralskiy_yuvelir/1119071637/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-gray-400 hover:text-gold transition-colors text-sm"
+                >
                   <MapPin className="w-4 h-4" />
-                  <span>г. Екатеринбург</span>
-                </div>
+                  <span>Челябинская область, г.Озерск, пр.Победы, 55</span>
+                </a>
               </li>
             </ul>
           </div>
@@ -91,9 +96,21 @@ const Footer = () => {
           <p className="text-gray-500 text-sm">
             © {new Date().getFullYear()} ЗНАЧКОВ.РФ — Все права защищены
           </p>
-          <div className="text-gray-500 text-xs text-center sm:text-right">
-            <p>ИП Баженов Ю.Н. | ИНН 940473974801</p>
-            <p>ТПК "Уральский ювелир"</p>
+          <div className="flex flex-col items-center sm:items-end gap-2">
+            {/* Privacy Policy Link */}
+            <a
+              href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-500 hover:text-gold transition-colors text-xs"
+            >
+              Политика конфиденциальности
+            </a>
+            <div className="text-gray-500 text-xs text-center sm:text-right">
+              <p>ИП Баженов Юрий Николаевич</p>
+              <p>ИНН: 667115263758</p>
+              <p>ТПК "Уральский ювелир"</p>
+            </div>
           </div>
         </div>
       </div>
