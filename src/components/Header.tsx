@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // <-- Добавьте импорт
-import { Phone, Menu, X, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Phone, X, Send, AlertCircle, Menu } from 'lucide-react';
 
 // Конфигурация Telegram из переменных окружения Vite
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
 
 const Header = () => {
-  const navigate = useNavigate(); // <-- Добавьте хук навигации
+  const navigate = useNavigate();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -21,7 +21,6 @@ const Header = () => {
   const [consentError, setConsentError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [isSubmitted, setIsSubmitted] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -112,11 +111,9 @@ const Header = () => {
     try {
       await sendToTelegram(formData);
       
-      // Вместо показа сообщения об успехе - перенаправляем на страницу Спасибо
-      setIsModalOpen(false); // Закрываем модальное окно
-      navigate('/thanks'); // <-- Перенаправление на страницу Спасибо
+      setIsModalOpen(false);
+      navigate('/thanks');
       
-      // Сбрасываем форму
       setFormData({ name: '', phone: '' });
       setIsAgreed(false);
       
@@ -144,7 +141,6 @@ const Header = () => {
     setIsAgreed(false);
     setSubmitError('');
     setConsentError('');
-    setIsSubmitted(false);
   };
 
   return (
@@ -156,7 +152,93 @@ const Header = () => {
             : 'bg-transparent py-6'
         }`}
       >
-        {/* ... остальной код header без изменений ... */}
+        <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
+          <div className="flex items-center justify-between">
+            {/* Logo */}
+            <a href="#" className="flex items-center gap-2">
+              <span className="font-serif text-2xl md:text-3xl font-bold text-gold-gradient">
+                ЗНАЧКОВ.РФ
+              </span>
+            </a>
+
+            {/* Desktop Navigation */}
+            <nav className="hidden lg:flex items-center gap-8">
+              {navLinks.map((link) => (
+                <button
+                  key={link.name}
+                  onClick={() => scrollToSection(link.href)}
+                  className="text-gray-300 hover:text-gold transition-colors duration-300 text-sm uppercase tracking-wider"
+                >
+                  {link.name}
+                </button>
+              ))}
+            </nav>
+
+            {/* Contact & CTA */}
+            <div className="hidden lg:flex items-center gap-6">
+              <a
+                href="tel:+79227474474"
+                className="flex items-center gap-2 text-gold hover:text-gold-light transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                <span className="font-medium">+7 (922) 74-74-4-74</span>
+              </a>
+              <button
+                onClick={openModal}
+                className="btn-primary text-sm"
+              >
+                Заказать обратный звонок
+              </button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden text-white p-2"
+              aria-label="Меню"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Mobile Menu */}
+        {isMobileMenuOpen && (
+          <div className="lg:hidden absolute top-full left-0 right-0 bg-dark/98 backdrop-blur-md">
+            <div className="px-4 py-6 space-y-4">
+              {navLinks.map((link) => (
+                <button
+                  key={link.name}
+                  onClick={() => {
+                    scrollToSection(link.href);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="block w-full text-left text-gray-300 hover:text-gold transition-colors py-2 text-lg"
+                >
+                  {link.name}
+                </button>
+              ))}
+              <div className="pt-4 border-t border-gray-800">
+                <a
+                  href="tel:+79227474474"
+                  className="flex items-center gap-2 text-gold mb-4"
+                >
+                  <Phone className="w-4 h-4" />
+                  <span>+7 (922) 74-74-4-74</span>
+                </a>
+                <button
+                  onClick={() => {
+                    openModal();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="btn-primary w-full text-center"
+                >
+                  Заказать обратный звонок
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Модальное окно */}
@@ -175,6 +257,7 @@ const Header = () => {
               onClick={() => !isSubmitting && setIsModalOpen(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gold transition-colors"
               disabled={isSubmitting}
+              aria-label="Закрыть"
             >
               <X className="w-6 h-6" />
             </button>
