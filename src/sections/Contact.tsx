@@ -93,8 +93,8 @@ const Contact = () => {
     {
       icon: MapPin,
       label: 'Адрес',
-      value: 'г. Екатеринбург',
-      href: '#',
+      value: 'Челябинская область, г.Озерск, пр.Победы, 55',
+      href: 'https://maps.yandex.ru/?text=Челябинская+область+Озерск+Победы+55',
     },
     {
       icon: Clock,
@@ -140,6 +140,8 @@ const Contact = () => {
                   key={index}
                   href={item.href}
                   className="flex items-start gap-4 group"
+                  target={item.href !== '#' ? '_blank' : undefined}
+                  rel={item.href !== '#' ? 'noopener noreferrer' : undefined}
                 >
                   <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center flex-shrink-0 group-hover:bg-gold/20 transition-colors">
                     <item.icon className="w-5 h-5 text-gold" />
@@ -161,7 +163,7 @@ const Contact = () => {
               <h4 className="text-white font-medium mb-4">Реквизиты</h4>
               <div className="space-y-2 text-gray-400 text-sm">
                 <p>ИП Баженов Юрий Николаевич</p>
-                <p>ИНН: 940473974801</p>
+                <p>ИНН: 667115263758</p>
                 <p>ТПК "Уральский ювелир"</p>
               </div>
             </div>
