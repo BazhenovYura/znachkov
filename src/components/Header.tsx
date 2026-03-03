@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Phone, X, Send, AlertCircle, Menu } from 'lucide-react';
+import { Phone, X, Menu } from 'lucide-react';
 
 // Конфигурация Telegram из переменных окружения Vite
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
@@ -19,9 +19,7 @@ const Header = () => {
     phone: '',
   });
   const [isAgreed, setIsAgreed] = useState(false);
-  const [consentError, setConsentError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     const handleScroll = () => {
@@ -81,7 +79,7 @@ const Header = () => {
       // Очищаем state, чтобы не скроллить при повторных переходах
       navigate('/', { replace: true, state: {} });
     }
-  }, [location]);
+  }, [location, navigate]);
 
   // Функция отправки в Telegram
   const sendToTelegram = async (data: typeof formData) => {
@@ -124,11 +122,9 @@ const Header = () => {
   // Обработка отправки формы
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSubmitError('');
-    setConsentError('');
     
     if (!isAgreed) {
-      setConsentError('Необходимо согласиться с политикой конфиденциальности');
+      alert('Необходимо согласиться с политикой конфиденциальности');
       return;
     }
     
@@ -145,7 +141,7 @@ const Header = () => {
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      setSubmitError('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
+      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
     }
@@ -157,7 +153,6 @@ const Header = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    setSubmitError('');
   };
 
   // Открытие модального окна
@@ -165,8 +160,6 @@ const Header = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
-    setSubmitError('');
-    setConsentError('');
   };
 
   return (
@@ -238,7 +231,10 @@ const Header = () => {
               {navLinks.map((link) => (
                 <button
                   key={link.name}
-                  onClick={() => handleNavClick(link.href)}
+                  onClick={() => {
+                    handleNavClick(link.href);
+                    setIsMobileMenuOpen(false);
+                  }}
                   className="block w-full text-left text-gray-300 hover:text-gold transition-colors py-2 text-lg"
                 >
                   {link.name}
@@ -267,16 +263,18 @@ const Header = () => {
         )}
       </header>
 
-      {/* Модальное окно (без изменений) */}
+      {/* Модальное окно */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          {/* ... остальной код модального окна ... */}
+          {/* Overlay */}
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => !isSubmitting && setIsModalOpen(false)}
           />
           
+          {/* Modal Content */}
           <div className="relative bg-dark-light border border-gray-800 rounded-2xl max-w-md w-full p-8 shadow-2xl animate-fade-in-up">
+            {/* Close button */}
             <button
               onClick={() => !isSubmitting && setIsModalOpen(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gold transition-colors"
@@ -286,6 +284,7 @@ const Header = () => {
               <X className="w-6 h-6" />
             </button>
 
+            {/* Header */}
             <div className="text-center mb-6">
               <h3 className="font-serif text-2xl text-white mb-2">
                 Заказать обратный звонок
@@ -295,8 +294,82 @@ const Header = () => {
               </p>
             </div>
 
+            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* ... остальная форма ... */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">
+                  Ваше имя *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                  placeholder="Иван Иванов"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">
+                  Телефон *
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                  placeholder="+7 (___) ___-__-__"
+                />
+              </div>
+
+              {/* Privacy Policy Checkbox */}
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <div className="relative flex items-center h-6">
+                    <input
+                      type="checkbox"
+                      id="privacy-modal"
+                      checked={isAgreed}
+                      onChange={(e) => setIsAgreed(e.target.checked)}
+                      className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
+                    />
+                  </div>
+                  <label htmlFor="privacy-modal" className="text-sm text-gray-400 cursor-pointer">
+                    Я соглашаюсь с{' '}
+                    <a 
+                      href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-gold hover:text-gold-light underline transition-colors"
+                    >
+                      политикой конфиденциальности
+                    </a>
+                    {' '}и даю согласие на обработку персональных данных *
+                  </label>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
+                    <span>Отправка...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>ЗАКАЗАТЬ ЗВОНОК</span>
+                    <span>📞</span>
+                  </>
+                )}
+              </button>
             </form>
           </div>
         </div>
