@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
-declare const process: {
-  env: {
-    REACT_APP_TELEGRAM_BOT_TOKEN?: string;
-    REACT_APP_TELEGRAM_CHAT_ID?: string;
-  };
-};
-
 // Конфигурация Telegram из переменных окружения
 const TELEGRAM_BOT_TOKEN = process.env.REACT_APP_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.REACT_APP_TELEGRAM_CHAT_ID;
@@ -127,7 +120,27 @@ const Contact = () => {
       setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      setSubmitError('Произошла ошибка при отправке. Пожалуйста, попробуйте позже или свяжитесь с нами по телефону.');
+      setSubmitError(
+        <>
+          <span>❌ Ошибка отправки в Telegram. </span>
+          <span>Попробуйте позже или свяжитесь напрямую: </span>
+          <a 
+            href="tel:+79227474474" 
+            className="text-gold hover:text-gold-light underline font-medium"
+          >
+            по телефону
+          </a>
+          <span> или в </span>
+          <a 
+            href="https://t.me/BazhenovYuri" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-gold hover:text-gold-light underline font-medium"
+          >
+            Telegram @BazhenovYuri
+          </a>
+        </>
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -339,10 +352,10 @@ const Contact = () => {
                 )}
               </div>
 
-              {/* Error Message */}
+              {/* Error Message с альтернативными контактами */}
               {submitError && (
-                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
-                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
                   <span className="text-red-500 text-sm">
                     {submitError}
                   </span>
