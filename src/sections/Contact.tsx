@@ -1,5 +1,13 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, ReactNode } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
+
+// Объявляем тип для process.env
+declare const process: {
+  env: {
+    REACT_APP_TELEGRAM_BOT_TOKEN?: string;
+    REACT_APP_TELEGRAM_CHAT_ID?: string;
+  };
+};
 
 // Конфигурация Telegram из переменных окружения
 const TELEGRAM_BOT_TOKEN = process.env.REACT_APP_TELEGRAM_BOT_TOKEN;
@@ -18,7 +26,7 @@ const Contact = () => {
   const [consentError, setConsentError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState('');
+  const [submitError, setSubmitError] = useState<string | ReactNode>('');
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -121,16 +129,15 @@ const Contact = () => {
     } catch (error) {
       console.error('Ошибка отправки:', error);
       setSubmitError(
-        <>
-          <span>❌ Ошибка отправки в Telegram. </span>
-          <span>Попробуйте позже или свяжитесь напрямую: </span>
+        <span>
+          ❌ Ошибка отправки в Telegram. Попробуйте позже или свяжитесь напрямую:{' '}
           <a 
             href="tel:+79227474474" 
             className="text-gold hover:text-gold-light underline font-medium"
           >
             по телефону
           </a>
-          <span> или в </span>
+          {' '}или в{' '}
           <a 
             href="https://t.me/BazhenovYuri" 
             target="_blank" 
@@ -139,7 +146,7 @@ const Contact = () => {
           >
             Telegram @BazhenovYuri
           </a>
-        </>
+        </span>
       );
     } finally {
       setIsSubmitting(false);
