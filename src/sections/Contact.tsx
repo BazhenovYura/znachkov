@@ -7,22 +7,34 @@ declare const process: {
   env: {
     REACT_APP_TELEGRAM_BOT_TOKEN?: string;
     REACT_APP_TELEGRAM_CHAT_ID?: string;
+    [key: string]: string | undefined;
   };
 };
+
+// ===== ОТЛАДКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ =====
+console.log('%c=== TELEGRAM ENV DEBUG ===', 'color: yellow; font-weight: bold');
+console.log('All REACT_APP vars:', Object.keys(process.env).filter(key => key.startsWith('REACT_APP_')));
+console.log('Raw token from env:', process.env.REACT_APP_TELEGRAM_BOT_TOKEN);
+console.log('Raw chat id from env:', process.env.REACT_APP_TELEGRAM_CHAT_ID);
+// ========================================
 
 // Конфигурация Telegram из переменных окружения
 const TELEGRAM_BOT_TOKEN = process.env.REACT_APP_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.REACT_APP_TELEGRAM_CHAT_ID;
 
-const Contact = () => {
-  // Отладка (временно)
-  console.log('=== TELEGRAM DEBUG ===');
-  console.log('Token exists:', !!TELEGRAM_BOT_TOKEN);
-  console.log('Chat ID exists:', !!TELEGRAM_CHAT_ID);
-  console.log('Token first chars:', TELEGRAM_BOT_TOKEN ? TELEGRAM_BOT_TOKEN.substring(0, 5) + '...' : 'none');
+// ===== ОТЛАДКА ПОСЛЕ ПРИСВОЕНИЯ =====
+console.log('Token after assign:', TELEGRAM_BOT_TOKEN ? '✅ EXISTS' : '❌ MISSING');
+console.log('Chat ID after assign:', TELEGRAM_CHAT_ID ? '✅ EXISTS' : '❌ MISSING');
+if (TELEGRAM_BOT_TOKEN) {
+  console.log('Token first chars:', TELEGRAM_BOT_TOKEN.substring(0, 5) + '...');
+}
+if (TELEGRAM_CHAT_ID) {
   console.log('Chat ID:', TELEGRAM_CHAT_ID);
-  console.log('======================');
+}
+console.log('%c=== END DEBUG ===', 'color: yellow; font-weight: bold');
+// ================================
 
+const Contact = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -73,9 +85,20 @@ const Contact = () => {
 
   // Функция отправки в Telegram
   const sendToTelegram = async (data: typeof formData) => {
-    // Проверяем, что переменные окружения загружены
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      throw new Error('Отсутствуют настройки Telegram. Пожалуйста, свяжитесь с администратором.');
+    // ===== ОТЛАДКА ПЕРЕД ОТПРАВКОЙ =====
+    console.log('%c=== SENDING TO TELEGRAM ===', 'color: cyan; font-weight: bold');
+    console.log('sendToTelegram - Token:', TELEGRAM_BOT_TOKEN ? '✅' : '❌');
+    console.log('sendToTelegram - Chat ID:', TELEGRAM_CHAT_ID ? '✅' : '❌');
+    // ===================================
+    
+    if (!TELEGRAM_BOT_TOKEN) {
+      console.error('❌ TELEGRAM_BOT_TOKEN is missing');
+      throw new Error('Отсутствует токен Telegram');
+    }
+    
+    if (!TELEGRAM_CHAT_ID) {
+      console.error('❌ TELEGRAM_CHAT_ID is missing');
+      throw new Error('Отсутствует ID чата Telegram');
     }
 
     const message = `
@@ -93,6 +116,7 @@ const Contact = () => {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     
     try {
+      console.log('Sending request to Telegram...');
       const response = await fetch(url, {
         method: 'POST',
         headers: {
@@ -109,12 +133,14 @@ const Contact = () => {
       console.log('Telegram response:', data);
       
       if (!response.ok) {
+        console.error('Telegram API error:', data);
         throw new Error(data.description || 'Ошибка отправки в Telegram');
       }
 
+      console.log('✅ Message sent successfully!');
       return data;
     } catch (error) {
-      console.error('Fetch error:', error);
+      console.error('❌ Fetch error:', error);
       throw error;
     }
   };
@@ -122,6 +148,13 @@ const Contact = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
+    
+    // ===== ОТЛАДКА ПЕРЕД ОТПРАВКОЙ ФОРМЫ =====
+    console.log('%c=== FORM SUBMITTED ===', 'color: green; font-weight: bold');
+    console.log('Before sending - Token exists:', !!TELEGRAM_BOT_TOKEN);
+    console.log('Before sending - Chat ID exists:', !!TELEGRAM_CHAT_ID);
+    console.log('Form data:', formData);
+    // ========================================
     
     if (!isAgreed) {
       setConsentError('Необходимо согласиться с политикой конфиденциальности');
