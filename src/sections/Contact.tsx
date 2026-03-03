@@ -261,7 +261,7 @@ const Contact = () => {
                   <label htmlFor="privacy" className="text-sm text-gray-400 cursor-pointer">
                     Я соглашаюсь с{' '}
                     <a 
-                      href="/privacy-policy" 
+                      href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-gold hover:text-gold-light underline transition-colors"
