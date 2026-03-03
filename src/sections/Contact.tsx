@@ -1,6 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
+declare const process: {
+  env: {
+    REACT_APP_TELEGRAM_BOT_TOKEN?: string;
+    REACT_APP_TELEGRAM_CHAT_ID?: string;
+  };
+};
+
 // Конфигурация Telegram из переменных окружения
 const TELEGRAM_BOT_TOKEN = process.env.REACT_APP_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.REACT_APP_TELEGRAM_CHAT_ID;
