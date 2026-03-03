@@ -94,7 +94,7 @@ const Contact = () => {
       icon: MapPin,
       label: 'Адрес',
       value: 'Челябинская область, г.Озерск, пр.Победы, 55',
-      href: 'https://maps.yandex.ru/?text=Челябинская+область+Озерск+Победы+55',
+      href: 'https://yandex.ru/maps/org/uralskiy_yuvelir/1119071637/',
     },
     {
       icon: Clock,
