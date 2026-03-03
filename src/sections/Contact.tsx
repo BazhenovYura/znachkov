@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
-// Конфигурация Telegram
-const TELEGRAM_BOT_TOKEN = '7981489499:AAF6_AyeVt0mQGUd_IdKRFrYT7YR23hpmgg';
-const TELEGRAM_CHAT_ID = '180758065';
+// Конфигурация Telegram из переменных окружения
+const TELEGRAM_BOT_TOKEN = process.env.REACT_APP_TELEGRAM_BOT_TOKEN;
+const TELEGRAM_CHAT_ID = process.env.REACT_APP_TELEGRAM_CHAT_ID;
 
 const Contact = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -44,7 +44,6 @@ const Contact = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
-    // Сбрасываем ошибку при изменении формы
     setSubmitError('');
   };
 
@@ -57,6 +56,11 @@ const Contact = () => {
 
   // Функция отправки в Telegram
   const sendToTelegram = async (data: typeof formData) => {
+    // Проверяем, что переменные окружения загружены
+    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
+      throw new Error('Отсутствуют настройки Telegram. Пожалуйста, свяжитесь с администратором.');
+    }
+
     const message = `
 🔥 <b>Новая заявка с сайта ЗНАЧКОВ.РФ</b>
 
@@ -94,7 +98,6 @@ const Contact = () => {
     e.preventDefault();
     setSubmitError('');
     
-    // Check if user agreed to privacy policy
     if (!isAgreed) {
       setConsentError('Необходимо согласиться с политикой конфиденциальности');
       const checkboxElement = document.getElementById('privacy-checkbox');
@@ -108,15 +111,12 @@ const Contact = () => {
     setIsSubmitting(true);
     
     try {
-      // Отправляем данные в Telegram
       await sendToTelegram(formData);
       
-      // Если успешно
       setIsSubmitted(true);
       setFormData({ name: '', company: '', phone: '', email: '', comment: '' });
       setIsAgreed(false);
       
-      // Reset success message after 5 seconds
       setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
       console.error('Ошибка отправки:', error);
