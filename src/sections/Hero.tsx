@@ -112,18 +112,18 @@ const Hero = () => {
             </div>
           </div>
 
-          {/* Right column - Image (cropped to square) */}
+          {/* Right column - Image (cropped from top to square) */}
           <div className="reveal opacity-0 animation-delay-300 relative">
             <div className="relative aspect-square max-w-md mx-auto">
               {/* Glow effect */}
               <div className="absolute inset-0 bg-gold/20 rounded-full blur-3xl transform scale-75" />
               
-              {/* Image container with crop */}
+              {/* Image container with crop from top */}
               <div className="relative z-10 w-full h-full overflow-hidden rounded-lg shadow-2xl">
                 <img
                   src="/images/hero-badges.jpg"
                   alt="Ювелирные значки премиум класса"
-                  className="w-full h-full object-cover object-top"
+                  className="w-full h-full object-cover object-bottom"
                 />
               </div>
               
