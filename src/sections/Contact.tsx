@@ -131,7 +131,7 @@ const Contact = () => {
       console.error('Ошибка отправки:', error);
       setSubmitError(
         <span>
-          ❌ Ошибка отправки в Telegram. Попробуйте позже или свяжитесь напрямую:{' '}
+          ❌ Ошибка отправки. Попробуйте позже или свяжитесь напрямую:{' '}
           <a 
             href="tel:+79227474474" 
             className="text-gold hover:text-gold-light underline font-medium"
@@ -145,7 +145,7 @@ const Contact = () => {
             rel="noopener noreferrer"
             className="text-gold hover:text-gold-light underline font-medium"
           >
-            Telegram @BazhenovYuri
+            Telegram
           </a>
         </span>
       );
