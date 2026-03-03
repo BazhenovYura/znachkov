@@ -23,6 +23,7 @@ function App() {
         <Benefits />
         <CTA />
         <Contact />
+        <Route path="/thanks" element={<Thanks />} />
       </main>
       <Footer />
     </div>
