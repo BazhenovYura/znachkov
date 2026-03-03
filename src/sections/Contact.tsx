@@ -2,14 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
-// Объявляем тип для import.meta.env (Vite)
-interface ImportMeta {
-  env: {
-    VITE_TELEGRAM_BOT_TOKEN?: string;
-    VITE_TELEGRAM_CHAT_ID?: string;
-  };
-}
-
 // ===== ОТЛАДКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ =====
 console.log('%c=== TELEGRAM ENV DEBUG ===', 'color: yellow; font-weight: bold');
 console.log('All VITE vars:', Object.keys(import.meta.env).filter(key => key.startsWith('VITE_')));
