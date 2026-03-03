@@ -1,6 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
+// Конфигурация Telegram
+const TELEGRAM_BOT_TOKEN = '7981489499:AAF6_AyeVt0mQGUd_IdKRFrYT7YR23hpmgg';
+const TELEGRAM_CHAT_ID = '180758065';
+
 const Contact = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
@@ -14,6 +18,7 @@ const Contact = () => {
   const [consentError, setConsentError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -39,6 +44,8 @@ const Contact = () => {
       ...formData,
       [e.target.name]: e.target.value,
     });
+    // Сбрасываем ошибку при изменении формы
+    setSubmitError('');
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,13 +55,48 @@ const Contact = () => {
     }
   };
 
+  // Функция отправки в Telegram
+  const sendToTelegram = async (data: typeof formData) => {
+    const message = `
+🔥 <b>Новая заявка с сайта ЗНАЧКОВ.РФ</b>
+
+👤 <b>Имя:</b> ${data.name || 'Не указано'}
+🏢 <b>Компания:</b> ${data.company || 'Не указана'}
+📞 <b>Телефон:</b> ${data.phone}
+📧 <b>Email:</b> ${data.email || 'Не указан'}
+💬 <b>Комментарий:</b> ${data.comment || 'Без комментария'}
+
+⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU')}
+    `;
+
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        chat_id: TELEGRAM_CHAT_ID,
+        text: message,
+        parse_mode: 'HTML',
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Ошибка отправки в Telegram');
+    }
+
+    return response.json();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSubmitError('');
     
     // Check if user agreed to privacy policy
     if (!isAgreed) {
       setConsentError('Необходимо согласиться с политикой конфиденциальности');
-      // Scroll to checkbox
       const checkboxElement = document.getElementById('privacy-checkbox');
       if (checkboxElement) {
         checkboxElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -65,16 +107,23 @@ const Contact = () => {
     setConsentError('');
     setIsSubmitting(true);
     
-    // Simulate form submission
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    setIsSubmitting(false);
-    setIsSubmitted(true);
-    setFormData({ name: '', company: '', phone: '', email: '', comment: '' });
-    setIsAgreed(false);
-    
-    // Reset success message after 5 seconds
-    setTimeout(() => setIsSubmitted(false), 5000);
+    try {
+      // Отправляем данные в Telegram
+      await sendToTelegram(formData);
+      
+      // Если успешно
+      setIsSubmitted(true);
+      setFormData({ name: '', company: '', phone: '', email: '', comment: '' });
+      setIsAgreed(false);
+      
+      // Reset success message after 5 seconds
+      setTimeout(() => setIsSubmitted(false), 5000);
+    } catch (error) {
+      console.error('Ошибка отправки:', error);
+      setSubmitError('Произошла ошибка при отправке. Пожалуйста, попробуйте позже или свяжитесь с нами по телефону.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const contactInfo = [
@@ -282,6 +331,16 @@ const Contact = () => {
                   </div>
                 )}
               </div>
+
+              {/* Error Message */}
+              {submitError && (
+                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <span className="text-red-500 text-sm">
+                    {submitError}
+                  </span>
+                </div>
+              )}
 
               <button
                 type="submit"
