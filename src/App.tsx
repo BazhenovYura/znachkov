@@ -8,6 +8,7 @@ import Benefits from './sections/Benefits'
 import CTA from './sections/CTA'
 import Contact from './sections/Contact'
 import Footer from './sections/Footer'
+import Thanks from './sections/Thanks'
 
 function App() {
   return (
