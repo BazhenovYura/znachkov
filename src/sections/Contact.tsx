@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Phone, Mail, MapPin, Clock, Send, CheckCircle } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
 const Contact = () => {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -10,6 +10,8 @@ const Contact = () => {
     email: '',
     comment: '',
   });
+  const [isAgreed, setIsAgreed] = useState(false);
+  const [consentError, setConsentError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -39,8 +41,28 @@ const Contact = () => {
     });
   };
 
+  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setIsAgreed(e.target.checked);
+    if (e.target.checked) {
+      setConsentError('');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Check if user agreed to privacy policy
+    if (!isAgreed) {
+      setConsentError('Необходимо согласиться с политикой конфиденциальности');
+      // Scroll to checkbox
+      const checkboxElement = document.getElementById('privacy-checkbox');
+      if (checkboxElement) {
+        checkboxElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      return;
+    }
+    
+    setConsentError('');
     setIsSubmitting(true);
     
     // Simulate form submission
@@ -49,6 +71,7 @@ const Contact = () => {
     setIsSubmitting(false);
     setIsSubmitted(true);
     setFormData({ name: '', company: '', phone: '', email: '', comment: '' });
+    setIsAgreed(false);
     
     // Reset success message after 5 seconds
     setTimeout(() => setIsSubmitted(false), 5000);
@@ -221,6 +244,43 @@ const Contact = () => {
                 />
               </div>
 
+              {/* Privacy Policy Checkbox */}
+              <div className="space-y-2">
+                <div className="flex items-start gap-3" id="privacy-checkbox">
+                  <div className="relative flex items-center h-6">
+                    <input
+                      type="checkbox"
+                      id="privacy"
+                      checked={isAgreed}
+                      onChange={handleCheckboxChange}
+                      className="w-5 h-5 bg-dark-light border border-gray-800 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
+                    />
+                  </div>
+                  <label htmlFor="privacy" className="text-sm text-gray-400 cursor-pointer">
+                    Я соглашаюсь с{' '}
+                    <a 
+                      href="/privacy-policy" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-gold hover:text-gold-light underline transition-colors"
+                    >
+                      политикой конфиденциальности
+                    </a>
+                    {' '}и даю согласие на обработку персональных данных *
+                  </label>
+                </div>
+                
+                {/* Consent Error Message */}
+                {consentError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg animate-pulse">
+                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                    <span className="text-red-500 text-sm">
+                      {consentError}
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
                 disabled={isSubmitting}
@@ -242,16 +302,12 @@ const Contact = () => {
               {/* Success Message */}
               {isSubmitted && (
                 <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                  <span className="text-green-500">
+                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <span className="text-green-500 text-sm">
                     Спасибо! Ваша заявка отправлена. Мы свяжемся с вами в ближайшее время.
                   </span>
                 </div>
               )}
-
-              <p className="text-gray-500 text-xs text-center">
-                Нажимая кнопку, вы соглашаетесь с политикой конфиденциальности
-              </p>
             </form>
           </div>
         </div>
