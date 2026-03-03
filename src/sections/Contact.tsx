@@ -1,3 +1,15 @@
+const Contact = () => {
+  // Добавьте эту отладку
+  console.log('=== TELEGRAM DEBUG ===');
+  console.log('Token exists:', !!TELEGRAM_BOT_TOKEN);
+  console.log('Chat ID exists:', !!TELEGRAM_CHAT_ID);
+  console.log('Token first chars:', TELEGRAM_BOT_TOKEN ? TELEGRAM_BOT_TOKEN.substring(0, 5) + '...' : 'none');
+  console.log('Chat ID:', TELEGRAM_CHAT_ID);
+  console.log('======================');
+  
+  // ... остальной код
+
+
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
