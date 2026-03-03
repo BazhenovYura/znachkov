@@ -9,11 +9,6 @@ const ThanksPage = () => {
     window.scrollTo(0, 0);
   }, []);
 
-  // Функция для навигации с якорем
-  const handleNavClick = (sectionId: string) => {
-    navigate('/', { state: { scrollTo: sectionId } });
-  };
-
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
       {/* Декоративный градиент */}
