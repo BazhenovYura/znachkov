@@ -1,12 +1,18 @@
 import { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CheckCircle, Phone, Mail, ArrowRight, MessageSquare, Sparkles, Package, Percent } from 'lucide-react';
-import { Link } from 'react-router-dom';
 
 const ThanksPage = () => {
+  const navigate = useNavigate();
+
   useEffect(() => {
-    // Скролл наверх при загрузке страницы
     window.scrollTo(0, 0);
   }, []);
+
+  // Функция для навигации с якорем
+  const handleNavClick = (sectionId: string) => {
+    navigate('/', { state: { scrollTo: sectionId } });
+  };
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
@@ -101,7 +107,7 @@ const ThanksPage = () => {
 
             {/* Кнопка перехода в бота */}
             <a
-              href="https://t.me/BazhenovYuri"
+              href="https://t.me/znachkoff_bot"
               target="_blank"
               rel="noopener noreferrer"
               className="group relative inline-flex items-center justify-center w-full bg-gradient-to-r from-gold/20 to-gold/5 hover:from-gold/30 hover:to-gold/10 border-2 border-gold/30 rounded-xl px-8 py-5 overflow-hidden transition-all duration-300"
@@ -147,13 +153,13 @@ const ThanksPage = () => {
 
         {/* Кнопка возврата на главную */}
         <div className="mt-12 text-center animate-fade-in-up animation-delay-400">
-          <Link
-            to="/"
+          <button
+            onClick={() => navigate('/')}
             className="inline-flex items-center gap-2 text-gray-400 hover:text-gold transition-colors group"
           >
             <span>Вернуться на главную</span>
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-          </Link>
+          </button>
         </div>
       </div>
     </div>
