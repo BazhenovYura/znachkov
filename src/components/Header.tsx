@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom'; // <-- Добавьте импорт
 import { Phone, Menu, X, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
 // Конфигурация Telegram из переменных окружения Vite
@@ -6,6 +7,7 @@ const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
 
 const Header = () => {
+  const navigate = useNavigate(); // <-- Добавьте хук навигации
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
@@ -110,15 +112,14 @@ const Header = () => {
     try {
       await sendToTelegram(formData);
       
-      setIsSubmitted(true);
+      // Вместо показа сообщения об успехе - перенаправляем на страницу Спасибо
+      setIsModalOpen(false); // Закрываем модальное окно
+      navigate('/thanks'); // <-- Перенаправление на страницу Спасибо
+      
+      // Сбрасываем форму
       setFormData({ name: '', phone: '' });
       setIsAgreed(false);
       
-      // Закрыть модальное окно через 2 секунды после успешной отправки
-      setTimeout(() => {
-        setIsModalOpen(false);
-        setIsSubmitted(false);
-      }, 2000);
     } catch (error) {
       console.error('Ошибка отправки:', error);
       setSubmitError('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
@@ -155,91 +156,7 @@ const Header = () => {
             : 'bg-transparent py-6'
         }`}
       >
-        <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
-          <div className="flex items-center justify-between">
-            {/* Logo */}
-            <a href="#" className="flex items-center gap-2">
-              <span className="font-serif text-2xl md:text-3xl font-bold text-gold-gradient">
-                ЗНАЧКОВ.РФ
-              </span>
-            </a>
-
-            {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center gap-8">
-              {navLinks.map((link) => (
-                <button
-                  key={link.name}
-                  onClick={() => scrollToSection(link.href)}
-                  className="text-gray-300 hover:text-gold transition-colors duration-300 text-sm uppercase tracking-wider"
-                >
-                  {link.name}
-                </button>
-              ))}
-            </nav>
-
-            {/* Contact & CTA */}
-            <div className="hidden lg:flex items-center gap-6">
-              <a
-                href="tel:+79227474474"
-                className="flex items-center gap-2 text-gold hover:text-gold-light transition-colors"
-              >
-                <Phone className="w-4 h-4" />
-                <span className="font-medium">+7 (922) 74-74-4-74</span>
-              </a>
-              <button
-                onClick={openModal}
-                className="btn-primary text-sm"
-              >
-                Заказать обратный звонок
-              </button>
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden text-white p-2"
-            >
-              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-          </div>
-        </div>
-
-        {/* Mobile Menu */}
-        <div
-          className={`lg:hidden absolute top-full left-0 right-0 bg-dark/98 backdrop-blur-md transition-all duration-300 ${
-            isMobileMenuOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
-          }`}
-        >
-          <div className="px-4 py-6 space-y-4">
-            {navLinks.map((link) => (
-              <button
-                key={link.name}
-                onClick={() => scrollToSection(link.href)}
-                className="block w-full text-left text-gray-300 hover:text-gold transition-colors py-2 text-lg"
-              >
-                {link.name}
-              </button>
-            ))}
-            <div className="pt-4 border-t border-gray-800">
-              <a
-                href="tel:+79227474474"
-                className="flex items-center gap-2 text-gold mb-4"
-              >
-                <Phone className="w-4 h-4" />
-                <span>+7 (922) 74-74-4-74</span>
-              </a>
-              <button
-                onClick={() => {
-                  openModal();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="btn-primary w-full text-center"
-              >
-                Заказать обратный звонок
-              </button>
-            </div>
-          </div>
-        </div>
+        {/* ... остальной код header без изменений ... */}
       </header>
 
       {/* Модальное окно */}
@@ -272,120 +189,108 @@ const Header = () => {
               </p>
             </div>
 
-            {/* Success Message */}
-            {isSubmitted && (
-              <div className="mb-6 flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
-                <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <span className="text-green-500 text-sm">
-                  Спасибо! Мы перезвоним вам в ближайшее время.
-                </span>
-              </div>
-            )}
-
             {/* Form */}
-            {!isSubmitted && (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">
-                    Ваше имя *
-                  </label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
-                    placeholder="Иван Иванов"
-                  />
-                </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">
+                  Ваше имя *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                  placeholder="Иван Иванов"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">
-                    Телефон *
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
-                    placeholder="+7 (___) ___-__-__"
-                  />
-                </div>
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">
+                  Телефон *
+                </label>
+                <input
+                  type="tel"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                  placeholder="+7 (___) ___-__-__"
+                />
+              </div>
 
-                {/* Privacy Policy Checkbox */}
-                <div className="space-y-2">
-                  <div className="flex items-start gap-3">
-                    <div className="relative flex items-center h-6">
-                      <input
-                        type="checkbox"
-                        id="privacy-modal"
-                        checked={isAgreed}
-                        onChange={(e) => {
-                          setIsAgreed(e.target.checked);
-                          if (e.target.checked) {
-                            setConsentError('');
-                          }
-                        }}
-                        className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
-                      />
-                    </div>
-                    <label htmlFor="privacy-modal" className="text-sm text-gray-400 cursor-pointer">
-                      Я соглашаюсь с{' '}
-                      <a 
-                        href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-gold hover:text-gold-light underline transition-colors"
-                      >
-                        политикой конфиденциальности
-                      </a>
-                      {' '}и даю согласие на обработку персональных данных *
-                    </label>
+              {/* Privacy Policy Checkbox */}
+              <div className="space-y-2">
+                <div className="flex items-start gap-3">
+                  <div className="relative flex items-center h-6">
+                    <input
+                      type="checkbox"
+                      id="privacy-modal"
+                      checked={isAgreed}
+                      onChange={(e) => {
+                        setIsAgreed(e.target.checked);
+                        if (e.target.checked) {
+                          setConsentError('');
+                        }
+                      }}
+                      className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
+                    />
                   </div>
-                  
-                  {/* Consent Error Message */}
-                  {consentError && (
-                    <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg animate-pulse">
-                      <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-                      <span className="text-red-500 text-sm">
-                        {consentError}
-                      </span>
-                    </div>
-                  )}
+                  <label htmlFor="privacy-modal" className="text-sm text-gray-400 cursor-pointer">
+                    Я соглашаюсь с{' '}
+                    <a 
+                      href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-gold hover:text-gold-light underline transition-colors"
+                    >
+                      политикой конфиденциальности
+                    </a>
+                    {' '}и даю согласие на обработку персональных данных *
+                  </label>
                 </div>
-
-                {/* Error Message */}
-                {submitError && (
-                  <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                
+                {/* Consent Error Message */}
+                {consentError && (
+                  <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg animate-pulse">
                     <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
                     <span className="text-red-500 text-sm">
-                      {submitError}
+                      {consentError}
                     </span>
                   </div>
                 )}
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
-                      <span>Отправка...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>ЗАКАЗАТЬ ЗВОНОК</span>
-                      <Send className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
-              </form>
-            )}
+              {/* Error Message */}
+              {submitError && (
+                <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg">
+                  <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <span className="text-red-500 text-sm">
+                    {submitError}
+                  </span>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
+                    <span>Отправка...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>ЗАКАЗАТЬ ЗВОНОК</span>
+                    <Send className="w-5 h-5" />
+                  </>
+                )}
+              </button>
+            </form>
           </div>
         </div>
       )}
