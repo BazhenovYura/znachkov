@@ -1,15 +1,3 @@
-const Contact = () => {
-  // Добавьте эту отладку
-  console.log('=== TELEGRAM DEBUG ===');
-  console.log('Token exists:', !!TELEGRAM_BOT_TOKEN);
-  console.log('Chat ID exists:', !!TELEGRAM_CHAT_ID);
-  console.log('Token first chars:', TELEGRAM_BOT_TOKEN ? TELEGRAM_BOT_TOKEN.substring(0, 5) + '...' : 'none');
-  console.log('Chat ID:', TELEGRAM_CHAT_ID);
-  console.log('======================');
-  
-  // ... остальной код
-
-
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
@@ -27,6 +15,14 @@ const TELEGRAM_BOT_TOKEN = process.env.REACT_APP_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = process.env.REACT_APP_TELEGRAM_CHAT_ID;
 
 const Contact = () => {
+  // Отладка (временно)
+  console.log('=== TELEGRAM DEBUG ===');
+  console.log('Token exists:', !!TELEGRAM_BOT_TOKEN);
+  console.log('Chat ID exists:', !!TELEGRAM_CHAT_ID);
+  console.log('Token first chars:', TELEGRAM_BOT_TOKEN ? TELEGRAM_BOT_TOKEN.substring(0, 5) + '...' : 'none');
+  console.log('Chat ID:', TELEGRAM_CHAT_ID);
+  console.log('======================');
+
   const sectionRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -96,23 +92,31 @@ const Contact = () => {
 
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
     
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: 'HTML',
-      }),
-    });
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          chat_id: TELEGRAM_CHAT_ID,
+          text: message,
+          parse_mode: 'HTML',
+        }),
+      });
 
-    if (!response.ok) {
-      throw new Error('Ошибка отправки в Telegram');
+      const data = await response.json();
+      console.log('Telegram response:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.description || 'Ошибка отправки в Telegram');
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Fetch error:', error);
+      throw error;
     }
-
-    return response.json();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
