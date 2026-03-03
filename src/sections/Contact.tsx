@@ -56,7 +56,7 @@ const Contact = () => {
   };
 
   // Функция отправки в Telegram
-  const sendToTelegram = async (data: typeof formData) => {
+  const sendToTelegram = async (formDataToSend: typeof formData) => {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
       throw new Error('Отсутствует токен Telegram');
     }
@@ -64,11 +64,11 @@ const Contact = () => {
     const message = `
 🔥 <b>Новая заявка с сайта ЗНАЧКОВ.РФ</b>
 
-👤 <b>Имя:</b> ${data.name || 'Не указано'}
-🏢 <b>Компания:</b> ${data.company || 'Не указана'}
-📞 <b>Телефон:</b> ${data.phone}
-📧 <b>Email:</b> ${data.email || 'Не указан'}
-💬 <b>Комментарий:</b> ${data.comment || 'Без комментария'}
+👤 <b>Имя:</b> ${formDataToSend.name || 'Не указано'}
+🏢 <b>Компания:</b> ${formDataToSend.company || 'Не указана'}
+📞 <b>Телефон:</b> ${formDataToSend.phone}
+📧 <b>Email:</b> ${formDataToSend.email || 'Не указан'}
+💬 <b>Комментарий:</b> ${formDataToSend.comment || 'Без комментария'}
 
 ⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU')}
     `;
@@ -87,13 +87,13 @@ const Contact = () => {
       }),
     });
 
-    const data = await response.json();
+    const responseData = await response.json();
     
     if (!response.ok) {
-      throw new Error(data.description || 'Ошибка отправки в Telegram');
+      throw new Error(responseData.description || 'Ошибка отправки в Telegram');
     }
 
-    return data;
+    return responseData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
