@@ -113,55 +113,37 @@ const Process = () => {
           <div className="reveal opacity-0 animation-delay-300 gold-line mt-6" />
         </div>
 
-        {/* Process Steps */}
-        <div className="relative">
-          {/* Vertical line */}
-          <div className="absolute left-4 lg:left-1/2 top-0 bottom-0 w-px bg-gradient-to-b from-gold/50 via-gold/30 to-transparent hidden sm:block" />
-
-          <div className="space-y-8 lg:space-y-12">
-            {processSteps.map((step, index) => (
-              <div
-                key={index}
-                className={`reveal opacity-0 animation-delay-${(index + 2) * 100} relative`}
-              >
-                <div className={`flex flex-col sm:flex-row items-start gap-4 lg:gap-8 ${
-                  index % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'
-                }`}>
-                  {/* Content */}
-                  <div className={`flex-1 ${index % 2 === 0 ? 'lg:text-right' : 'lg:text-left'}`}>
-                    <div className={`p-6 bg-dark-light rounded-lg border border-gray-800 hover:border-gold/30 transition-all duration-300 group ${
-                      index % 2 === 0 ? 'lg:ml-auto' : 'lg:mr-auto'
-                    } max-w-lg`}>
-                      <div className={`flex items-center gap-4 mb-3 ${
-                        index % 2 === 0 ? 'lg:flex-row-reverse' : ''
-                      }`}>
-                        <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
-                          <step.icon className="w-5 h-5 text-gold" />
-                        </div>
-                        <span className="font-serif text-3xl font-bold text-gold-gradient">
-                          {step.number}
-                        </span>
-                      </div>
-                      <h3 className="font-serif text-xl font-bold text-white mb-2">
-                        {step.title}
-                      </h3>
-                      <p className="text-gray-400 text-sm leading-relaxed">
-                        {step.description}
-                      </p>
-                    </div>
+        {/* Process Steps - Horizontal Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {processSteps.map((step, index) => (
+            <div
+              key={index}
+              className={`reveal opacity-0 animation-delay-${(index + 2) * 100} relative group`}
+            >
+              <div className="p-6 bg-dark-light rounded-lg border border-gray-800 hover:border-gold/30 transition-all duration-300 h-full flex flex-col">
+                {/* Header with icon and number */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center group-hover:bg-gold/20 transition-colors">
+                    <step.icon className="w-6 h-6 text-gold" />
                   </div>
-
-                  {/* Center dot */}
-                  <div className="hidden lg:flex items-center justify-center w-4 flex-shrink-0">
-                    <div className="w-4 h-4 rounded-full bg-gold border-4 border-dark shadow-gold" />
-                  </div>
-
-                  {/* Spacer for alternating layout */}
-                  <div className="flex-1 hidden lg:block" />
+                  <span className="font-serif text-3xl font-bold text-gold-gradient">
+                    {step.number}
+                  </span>
                 </div>
+                
+                {/* Content */}
+                <h3 className="font-serif text-xl font-bold text-white mb-3">
+                  {step.title}
+                </h3>
+                <p className="text-gray-400 text-sm leading-relaxed flex-grow">
+                  {step.description}
+                </p>
+
+                {/* Decorative line on hover */}
+                <div className="mt-4 h-0.5 w-0 group-hover:w-full bg-gold/30 transition-all duration-300" />
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
       </div>
     </section>
