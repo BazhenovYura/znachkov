@@ -38,25 +38,20 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Обработка скролла при возврате с якорем - УЛУЧШЕНО
+  // Обработка скролла при возврате с якорем
   useEffect(() => {
     if (location.pathname === '/' && location.state?.scrollTo) {
       const sectionId = location.state.scrollTo;
       
-      // Увеличил задержку до 500ms для полной загрузки страницы
       const timer = setTimeout(() => {
         const element = document.getElementById(sectionId);
         if (element) {
-          const yOffset = -80; // Отступ от шапки
+          const yOffset = -80;
           const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
           window.scrollTo({ top: y, behavior: 'smooth' });
-          console.log(`Scrolling to ${sectionId}`); // Для отладки
-        } else {
-          console.log(`Element ${sectionId} not found`); // Для отладки
         }
       }, 500);
       
-      // Очищаем state, чтобы не скроллить при повторных переходах
       navigate('/', { replace: true, state: {} });
       
       return () => clearTimeout(timer);
@@ -151,10 +146,8 @@ const Header = () => {
       
       setIsModalOpen(false);
       
-      // Сохраняем информацию о том, откуда пришли
       let section = 'header';
       if (location.pathname === '/') {
-        // Если на главной, пытаемся определить видимую секцию
         for (const link of navLinks) {
           const id = link.href.substring(1);
           const element = document.getElementById(id);
@@ -205,7 +198,7 @@ const Header = () => {
       {/* Затемнение фона при открытом мобильном меню */}
       {isMobileMenuOpen && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden"
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40"
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
@@ -265,24 +258,30 @@ const Header = () => {
             </button>
           </div>
         </div>
+      </header>
 
-        {/* Мобильное меню на весь экран */}
-        <div
-          className={`lg:hidden fixed inset-0 bg-dark/98 backdrop-blur-md transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto ${
-            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          <div className="min-h-full flex flex-col justify-center py-20 px-6">
-            <button
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="absolute top-6 right-6 text-white p-2"
-              aria-label="Закрыть меню"
-            >
-              <X className="w-8 h-8" />
-            </button>
+      {/* Мобильное меню на весь экран - отдельно от header */}
+      <div
+        className={`lg:hidden fixed inset-0 z-[70] transform transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Затемнение позади меню (уже есть выше, но оставим для надежности) */}
+        <div className="absolute inset-0 bg-dark/98 backdrop-blur-md" />
+        
+        {/* Контент меню */}
+        <div className="relative h-full overflow-y-auto">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="absolute top-6 right-6 text-white p-2 z-10"
+            aria-label="Закрыть меню"
+          >
+            <X className="w-8 h-8" />
+          </button>
 
-            <div className="space-y-8 text-center">
-              {/* Навигационные ссылки - теперь точно видны */}
+          <div className="min-h-full flex flex-col justify-center px-6 py-20">
+            <div className="space-y-6 text-center">
+              {/* Навигационные ссылки */}
               {navLinks.map((link) => (
                 <button
                   key={link.name}
@@ -290,7 +289,7 @@ const Header = () => {
                     handleNavClick(link.href);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="block text-gray-300 hover:text-gold transition-colors text-2xl font-medium w-full py-2"
+                  className="block text-gray-300 hover:text-gold transition-colors text-3xl font-medium w-full py-3"
                 >
                   {link.name}
                 </button>
@@ -301,6 +300,7 @@ const Header = () => {
                 <a
                   href="tel:+79227474474"
                   className="flex items-center justify-center gap-2 text-gold mb-6 text-xl"
+                  onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <Phone className="w-6 h-6" />
                   <span>+7 (922) 74-74-4-74</span>
@@ -318,10 +318,10 @@ const Header = () => {
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => !isSubmitting && setIsModalOpen(false)}
