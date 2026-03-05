@@ -41,12 +41,17 @@ const Header = () => {
   // Обработка скролла при возврате с якорем
   useEffect(() => {
     if (location.pathname === '/' && location.state?.scrollTo) {
+      // Увеличил задержку для полной загрузки страницы
       setTimeout(() => {
         const element = document.getElementById(location.state.scrollTo);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+          const yOffset = -80; // Отступ от шапки
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
         }
-      }, 100);
+      }, 300); // Увеличил задержку до 300ms
+      
+      // Очищаем state, чтобы не скроллить при повторных переходах
       navigate('/', { replace: true, state: {} });
     }
   }, [location, navigate]);
@@ -64,7 +69,9 @@ const Header = () => {
     if (location.pathname === '/') {
       const element = document.getElementById(sectionId);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+        const yOffset = -80;
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
       }
     } else {
       navigate('/', { state: { scrollTo: sectionId } });
@@ -80,7 +87,7 @@ const Header = () => {
       navigate('/');
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 100);
+      }, 300);
     }
     setIsMobileMenuOpen(false);
   };
@@ -139,7 +146,7 @@ const Header = () => {
       navigate('/thanks', { 
         state: { 
           from: '/',
-          section: 'header' 
+          section: location.pathname === '/' ? 'header' : location.pathname.substring(1)
         } 
       });
       
@@ -165,7 +172,7 @@ const Header = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
-    setIsMobileMenuOpen(false); // Закрываем мобильное меню если открыто
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -180,7 +187,7 @@ const Header = () => {
 
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          isScrolled
+          isScrolled || isMobileMenuOpen
             ? 'bg-dark/95 backdrop-blur-md py-4'
             : 'bg-transparent py-6'
         }`}
@@ -234,14 +241,22 @@ const Header = () => {
           </div>
         </div>
 
-        {/* Мобильное меню */}
+        {/* Мобильное меню на весь экран */}
         <div
-          className={`lg:hidden fixed top-0 right-0 h-full w-64 bg-dark/98 backdrop-blur-md transform transition-transform duration-300 ease-in-out z-50 ${
+          className={`lg:hidden fixed inset-0 bg-dark/98 backdrop-blur-md transform transition-transform duration-300 ease-in-out z-50 ${
             isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          <div className="pt-20 px-6 pb-6 h-full overflow-y-auto">
-            <div className="space-y-4">
+          <div className="flex flex-col items-center justify-center h-full px-6">
+            <button
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="absolute top-6 right-6 text-white p-2"
+              aria-label="Закрыть меню"
+            >
+              <X className="w-8 h-8" />
+            </button>
+
+            <div className="space-y-8 text-center">
               {navLinks.map((link) => (
                 <button
                   key={link.name}
@@ -249,17 +264,18 @@ const Header = () => {
                     handleNavClick(link.href);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="block w-full text-left text-gray-300 hover:text-gold transition-colors py-2 text-lg"
+                  className="block text-gray-300 hover:text-gold transition-colors text-2xl font-medium w-full"
                 >
                   {link.name}
                 </button>
               ))}
-              <div className="pt-4 border-t border-gray-800">
+              
+              <div className="pt-8 border-t border-gray-800">
                 <a
                   href="tel:+79227474474"
-                  className="flex items-center gap-2 text-gold mb-4"
+                  className="flex items-center justify-center gap-2 text-gold mb-6 text-xl"
                 >
-                  <Phone className="w-4 h-4" />
+                  <Phone className="w-6 h-6" />
                   <span>+7 (922) 74-74-4-74</span>
                 </a>
                 <button
@@ -267,7 +283,7 @@ const Header = () => {
                     openModal();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="btn-primary w-full text-center"
+                  className="btn-primary text-lg px-8 py-4"
                 >
                   Заказать обратный звонок
                 </button>
