@@ -104,13 +104,18 @@ const Portfolio = () => {
     };
   }, [selectedItem]);
 
-  // Функция отправки в Telegram
+  // Функция отправки в Telegram с фотографией
   const sendToTelegram = async (data: typeof formData, item: PortfolioItem) => {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
       throw new Error('Отсутствует токен Telegram');
     }
 
-    const message = `
+    // Формируем полный URL изображения
+    const baseUrl = window.location.origin;
+    const imageUrl = `${baseUrl}${item.image}`;
+
+    // Текст сообщения (caption для фото)
+    const caption = `
 🛍️ <b>Заказ похожего значка с сайта ЗНАЧКОВ.РФ</b>
 
 📌 <b>Выбранный образец:</b>
@@ -126,7 +131,8 @@ const Portfolio = () => {
 ⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU')}
     `;
 
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
+    // Отправляем фото с подписью через sendPhoto
+    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
     
     const response = await fetch(url, {
       method: 'POST',
@@ -135,7 +141,8 @@ const Portfolio = () => {
       },
       body: JSON.stringify({
         chat_id: TELEGRAM_CHAT_ID,
-        text: message,
+        photo: imageUrl, // URL изображения
+        caption: caption,
         parse_mode: 'HTML',
       }),
     });
@@ -143,6 +150,7 @@ const Portfolio = () => {
     const responseData = await response.json();
     
     if (!response.ok) {
+      console.error('Telegram API error:', responseData);
       throw new Error(responseData.description || 'Ошибка отправки в Telegram');
     }
 
@@ -252,7 +260,7 @@ const Portfolio = () => {
                 <button
                   onClick={() => {
                     setSelectedItem(item);
-                    setShowOrderForm(false); // Сбрасываем форму при открытии нового значка
+                    setShowOrderForm(false);
                   }}
                   className="absolute top-4 right-4 w-10 h-10 bg-dark/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gold hover:text-dark"
                 >
@@ -321,7 +329,6 @@ const Portfolio = () => {
             ) : (
               // Форма заказа
               <div className="p-8">
-                {/* Кнопка назад */}
                 <button
                   onClick={backToItem}
                   className="flex items-center gap-2 text-gray-400 hover:text-gold transition-colors mb-6"
@@ -331,7 +338,6 @@ const Portfolio = () => {
                 </button>
 
                 <div className="max-w-md mx-auto">
-                  {/* Заголовок */}
                   <div className="text-center mb-6">
                     <h3 className="font-serif text-2xl text-white mb-2">
                       Заказать похожий значок
@@ -341,7 +347,6 @@ const Portfolio = () => {
                     </p>
                   </div>
 
-                  {/* Форма */}
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                       <label className="block text-gray-400 text-sm mb-2">
@@ -373,7 +378,6 @@ const Portfolio = () => {
                       />
                     </div>
 
-                    {/* Чекбокс согласия */}
                     <div className="flex items-start gap-3">
                       <div className="relative flex items-center h-6">
                         <input
