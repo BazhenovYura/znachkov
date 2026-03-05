@@ -38,21 +38,28 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Обработка скролла при возврате с якорем
+  // Обработка скролла при возврате с якорем - УЛУЧШЕНО
   useEffect(() => {
     if (location.pathname === '/' && location.state?.scrollTo) {
-      // Увеличил задержку для полной загрузки страницы
-      setTimeout(() => {
-        const element = document.getElementById(location.state.scrollTo);
+      const sectionId = location.state.scrollTo;
+      
+      // Увеличил задержку до 500ms для полной загрузки страницы
+      const timer = setTimeout(() => {
+        const element = document.getElementById(sectionId);
         if (element) {
           const yOffset = -80; // Отступ от шапки
           const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
           window.scrollTo({ top: y, behavior: 'smooth' });
+          console.log(`Scrolling to ${sectionId}`); // Для отладки
+        } else {
+          console.log(`Element ${sectionId} not found`); // Для отладки
         }
-      }, 300); // Увеличил задержку до 300ms
+      }, 500);
       
       // Очищаем state, чтобы не скроллить при повторных переходах
       navigate('/', { replace: true, state: {} });
+      
+      return () => clearTimeout(timer);
     }
   }, [location, navigate]);
 
@@ -87,7 +94,7 @@ const Header = () => {
       navigate('/');
       setTimeout(() => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 300);
+      }, 500);
     }
     setIsMobileMenuOpen(false);
   };
@@ -143,10 +150,28 @@ const Header = () => {
       await sendToTelegram(formData);
       
       setIsModalOpen(false);
+      
+      // Сохраняем информацию о том, откуда пришли
+      let section = 'header';
+      if (location.pathname === '/') {
+        // Если на главной, пытаемся определить видимую секцию
+        for (const link of navLinks) {
+          const id = link.href.substring(1);
+          const element = document.getElementById(id);
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            if (rect.top < window.innerHeight / 2 && rect.bottom > 0) {
+              section = id;
+              break;
+            }
+          }
+        }
+      }
+      
       navigate('/thanks', { 
         state: { 
           from: '/',
-          section: location.pathname === '/' ? 'header' : location.pathname.substring(1)
+          section: section
         } 
       });
       
@@ -243,11 +268,11 @@ const Header = () => {
 
         {/* Мобильное меню на весь экран */}
         <div
-          className={`lg:hidden fixed inset-0 bg-dark/98 backdrop-blur-md transform transition-transform duration-300 ease-in-out z-50 ${
+          className={`lg:hidden fixed inset-0 bg-dark/98 backdrop-blur-md transform transition-transform duration-300 ease-in-out z-50 overflow-y-auto ${
             isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
           }`}
         >
-          <div className="flex flex-col items-center justify-center h-full px-6">
+          <div className="min-h-full flex flex-col justify-center py-20 px-6">
             <button
               onClick={() => setIsMobileMenuOpen(false)}
               className="absolute top-6 right-6 text-white p-2"
@@ -257,6 +282,7 @@ const Header = () => {
             </button>
 
             <div className="space-y-8 text-center">
+              {/* Навигационные ссылки - теперь точно видны */}
               {navLinks.map((link) => (
                 <button
                   key={link.name}
@@ -264,13 +290,14 @@ const Header = () => {
                     handleNavClick(link.href);
                     setIsMobileMenuOpen(false);
                   }}
-                  className="block text-gray-300 hover:text-gold transition-colors text-2xl font-medium w-full"
+                  className="block text-gray-300 hover:text-gold transition-colors text-2xl font-medium w-full py-2"
                 >
                   {link.name}
                 </button>
               ))}
               
-              <div className="pt-8 border-t border-gray-800">
+              {/* Контакты */}
+              <div className="pt-8 mt-8 border-t border-gray-800">
                 <a
                   href="tel:+79227474474"
                   className="flex items-center justify-center gap-2 text-gold mb-6 text-xl"
