@@ -129,25 +129,37 @@ const Types = () => {
     }
   }, [isModalOpen]);
 
-  // Функция отправки в Telegram с фотографией логотипа
+  // Функция отправки в Telegram с фотографией логотипа и характеристиками
   const sendToTelegram = async (data: typeof formData, type: BadgeType, logo?: File) => {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
       throw new Error('Отсутствует токен Telegram');
     }
 
+    // Формируем список характеристик
+    const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
+
     const message = `
-📌 <b>Заявка на макет с сайта ЗНАЧКОВ.РФ</b>
+📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ</b>
+━━━━━━━━━━━━━━━━━━━━━━━
 
 🔹 <b>Выбранный формат:</b> ${type.name} (${type.size})
-📝 <b>Описание:</b> ${type.description}
+📝 <b>Описание формата:</b> ${type.description}
 
+<b>Характеристики формата ${type.name}:</b>
+${featuresList}
+
+━━━━━━━━━━━━━━━━━━━━━━━
 👤 <b>Клиент:</b>
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
 
-${logo ? '🖼️ <b>Логотип:</b> Прикреплен к сообщению' : ''}
+${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к сообщению' : ''}
 
-⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU')}
+⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU', { 
+  timeZone: 'Europe/Moscow',
+  dateStyle: 'full',
+  timeStyle: 'short'
+})}
     `;
 
     if (logo) {
