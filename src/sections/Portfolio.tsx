@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ZoomIn } from 'lucide-react';
 
-// Конфигурация Telegram из переменных окружения Vite
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
 
@@ -63,8 +62,6 @@ const Portfolio = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
-  
-  // Состояния для формы заказа
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -92,7 +89,6 @@ const Portfolio = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Блокировка скролла при открытом модальном окне
   useEffect(() => {
     if (selectedItem) {
       document.body.style.overflow = 'hidden';
@@ -104,17 +100,14 @@ const Portfolio = () => {
     };
   }, [selectedItem]);
 
-  // Функция отправки в Telegram с фотографией
   const sendToTelegram = async (data: typeof formData, item: PortfolioItem) => {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
       throw new Error('Отсутствует токен Telegram');
     }
 
-    // Формируем полный URL изображения
     const baseUrl = window.location.origin;
     const imageUrl = `${baseUrl}${item.image}`;
 
-    // Текст сообщения (caption для фото)
     const caption = `
 🛍️ <b>Заказ похожего значка с сайта ЗНАЧКОВ.РФ</b>
 
@@ -128,10 +121,9 @@ const Portfolio = () => {
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
 
-⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU')}
+⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg' })}
     `;
 
-    // Отправляем фото с подписью через sendPhoto
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
     
     const response = await fetch(url, {
@@ -141,7 +133,7 @@ const Portfolio = () => {
       },
       body: JSON.stringify({
         chat_id: TELEGRAM_CHAT_ID,
-        photo: imageUrl, // URL изображения
+        photo: imageUrl,
         caption: caption,
         parse_mode: 'HTML',
       }),
@@ -157,7 +149,6 @@ const Portfolio = () => {
     return responseData;
   };
 
-  // Обработка отправки формы
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -171,14 +162,16 @@ const Portfolio = () => {
     try {
       await sendToTelegram(formData, selectedItem!);
       
-      // Закрываем модальное окно и форму
       setSelectedItem(null);
       setShowOrderForm(false);
       
-      // Переход на страницу благодарности
-      navigate('/thanks');
+      navigate('/thanks', { 
+        state: { 
+          from: '/',
+          section: 'portfolio' 
+        } 
+      });
       
-      // Сброс формы
       setFormData({ name: '', phone: '' });
       setIsAgreed(false);
       
@@ -190,7 +183,6 @@ const Portfolio = () => {
     }
   };
 
-  // Обработка изменений в форме
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
@@ -198,12 +190,10 @@ const Portfolio = () => {
     });
   };
 
-  // Открытие формы заказа
   const openOrderForm = () => {
     setShowOrderForm(true);
   };
 
-  // Возврат к просмотру значка
   const backToItem = () => {
     setShowOrderForm(false);
   };
@@ -216,7 +206,6 @@ const Portfolio = () => {
       style={{ backgroundColor: '#0A0A0A' }}
     >
       <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
-        {/* Header */}
         <div className="text-center mb-16">
           <span className="reveal opacity-0 inline-block text-gold text-sm uppercase tracking-widest mb-4">
             Наши работы
@@ -231,7 +220,6 @@ const Portfolio = () => {
           <div className="reveal opacity-0 animation-delay-300 gold-line mt-6" />
         </div>
 
-        {/* Grid */}
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
           {portfolioItems.map((item, index) => (
             <div
@@ -239,24 +227,20 @@ const Portfolio = () => {
               className={`reveal opacity-0 animation-delay-${(index % 5) * 100 + 200} group relative`}
             >
               <div className="relative aspect-square overflow-hidden rounded-lg bg-dark-light cursor-pointer card-hover">
-                {/* Image */}
                 <img
                   src={item.image}
                   alt={item.title}
                   className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                 />
                 
-                {/* Overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-dark/90 via-dark/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                {/* Content on hover */}
                 <div className="absolute inset-0 flex flex-col justify-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
                   <span className="text-gold text-sm mb-2">{item.material}</span>
                   <h3 className="text-white font-serif text-xl mb-1">{item.title}</h3>
                   <p className="text-gray-400 text-sm">{item.description}</p>
                 </div>
 
-                {/* Zoom icon */}
                 <button
                   onClick={() => {
                     setSelectedItem(item);
@@ -267,7 +251,6 @@ const Portfolio = () => {
                   <ZoomIn className="w-5 h-5" />
                 </button>
 
-                {/* Border on hover */}
                 <div className="absolute inset-0 border-2 border-gold/0 group-hover:border-gold/50 rounded-lg transition-colors duration-300 pointer-events-none" />
               </div>
             </div>
@@ -275,7 +258,6 @@ const Portfolio = () => {
         </div>
       </div>
 
-      {/* Modal */}
       {selectedItem && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/95 backdrop-blur-sm"
@@ -299,7 +281,6 @@ const Portfolio = () => {
             </button>
             
             {!showOrderForm ? (
-              // Просмотр значка
               <div className="grid md:grid-cols-2">
                 <div className="aspect-square">
                   <img
@@ -327,7 +308,6 @@ const Portfolio = () => {
                 </div>
               </div>
             ) : (
-              // Форма заказа
               <div className="p-8">
                 <button
                   onClick={backToItem}
