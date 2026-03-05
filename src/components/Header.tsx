@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Phone, X, Menu } from 'lucide-react';
 
-// Конфигурация Telegram из переменных окружения Vite
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
 
@@ -11,8 +10,6 @@ const Header = () => {
   const location = useLocation();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
-  // Состояния для модального окна
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -29,7 +26,19 @@ const Header = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Блокировка скролла при открытом модальном окне
+  // Обработка скролла при возврате с якорем
+  useEffect(() => {
+    if (location.pathname === '/' && location.state?.scrollTo) {
+      setTimeout(() => {
+        const element = document.getElementById(location.state.scrollTo);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+      navigate('/', { replace: true, state: {} });
+    }
+  }, [location, navigate]);
+
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -48,55 +57,32 @@ const Header = () => {
     { name: 'Контакты', href: '#contact' },
   ];
 
-  // Функция для перехода на главную и скролла наверх
-  const goToHome = () => {
-    if (location.pathname === '/') {
-      // Если уже на главной - просто скроллим наверх
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      // Если на другой странице - переходим на главную
-      navigate('/');
-      // Небольшая задержка, чтобы страница загрузилась, затем скролл наверх
-      setTimeout(() => {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }, 100);
-    }
-  };
-
-  // Универсальная функция навигации по разделам
   const handleNavClick = (href: string) => {
-    const sectionId = href.substring(1); // убираем #
+    const sectionId = href.substring(1);
     
     if (location.pathname === '/') {
-      // Если мы на главной - просто скроллим к секции
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      // Если на другой странице - переходим на главную с якорем
       navigate('/', { state: { scrollTo: sectionId } });
     }
     
     setIsMobileMenuOpen(false);
   };
 
-  // Обработка скролла после навигации с якорем
-  useEffect(() => {
-    if (location.pathname === '/' && location.state?.scrollTo) {
-      // Небольшая задержка, чтобы страница загрузилась
+  const goToHome = () => {
+    if (location.pathname === '/') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate('/');
       setTimeout(() => {
-        const element = document.getElementById(location.state.scrollTo);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
-      // Очищаем state, чтобы не скроллить при повторных переходах
-      navigate('/', { replace: true, state: {} });
     }
-  }, [location, navigate]);
+  };
 
-  // Функция отправки в Telegram
   const sendToTelegram = async (data: typeof formData) => {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
       throw new Error('Отсутствует токен Telegram');
@@ -108,7 +94,7 @@ const Header = () => {
 👤 <b>Имя:</b> ${data.name || 'Не указано'}
 📞 <b>Телефон:</b> ${data.phone}
 
-⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU')}
+⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg' })}
     `;
 
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -134,42 +120,38 @@ const Header = () => {
     return responseData;
   };
 
-  // Обработка отправки формы
-  // В обработчике handleSubmit:
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (!isAgreed) {
-    alert('Необходимо согласиться с политикой конфиденциальности');
-    return;
-  }
-  
-  setIsSubmitting(true);
-  
-  try {
-    await sendToTelegram(formData);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
-    setIsModalOpen(false);
-    // Передаем информацию о том, откуда пришли
-    navigate('/thanks', { 
-      state: { 
-        from: '/',
-        section: 'header' 
-      } 
-    });
+    if (!isAgreed) {
+      alert('Необходимо согласиться с политикой конфиденциальности');
+      return;
+    }
     
-    setFormData({ name: '', phone: '' });
-    setIsAgreed(false);
+    setIsSubmitting(true);
     
-  } catch (error) {
-    console.error('Ошибка отправки:', error);
-    alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+    try {
+      await sendToTelegram(formData);
+      
+      setIsModalOpen(false);
+      navigate('/thanks', { 
+        state: { 
+          from: '/',
+          section: 'header' 
+        } 
+      });
+      
+      setFormData({ name: '', phone: '' });
+      setIsAgreed(false);
+      
+    } catch (error) {
+      console.error('Ошибка отправки:', error);
+      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
-  // Обработка изменений в форме
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
@@ -177,7 +159,6 @@ const handleSubmit = async (e: React.FormEvent) => {
     });
   };
 
-  // Открытие модального окна
   const openModal = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
@@ -195,9 +176,8 @@ const handleSubmit = async (e: React.FormEvent) => {
       >
         <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
           <div className="flex items-center justify-between">
-            {/* Logo - ведет на главную и скроллит наверх */}
             <button 
-              onClick={goToHome}
+              onClick={goToHome} 
               className="flex items-center gap-2"
             >
               <span className="font-serif text-2xl md:text-3xl font-bold text-gold-gradient">
@@ -205,7 +185,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </span>
             </button>
 
-            {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
                 <button
@@ -218,7 +197,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               ))}
             </nav>
 
-            {/* Contact & CTA */}
             <div className="hidden lg:flex items-center gap-6">
               <a
                 href="tel:+79227474474"
@@ -235,7 +213,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </button>
             </div>
 
-            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="lg:hidden text-white p-2"
@@ -246,7 +223,6 @@ const handleSubmit = async (e: React.FormEvent) => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
         {isMobileMenuOpen && (
           <div className="lg:hidden absolute top-full left-0 right-0 bg-dark/98 backdrop-blur-md">
             <div className="px-4 py-6 space-y-4">
@@ -285,18 +261,14 @@ const handleSubmit = async (e: React.FormEvent) => {
         )}
       </header>
 
-      {/* Модальное окно */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          {/* Overlay */}
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => !isSubmitting && setIsModalOpen(false)}
           />
           
-          {/* Modal Content */}
           <div className="relative bg-dark-light border border-gray-800 rounded-2xl max-w-md w-full p-8 shadow-2xl animate-fade-in-up">
-            {/* Close button */}
             <button
               onClick={() => !isSubmitting && setIsModalOpen(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gold transition-colors"
@@ -306,7 +278,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               <X className="w-6 h-6" />
             </button>
 
-            {/* Header */}
             <div className="text-center mb-6">
               <h3 className="font-serif text-2xl text-white mb-2">
                 Заказать обратный звонок
@@ -316,7 +287,6 @@ const handleSubmit = async (e: React.FormEvent) => {
               </p>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
@@ -348,31 +318,28 @@ const handleSubmit = async (e: React.FormEvent) => {
                 />
               </div>
 
-              {/* Privacy Policy Checkbox */}
-              <div className="space-y-2">
-                <div className="flex items-start gap-3">
-                  <div className="relative flex items-center h-6">
-                    <input
-                      type="checkbox"
-                      id="privacy-modal"
-                      checked={isAgreed}
-                      onChange={(e) => setIsAgreed(e.target.checked)}
-                      className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
-                    />
-                  </div>
-                  <label htmlFor="privacy-modal" className="text-sm text-gray-400 cursor-pointer">
-                    Я соглашаюсь с{' '}
-                    <a 
-                      href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="text-gold hover:text-gold-light underline transition-colors"
-                    >
-                      политикой конфиденциальности
-                    </a>
-                    {' '}и даю согласие на обработку персональных данных *
-                  </label>
+              <div className="flex items-start gap-3">
+                <div className="relative flex items-center h-6">
+                  <input
+                    type="checkbox"
+                    id="privacy-header"
+                    checked={isAgreed}
+                    onChange={(e) => setIsAgreed(e.target.checked)}
+                    className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
+                  />
                 </div>
+                <label htmlFor="privacy-header" className="text-sm text-gray-400 cursor-pointer">
+                  Я соглашаюсь с{' '}
+                  <a 
+                    href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-gold hover:text-gold-light underline transition-colors"
+                  >
+                    политикой конфиденциальности
+                  </a>
+                  {' '}и даю согласие на обработку персональных данных *
+                </label>
               </div>
 
               <button
