@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gem, Crown, Circle, Dot, X, Upload } from 'lucide-react';
 
-// Конфигурация Telegram из переменных окружения Vite
 const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
 const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
 
@@ -78,7 +77,6 @@ const Types = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
   
-  // Состояния для модального окна
   const [selectedType, setSelectedType] = useState<BadgeType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -109,7 +107,6 @@ const Types = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Блокировка скролла при открытом модальном окне
   useEffect(() => {
     if (isModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -121,7 +118,6 @@ const Types = () => {
     };
   }, [isModalOpen]);
 
-  // Очистка превью при закрытии
   useEffect(() => {
     if (!isModalOpen) {
       setLogoFile(null);
@@ -129,11 +125,8 @@ const Types = () => {
     }
   }, [isModalOpen]);
 
-  // Функция для форматирования даты по Екатеринбургу (UTC+5)
   const getEkaterinburgTime = () => {
-    const date = new Date();
-    // Екатеринбург — UTC+5 (Asia/Yekaterinburg)
-    return date.toLocaleString('ru-RU', { 
+    return new Date().toLocaleString('ru-RU', { 
       timeZone: 'Asia/Yekaterinburg',
       year: 'numeric',
       month: 'long',
@@ -144,13 +137,11 @@ const Types = () => {
     });
   };
 
-  // Функция отправки в Telegram с фотографией логотипа и характеристиками
   const sendToTelegram = async (data: typeof formData, type: BadgeType, logo?: File) => {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
       throw new Error('Отсутствует токен Telegram');
     }
 
-    // Формируем список характеристик
     const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
     const message = `
@@ -174,7 +165,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
     `;
 
     if (logo) {
-      // Если есть логотип, используем sendPhoto
       const formData = new FormData();
       formData.append('chat_id', TELEGRAM_CHAT_ID);
       formData.append('photo', logo);
@@ -196,7 +186,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
 
       return responseData;
     } else {
-      // Если без логотипа, используем sendMessage
       const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
       
       const response = await fetch(url, {
@@ -221,7 +210,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
     }
   };
 
-  // Обработка выбора файла
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -234,13 +222,11 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
     }
   };
 
-  // Удаление выбранного логотипа
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
   };
 
-  // Обработка отправки формы
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -255,9 +241,13 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
       await sendToTelegram(formData, selectedType!, logoFile || undefined);
       
       setIsModalOpen(false);
-      navigate('/thanks');
+      navigate('/thanks', { 
+        state: { 
+          from: '/',
+          section: 'types' 
+        } 
+      });
       
-      // Сброс формы
       setFormData({ name: '', phone: '' });
       setLogoFile(null);
       setLogoPreview(null);
@@ -271,7 +261,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
     }
   };
 
-  // Обработка изменений в форме
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
@@ -279,7 +268,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
     });
   };
 
-  // Открытие модального окна с выбранным типом
   const openModal = (type: BadgeType) => {
     setSelectedType(type);
     setIsModalOpen(true);
@@ -293,7 +281,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
         style={{ backgroundColor: '#0A0A0A' }}
       >
         <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
-          {/* Header */}
           <div className="text-center mb-16">
             <span className="reveal opacity-0 inline-block text-gold text-sm uppercase tracking-widest mb-4">
               Виды значков
@@ -308,7 +295,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
             <div className="reveal opacity-0 animation-delay-300 gold-line mt-6" />
           </div>
 
-          {/* Types Grid */}
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {badgeTypes.map((type, index) => (
               <div
@@ -316,12 +302,10 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
                 className={`reveal opacity-0 animation-delay-${(index + 2) * 100} group relative`}
               >
                 <div className="h-full p-6 lg:p-8 bg-dark-light rounded-lg border border-gray-800 hover:border-gold/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold">
-                  {/* Icon */}
                   <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mb-6 group-hover:bg-gold/20 transition-colors">
                     <type.icon className="w-7 h-7 text-gold" />
                   </div>
 
-                  {/* Name & Size */}
                   <div className="flex items-baseline gap-3 mb-4">
                     <h3 className="font-serif text-2xl font-bold text-white">
                       {type.name}
@@ -329,12 +313,10 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
                     <span className="text-gold text-sm">{type.size}</span>
                   </div>
 
-                  {/* Description */}
                   <p className="text-gray-400 text-sm mb-6">
                     {type.description}
                   </p>
 
-                  {/* Features */}
                   <ul className="space-y-3 mb-6">
                     {type.features.map((feature, featureIndex) => (
                       <li
@@ -347,7 +329,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
                     ))}
                   </ul>
 
-                  {/* Кнопка заказа макета */}
                   <button
                     onClick={() => openModal(type)}
                     className="w-full py-2 px-4 bg-gold/10 text-gold rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm"
@@ -361,7 +342,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
         </div>
       </section>
 
-      {/* Модальное окно */}
       {isModalOpen && selectedType && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/95 backdrop-blur-sm"
@@ -371,7 +351,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
             className="relative max-w-lg w-full bg-dark-light border border-gray-800 rounded-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close button */}
             <button
               onClick={() => !isSubmitting && setIsModalOpen(false)}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-dark/80 rounded-full flex items-center justify-center hover:bg-gold hover:text-dark transition-colors"
@@ -380,7 +359,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
               <X className="w-5 h-5" />
             </button>
 
-            {/* Header */}
             <div className="p-6 border-b border-gray-800">
               <h3 className="font-serif text-2xl text-white">
                 Получить макет в формате <span className="text-gold-gradient">{selectedType.name}</span>
@@ -390,7 +368,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
               </p>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
@@ -422,7 +399,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
                 />
               </div>
 
-              {/* Загрузка логотипа */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
                   Загрузить свой логотип <span className="text-gray-600">(необязательно)</span>
@@ -469,7 +445,6 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
                 )}
               </div>
 
-              {/* Privacy Policy Checkbox */}
               <div className="flex items-start gap-3">
                 <div className="relative flex items-center h-6">
                   <input
