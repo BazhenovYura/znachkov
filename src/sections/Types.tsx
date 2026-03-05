@@ -129,6 +129,21 @@ const Types = () => {
     }
   }, [isModalOpen]);
 
+  // Функция для форматирования даты по Екатеринбургу (UTC+5)
+  const getEkaterinburgTime = () => {
+    const date = new Date();
+    // Екатеринбург — UTC+5 (Asia/Yekaterinburg)
+    return date.toLocaleString('ru-RU', { 
+      timeZone: 'Asia/Yekaterinburg',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+  };
+
   // Функция отправки в Telegram с фотографией логотипа и характеристиками
   const sendToTelegram = async (data: typeof formData, type: BadgeType, logo?: File) => {
     if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
@@ -155,11 +170,7 @@ ${featuresList}
 
 ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к сообщению' : ''}
 
-⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU', { 
-  timeZone: 'Europe/Moscow',
-  dateStyle: 'full',
-  timeStyle: 'short'
-})}
+⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
     if (logo) {
