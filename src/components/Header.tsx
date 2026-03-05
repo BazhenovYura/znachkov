@@ -18,6 +18,18 @@ const Header = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Блокировка скролла при открытом меню или модальном окне
+  useEffect(() => {
+    if (isMobileMenuOpen || isModalOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMobileMenuOpen, isModalOpen]);
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
@@ -38,17 +50,6 @@ const Header = () => {
       navigate('/', { replace: true, state: {} });
     }
   }, [location, navigate]);
-
-  useEffect(() => {
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [isModalOpen]);
 
   const navLinks = [
     { name: 'Портфолио', href: '#portfolio' },
@@ -81,6 +82,7 @@ const Header = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 100);
     }
+    setIsMobileMenuOpen(false);
   };
 
   const sendToTelegram = async (data: typeof formData) => {
@@ -163,10 +165,19 @@ const Header = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
+    setIsMobileMenuOpen(false); // Закрываем мобильное меню если открыто
   };
 
   return (
     <>
+      {/* Затемнение фона при открытом мобильном меню */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       <header
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
           isScrolled
@@ -215,7 +226,7 @@ const Header = () => {
 
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden text-white p-2"
+              className="lg:hidden text-white p-2 z-50 relative"
               aria-label="Меню"
             >
               {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -223,9 +234,14 @@ const Header = () => {
           </div>
         </div>
 
-        {isMobileMenuOpen && (
-          <div className="lg:hidden absolute top-full left-0 right-0 bg-dark/98 backdrop-blur-md">
-            <div className="px-4 py-6 space-y-4">
+        {/* Мобильное меню */}
+        <div
+          className={`lg:hidden fixed top-0 right-0 h-full w-64 bg-dark/98 backdrop-blur-md transform transition-transform duration-300 ease-in-out z-50 ${
+            isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="pt-20 px-6 pb-6 h-full overflow-y-auto">
+            <div className="space-y-4">
               {navLinks.map((link) => (
                 <button
                   key={link.name}
@@ -258,7 +274,7 @@ const Header = () => {
               </div>
             </div>
           </div>
-        )}
+        </div>
       </header>
 
       {isModalOpen && (
