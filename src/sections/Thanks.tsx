@@ -1,13 +1,26 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, Phone, Mail, ArrowRight, MessageSquare, Sparkles, Package, Percent } from 'lucide-react';
 
 const ThanksPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const from = location.state?.from || '/'; // откуда пришли (по умолчанию главная)
+  const section = location.state?.section; // к какой секции скроллить
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  const handleReturnHome = () => {
+    if (section) {
+      // Если есть секция, переходим на главную с якорем
+      navigate('/', { state: { scrollTo: section } });
+    } else {
+      // Иначе просто на главную
+      navigate(from);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
@@ -149,7 +162,7 @@ const ThanksPage = () => {
         {/* Кнопка возврата на главную */}
         <div className="mt-12 text-center animate-fade-in-up animation-delay-400">
           <button
-            onClick={() => navigate('/')}
+            onClick={handleReturnHome}
             className="inline-flex items-center gap-2 text-gray-400 hover:text-gold transition-colors group"
           >
             <span>Вернуться на главную</span>
