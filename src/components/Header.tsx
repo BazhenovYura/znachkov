@@ -260,20 +260,20 @@ const Header = () => {
         </div>
       </header>
 
-      {/* Мобильное меню на весь экран - отдельно от header */}
+      {/* Мобильное меню на весь экран */}
       <div
         className={`lg:hidden fixed inset-0 z-[70] transform transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        {/* Затемнение позади меню (уже есть выше, но оставим для надежности) */}
+        {/* Затемнение фона меню */}
         <div className="absolute inset-0 bg-dark/98 backdrop-blur-md" />
         
         {/* Контент меню */}
         <div className="relative h-full overflow-y-auto">
           <button
             onClick={() => setIsMobileMenuOpen(false)}
-            className="absolute top-6 right-6 text-white p-2 z-10"
+            className="absolute top-6 right-6 text-white p-2 z-10 hover:text-gold transition-colors"
             aria-label="Закрыть меню"
           >
             <X className="w-8 h-8" />
@@ -295,22 +295,29 @@ const Header = () => {
                 </button>
               ))}
               
-              {/* Контакты */}
+              {/* Контакты с подсветкой */}
               <div className="pt-8 mt-8 border-t border-gray-800">
                 <a
                   href="tel:+79227474474"
-                  className="flex items-center justify-center gap-2 text-gold mb-6 text-xl"
                   onClick={() => setIsMobileMenuOpen(false)}
+                  className="group flex items-center justify-center gap-3 mb-6 text-xl transition-all duration-300"
                 >
-                  <Phone className="w-6 h-6" />
-                  <span>+7 (922) 74-74-4-74</span>
+                  {/* Иконка с подсветкой */}
+                  <div className="w-12 h-12 rounded-full bg-gold/10 group-hover:bg-gold/20 flex items-center justify-center transition-colors">
+                    <Phone className="w-6 h-6 text-gold group-hover:scale-110 transition-transform" />
+                  </div>
+                  {/* Номер с подсветкой */}
+                  <span className="text-gold font-medium group-hover:text-gold-light group-hover:scale-105 transition-all">
+                    +7 (922) 74-74-4-74
+                  </span>
                 </a>
+                
                 <button
                   onClick={() => {
                     openModal();
                     setIsMobileMenuOpen(false);
                   }}
-                  className="btn-primary text-lg px-8 py-4"
+                  className="btn-primary text-lg px-8 py-4 hover:scale-105 transition-transform"
                 >
                   Заказать обратный звонок
                 </button>
