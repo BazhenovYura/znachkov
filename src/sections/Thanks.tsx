@@ -5,8 +5,8 @@ import { CheckCircle, Phone, Mail, ArrowRight, MessageSquare, Sparkles, Package,
 const ThanksPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const from = location.state?.from || '/'; // откуда пришли (по умолчанию главная)
-  const section = location.state?.section; // к какой секции скроллить
+  const from = location.state?.from || '/';
+  const section = location.state?.section;
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -14,10 +14,8 @@ const ThanksPage = () => {
 
   const handleReturnHome = () => {
     if (section) {
-      // Если есть секция, переходим на главную с якорем
       navigate('/', { state: { scrollTo: section } });
     } else {
-      // Иначе просто на главную
       navigate(from);
     }
   };
@@ -58,7 +56,6 @@ const ThanksPage = () => {
         <div className="max-w-4xl mx-auto animate-fade-in-up animation-delay-200">
           <div className="bg-dark-light/50 border border-gray-800 rounded-3xl p-8 md:p-12 backdrop-blur-sm">
             <div className="flex flex-col items-center text-center mb-8">
-              {/* Иконка бота */}
               <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4">
                 <MessageSquare className="w-8 h-8 text-gold" />
               </div>
@@ -113,7 +110,6 @@ const ThanksPage = () => {
               </div>
             </div>
 
-            {/* Кнопка перехода в бота */}
             <a
               href="https://t.me/znachkoff_bot"
               target="_blank"
