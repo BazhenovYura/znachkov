@@ -6,20 +6,24 @@ const ThanksPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || '/';
-  const section = location.state?.section; // Получаем секцию из state
+  const section = location.state?.section;
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   const handleReturnHome = () => {
-    if (section) {
-      // Если есть секция, переходим на главную с якорем
-      navigate('/', { state: { scrollTo: section } });
-    } else {
-      // Иначе просто на главную
-      navigate(from);
-    }
+    // Сначала прокручиваем текущую страницу наверх
+    window.scrollTo(0, 0);
+    
+    // Затем через небольшую задержку переходим
+    setTimeout(() => {
+      if (section) {
+        navigate('/', { state: { scrollTo: section } });
+      } else {
+        navigate(from);
+      }
+    }, 50);
   };
 
   return (
