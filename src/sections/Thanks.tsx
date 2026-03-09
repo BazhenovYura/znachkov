@@ -6,7 +6,7 @@ const ThanksPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from || '/';
-  const section = location.state?.section;
+  const section = location.state?.section; // Получаем секцию из state
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -14,8 +14,10 @@ const ThanksPage = () => {
 
   const handleReturnHome = () => {
     if (section) {
+      // Если есть секция, переходим на главную с якорем
       navigate('/', { state: { scrollTo: section } });
     } else {
+      // Иначе просто на главную
       navigate(from);
     }
   };
