@@ -1,0 +1,70 @@
+name: Deploy to Yandex Cloud (значков.рф)
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps
+          
+      - name: Build project
+        run: npm run build
+          
+      - name: Verify build output
+        run: |
+          echo "📁 Содержимое папки out после сборки:"
+          ls -la out/ || echo "❌ Папка out не создалась! Проверьте next.config.mjs"
+          
+      - name: Deploy to Yandex Cloud Storage
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.YC_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.YC_SECRET_ACCESS_KEY }}
+        run: |
+          BUCKET_NAME="xn--80aennni5d.xn--p1ai"
+          
+          echo "🚀 Деплоим сайт значков.рф в бакет $BUCKET_NAME"
+          
+          # Проверяем существование бакета
+          if aws s3 ls "s3://$BUCKET_NAME" --endpoint-url https://storage.yandexcloud.net 2>&1 | grep -q 'NoSuchBucket'; then
+            echo "❌ Бакет не существует! Создаю..."
+            aws s3 mb "s3://$BUCKET_NAME" --endpoint-url https://storage.yandexcloud.net
+          else
+            echo "✅ Бакет существует"
+          fi
+          
+          # Синхронизируем файлы из папки out
+          echo "📦 Синхронизируем файлы из ./out/"
+          aws s3 sync ./out/ "s3://$BUCKET_NAME/" \
+            --endpoint-url https://storage.yandexcloud.net \
+            --delete \
+            --exclude ".git/*" \
+            --exclude ".github/*"
+          
+          # Делаем все файлы публичными
+          echo "🔓 Открываем публичный доступ..."
+          aws s3 cp "s3://$BUCKET_NAME/" "s3://$BUCKET_NAME/" \
+            --recursive \
+            --acl public-read \
+            --endpoint-url https://storage.yandexcloud.net
+          
+          echo "✅ Деплой завершён!"
+          
+      - name: Show site URLs
+        run: |
+          BUCKET_NAME="xn--80aennni5d.xn--p1ai"
+          echo "🌐 ВРЕМЕННЫЙ АДРЕС (для проверки):"
+          echo "http://$BUCKET_NAME.website.yandexcloud.net"
+          echo ""
+          echo "🔜 ПОСТОЯННЫЙ АДРЕС (после настройки DNS и HTTPS):"
+          echo "https://значков.рф"
