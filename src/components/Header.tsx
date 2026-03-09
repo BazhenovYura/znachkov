@@ -148,11 +148,11 @@ const Header = () => {
     
     setIsModalOpen(false);
     
-    // Определяем, на какой секции находится пользователь
-    let currentSection = 'header'; // по умолчанию - верх
+    // ===== ВАЖНО: Определяем текущую секцию =====
+    let currentSection = 'hero'; // по умолчанию
     
     if (location.pathname === '/') {
-      // Проходим по всем секциям и находим ту, которая видна на экране
+      // Массив всех секций на главной
       const sections = [
         { id: 'hero', element: document.getElementById('hero') },
         { id: 'portfolio', element: document.getElementById('portfolio') },
@@ -164,27 +164,31 @@ const Header = () => {
         { id: 'contact', element: document.getElementById('contact') }
       ];
       
-      // Находим секцию, которая ближе всего к центру экрана
-      const windowCenter = window.scrollY + window.innerHeight / 2;
+      // Текущая позиция скролла
+      const scrollPosition = window.scrollY + 200; // +200 для учёта шапки
       
+      // Ищем секцию, в которой находится пользователь
       for (const section of sections) {
         if (section.element) {
           const rect = section.element.getBoundingClientRect();
-          const sectionCenter = window.scrollY + rect.top + rect.height / 2;
+          const sectionTop = window.scrollY + rect.top;
+          const sectionBottom = sectionTop + rect.height;
           
-          // Если центр секции близко к центру экрана
-          if (Math.abs(sectionCenter - windowCenter) < 300) {
+          // Если текущая позиция скролла внутри этой секции
+          if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
             currentSection = section.id;
+            console.log(`Пользователь в секции: ${section.id}`); // Для отладки
             break;
           }
         }
       }
     }
+    // ============================================
     
     navigate('/thanks', { 
       state: { 
         from: '/',
-        section: currentSection
+        section: currentSection // Передаём реальную секцию, а не 'header'
       } 
     });
     
