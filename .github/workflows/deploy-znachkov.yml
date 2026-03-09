@@ -20,11 +20,12 @@ jobs:
           
       - name: Build project
         run: npm run build
+        # Для Vite это создаст папку dist/
           
       - name: Verify build output
         run: |
-          echo "📁 Содержимое папки out после сборки:"
-          ls -la out/ || echo "❌ Папка out не создалась! Проверьте next.config.mjs"
+          echo "📁 Содержимое папки dist после сборки:"
+          ls -la dist/ || echo "❌ Папка dist не создалась! Проверьте сборку"
           
       - name: Deploy to Yandex Cloud Storage
         env:
@@ -43,9 +44,9 @@ jobs:
             echo "✅ Бакет существует"
           fi
           
-          # Синхронизируем файлы из папки out
-          echo "📦 Синхронизируем файлы из ./out/"
-          aws s3 sync ./out/ "s3://$BUCKET_NAME/" \
+          # Синхронизируем файлы из папки dist (НЕ out!)
+          echo "📦 Синхронизируем файлы из ./dist/"
+          aws s3 sync ./dist/ "s3://$BUCKET_NAME/" \
             --endpoint-url https://storage.yandexcloud.net \
             --delete \
             --exclude ".git/*" \
