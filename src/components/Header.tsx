@@ -134,52 +134,70 @@ const Header = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (!isAgreed) {
+    alert('Необходимо согласиться с политикой конфиденциальности');
+    return;
+  }
+  
+  setIsSubmitting(true);
+  
+  try {
+    await sendToTelegram(formData);
     
-    if (!isAgreed) {
-      alert('Необходимо согласиться с политикой конфиденциальности');
-      return;
-    }
+    setIsModalOpen(false);
     
-    setIsSubmitting(true);
+    // Определяем, на какой секции находится пользователь
+    let currentSection = 'header'; // по умолчанию - верх
     
-    try {
-      await sendToTelegram(formData);
+    if (location.pathname === '/') {
+      // Проходим по всем секциям и находим ту, которая видна на экране
+      const sections = [
+        { id: 'hero', element: document.getElementById('hero') },
+        { id: 'portfolio', element: document.getElementById('portfolio') },
+        { id: 'types', element: document.getElementById('types') },
+        { id: 'why-us', element: document.getElementById('why-us') },
+        { id: 'process', element: document.getElementById('process') },
+        { id: 'benefits', element: document.getElementById('benefits') },
+        { id: 'cta', element: document.getElementById('cta') },
+        { id: 'contact', element: document.getElementById('contact') }
+      ];
       
-      setIsModalOpen(false);
+      // Находим секцию, которая ближе всего к центру экрана
+      const windowCenter = window.scrollY + window.innerHeight / 2;
       
-      let section = 'header';
-      if (location.pathname === '/') {
-        for (const link of navLinks) {
-          const id = link.href.substring(1);
-          const element = document.getElementById(id);
-          if (element) {
-            const rect = element.getBoundingClientRect();
-            if (rect.top < window.innerHeight / 2 && rect.bottom > 0) {
-              section = id;
-              break;
-            }
+      for (const section of sections) {
+        if (section.element) {
+          const rect = section.element.getBoundingClientRect();
+          const sectionCenter = window.scrollY + rect.top + rect.height / 2;
+          
+          // Если центр секции близко к центру экрана
+          if (Math.abs(sectionCenter - windowCenter) < 300) {
+            currentSection = section.id;
+            break;
           }
         }
       }
-      
-      navigate('/thanks', { 
-        state: { 
-          from: '/',
-          section: section
-        } 
-      });
-      
-      setFormData({ name: '', phone: '' });
-      setIsAgreed(false);
-      
-    } catch (error) {
-      console.error('Ошибка отправки:', error);
-      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+    
+    navigate('/thanks', { 
+      state: { 
+        from: '/',
+        section: currentSection
+      } 
+    });
+    
+    setFormData({ name: '', phone: '' });
+    setIsAgreed(false);
+    
+  } catch (error) {
+    console.error('Ошибка отправки:', error);
+    alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
