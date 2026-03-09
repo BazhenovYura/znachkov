@@ -1,15 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Clock, Shield, Truck, X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { Phone, X, Menu } from 'lucide-react';
 
-// URL вашей Яндекс Функции
+// Константа с URL вашей Яндекс Функции
 const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
-const Hero = () => {
+// Убираем прямые переменные Telegram, они больше не нужны на фронте
+// const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+// const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
+
+const Header = () => {
   const navigate = useNavigate();
-  const heroRef = useRef<HTMLDivElement>(null);
-  
-  // Состояния для модального окна
+  const location = useLocation();
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -18,28 +22,9 @@ const Hero = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Блокировка скролла при открытом меню или модальном окне
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('animate-fade-in-up');
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.1, rootMargin: '0px 0px -50px 0px' }
-    );
-
-    const elements = heroRef.current?.querySelectorAll('.reveal');
-    elements?.forEach((el) => observer.observe(el));
-
-    return () => observer.disconnect();
-  }, []);
-
-  // Блокировка скролла при открытом модальном окне
-  useEffect(() => {
-    if (isModalOpen) {
+    if (isMobileMenuOpen || isModalOpen) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
@@ -47,19 +32,76 @@ const Hero = () => {
     return () => {
       document.body.style.overflow = 'unset';
     };
-  }, [isModalOpen]);
+  }, [isMobileMenuOpen, isModalOpen]);
 
-  const scrollToPortfolio = () => {
-    const element = document.querySelector('#portfolio');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 50);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Обработка скролла при возврате с якорем
+  useEffect(() => {
+    if (location.pathname === '/' && location.state?.scrollTo) {
+      const sectionId = location.state.scrollTo;
+      
+      const timer = setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const yOffset = -80;
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      }, 500);
+      
+      navigate('/', { replace: true, state: {} });
+      
+      return () => clearTimeout(timer);
     }
+  }, [location, navigate]);
+
+  const navLinks = [
+    { name: 'Портфолио', href: '#portfolio' },
+    { name: 'Процесс', href: '#process' },
+    { name: 'О нас', href: '#why-us' },
+    { name: 'Контакты', href: '#contact' },
+  ];
+
+  const handleNavClick = (href: string) => {
+    const sectionId = href.substring(1);
+    
+    if (location.pathname === '/') {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        const yOffset = -80;
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+      }
+    } else {
+      navigate('/', { state: { scrollTo: sectionId } });
+    }
+    
+    setIsMobileMenuOpen(false);
   };
 
-  // Функция отправки через Яндекс Функцию
+  const goToHome = () => {
+    if (location.pathname === '/') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate('/');
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 500);
+    }
+    setIsMobileMenuOpen(false);
+  };
+
+  // Обновленная функция отправки через Яндекс Функцию
   const sendToTelegram = async (data: typeof formData) => {
     const message = `
-🎨 <b>Запрос бесплатного макета с сайта ЗНАЧКОВ.РФ</b>
+📞 <b>Заказ обратного звонка с сайта ЗНАЧКОВ.РФ</b>
 
 👤 <b>Имя:</b> ${data.name || 'Не указано'}
 📞 <b>Телефон:</b> ${data.phone}
@@ -91,7 +133,6 @@ const Hero = () => {
     return responseData;
   };
 
-  // Обработка отправки формы
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -106,10 +147,26 @@ const Hero = () => {
       await sendToTelegram(formData);
       
       setIsModalOpen(false);
+      
+      let section = 'header';
+      if (location.pathname === '/') {
+        for (const link of navLinks) {
+          const id = link.href.substring(1);
+          const element = document.getElementById(id);
+          if (element) {
+            const rect = element.getBoundingClientRect();
+            if (rect.top < window.innerHeight / 2 && rect.bottom > 0) {
+              section = id;
+              break;
+            }
+          }
+        }
+      }
+      
       navigate('/thanks', { 
         state: { 
           from: '/',
-          section: 'hero' 
+          section: section
         } 
       });
       
@@ -124,7 +181,6 @@ const Hero = () => {
     }
   };
 
-  // Обработка изменений в форме
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
@@ -132,132 +188,155 @@ const Hero = () => {
     });
   };
 
-  // Открытие модального окна
   const openModal = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
+    setIsMobileMenuOpen(false);
   };
-
-  const benefits = [
-    { icon: Calendar, text: 'Работаем с 1972 года' },
-    { icon: Clock, text: 'От 14 дней' },
-    { icon: Shield, text: 'Проверка в УГИПН' },
-    { icon: Truck, text: 'Доставка по РФ' },
-  ];
 
   return (
     <>
-      <section
-        ref={heroRef}
-        className="relative min-h-[90vh] flex items-center overflow-hidden"
-        style={{ backgroundColor: '#0A0A0A' }}
+      {/* Затемнение фона при открытом мобильном меню */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
+          isScrolled || isMobileMenuOpen
+            ? 'bg-dark/95 backdrop-blur-md py-4'
+            : 'bg-transparent py-6'
+        }`}
       >
-        {/* Background gradient */}
-        <div className="absolute inset-0">
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-gold/5 to-transparent" />
-          <div className="absolute bottom-0 left-0 w-1/2 h-1/2 bg-gradient-to-t from-gold/5 to-transparent" />
+        <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
+          <div className="flex items-center justify-between">
+            <button 
+              onClick={goToHome} 
+              className="flex items-center gap-2"
+            >
+              <span className="font-serif text-2xl md:text-3xl font-bold text-gold-gradient">
+                ЗНАЧКОВ.РФ
+              </span>
+            </button>
+
+            <nav className="hidden lg:flex items-center gap-8">
+              {navLinks.map((link) => (
+                <button
+                  key={link.name}
+                  onClick={() => handleNavClick(link.href)}
+                  className="text-gray-300 hover:text-gold transition-colors duration-300 text-sm uppercase tracking-wider"
+                >
+                  {link.name}
+                </button>
+              ))}
+            </nav>
+
+            <div className="hidden lg:flex items-center gap-6">
+              <a
+                href="tel:+79227474474"
+                className="flex items-center gap-2 text-gold hover:text-gold-light transition-colors"
+              >
+                <Phone className="w-4 h-4" />
+                <span className="font-medium">+7 (922) 74-74-4-74</span>
+              </a>
+              <button
+                onClick={openModal}
+                className="btn-primary text-sm"
+              >
+                Заказать обратный звонок
+              </button>
+            </div>
+
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="lg:hidden text-white p-2 z-50 relative"
+              aria-label="Меню"
+            >
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
         </div>
+      </header>
 
-        {/* Content */}
-        <div className="relative z-10 w-full px-4 sm:px-6 lg:px-12 xl:px-20 pt-20 pb-8">
-          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center">
-            {/* Left column - Text */}
-            <div className="space-y-6">
-              <div className="reveal opacity-0">
-                <span className="inline-block px-4 py-2 border border-gold/30 text-gold text-sm uppercase tracking-widest mb-4">
-                  Премиум качество
-                </span>
-              </div>
+      {/* Мобильное меню на весь экран */}
+      <div
+        className={`lg:hidden fixed inset-0 z-[70] transform transition-transform duration-300 ease-in-out ${
+          isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        {/* Затемнение фона меню */}
+        <div className="absolute inset-0 bg-dark/98 backdrop-blur-md" />
+        
+        {/* Контент меню */}
+        <div className="relative h-full overflow-y-auto">
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="absolute top-6 right-6 text-white p-2 z-10 hover:text-gold transition-colors"
+            aria-label="Закрыть меню"
+          >
+            <X className="w-8 h-8" />
+          </button>
 
-              <h1 className="reveal opacity-0 animation-delay-100">
-                <span className="block font-serif text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight">
-                  ЮВЕЛИРНЫЕ
-                </span>
-                <span className="block font-serif text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-bold text-gold-gradient leading-tight mt-1">
-                  ЗНАЧКИ
-                </span>
-                <span className="block font-serif text-2xl sm:text-3xl lg:text-4xl text-white/90 mt-2">
-                  из золота и серебра
-                </span>
-              </h1>
-
-              <p className="reveal opacity-0 animation-delay-200 text-gray-400 text-lg md:text-xl max-w-xl leading-relaxed">
-                Корпоративная символика премиум-класса для вашего бренда. 
-                Собственное производство с 1972 года. Индивидуальное изготовление 
-                значков с логотипом вашей компании.
-              </p>
-
-              <div className="reveal opacity-0 animation-delay-300 flex flex-col sm:flex-row gap-4">
+          <div className="min-h-full flex flex-col justify-center px-6 py-20">
+            <div className="space-y-6 text-center">
+              {/* Навигационные ссылки */}
+              {navLinks.map((link) => (
                 <button
-                  onClick={openModal}
-                  className="btn-primary flex items-center justify-center gap-2 group animate-pulse-gold"
+                  key={link.name}
+                  onClick={() => {
+                    handleNavClick(link.href);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="block text-gray-300 hover:text-gold transition-colors text-3xl font-medium w-full py-3"
                 >
-                  <span>ПОЛУЧИТЬ БЕСПЛАТНЫЙ МАКЕТ</span>
-                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  {link.name}
                 </button>
-                <button
-                  onClick={scrollToPortfolio}
-                  className="btn-outline"
+              ))}
+              
+              {/* Контакты с подсветкой */}
+              <div className="pt-8 mt-8 border-t border-gray-800">
+                <a
+                  href="tel:+79227474474"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="group flex items-center justify-center gap-3 mb-6 text-xl transition-all duration-300"
                 >
-                  Смотреть портфолио
-                </button>
-              </div>
-
-              {/* Benefits */}
-              <div className="reveal opacity-0 animation-delay-400 grid grid-cols-2 sm:grid-cols-4 gap-4 pt-6 border-t border-gray-800">
-                {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <benefit.icon className="w-5 h-5 text-gold flex-shrink-0" />
-                    <span className="text-gray-400 text-sm">{benefit.text}</span>
+                  {/* Иконка с подсветкой */}
+                  <div className="w-12 h-12 rounded-full bg-gold/10 group-hover:bg-gold/20 flex items-center justify-center transition-colors">
+                    <Phone className="w-6 h-6 text-gold group-hover:scale-110 transition-transform" />
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right column - Image */}
-            <div className="reveal opacity-0 animation-delay-300 relative lg:col-span-1">
-              <div className="relative aspect-square max-w-md mx-auto lg:max-w-2xl xl:max-w-3xl">
-                {/* Glow effect */}
-                <div className="absolute inset-0 bg-gold/20 rounded-full blur-3xl transform scale-75" />
+                  {/* Номер с подсветкой */}
+                  <span className="text-gold font-medium group-hover:text-gold-light group-hover:scale-105 transition-all">
+                    +7 (922) 74-74-4-74
+                  </span>
+                </a>
                 
-                {/* Image container */}
-                <div className="relative z-10 w-full h-full overflow-hidden rounded-lg shadow-2xl">
-                  <img
-                    src="/images/hero-badges.jpg"
-                    alt="Ювелирные значки премиум класса"
-                    className="w-full h-full object-cover object-bottom"
-                  />
-                </div>
-                
-                {/* Decorative elements */}
-                <div className="absolute -top-6 -right-6 w-20 h-20 lg:w-24 lg:h-24 border border-gold/30 rounded-lg" />
-                <div className="absolute -bottom-6 -left-6 w-24 h-24 lg:w-28 lg:h-28 border border-gold/20 rounded-lg" />
+                <button
+                  onClick={() => {
+                    openModal();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="btn-primary text-lg px-8 py-4 hover:scale-105 transition-transform"
+                >
+                  Заказать обратный звонок
+                </button>
               </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 hidden lg:block">
-          <div className="w-5 h-8 border-2 border-gold/30 rounded-full flex justify-center">
-            <div className="w-1 h-2 bg-gold rounded-full mt-2 animate-bounce" />
-          </div>
-        </div>
-      </section>
-
-      {/* Модальное окно для получения макета */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-          {/* Overlay */}
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => !isSubmitting && setIsModalOpen(false)}
           />
           
-          {/* Modal Content */}
           <div className="relative bg-dark-light border border-gray-800 rounded-2xl max-w-md w-full p-8 shadow-2xl animate-fade-in-up">
-            {/* Close button */}
             <button
               onClick={() => !isSubmitting && setIsModalOpen(false)}
               className="absolute top-4 right-4 text-gray-500 hover:text-gold transition-colors"
@@ -267,17 +346,15 @@ const Hero = () => {
               <X className="w-6 h-6" />
             </button>
 
-            {/* Header */}
             <div className="text-center mb-6">
               <h3 className="font-serif text-2xl text-white mb-2">
-                Получить бесплатный макет
+                Заказать обратный звонок
               </h3>
               <p className="text-gray-400 text-sm">
-                Оставьте контакты и мы пришлем вам макет для согласования
+                Оставьте контакты и мы перезвоним вам в ближайшее время
               </p>
             </div>
 
-            {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
@@ -309,18 +386,17 @@ const Hero = () => {
                 />
               </div>
 
-              {/* Privacy Policy Checkbox */}
               <div className="flex items-start gap-3">
                 <div className="relative flex items-center h-6">
                   <input
                     type="checkbox"
-                    id="privacy-hero"
+                    id="privacy-header"
                     checked={isAgreed}
                     onChange={(e) => setIsAgreed(e.target.checked)}
                     className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
                   />
                 </div>
-                <label htmlFor="privacy-hero" className="text-sm text-gray-400 cursor-pointer">
+                <label htmlFor="privacy-header" className="text-sm text-gray-400 cursor-pointer">
                   Я соглашаюсь с{' '}
                   <a 
                     href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
@@ -346,8 +422,8 @@ const Hero = () => {
                   </>
                 ) : (
                   <>
-                    <span>ПОЛУЧИТЬ МАКЕТ</span>
-                    <ArrowRight className="w-5 h-5" />
+                    <span>ЗАКАЗАТЬ ЗВОНОК</span>
+                    <span>📞</span>
                   </>
                 )}
               </button>
@@ -359,4 +435,4 @@ const Hero = () => {
   );
 };
 
-export default Hero;
+export default Header;
