@@ -2,8 +2,12 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Phone, X, Menu } from 'lucide-react';
 
-const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
+// Константа с URL вашей Яндекс Функции
+const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+
+// Убираем прямые переменные Telegram, они больше не нужны на фронте
+// const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
+// const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
 
 const Header = () => {
   const navigate = useNavigate();
@@ -94,38 +98,36 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   };
 
+  // Обновленная функция отправки через Яндекс Функцию
   const sendToTelegram = async (data: typeof formData) => {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      throw new Error('Отсутствует токен Telegram');
-    }
-
     const message = `
 📞 <b>Заказ обратного звонка с сайта ЗНАЧКОВ.РФ</b>
 
 👤 <b>Имя:</b> ${data.name || 'Не указано'}
 📞 <b>Телефон:</b> ${data.phone}
 
-⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg' })}
+⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
+  timeZone: 'Asia/Yekaterinburg',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}
     `;
 
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const response = await fetch(url, {
+    const response = await fetch(YANDEX_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: 'HTML',
-      }),
+      body: JSON.stringify({ message }),
     });
 
     const responseData = await response.json();
     
-    if (!response.ok) {
-      throw new Error(responseData.description || 'Ошибка отправки в Telegram');
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
     }
 
     return responseData;
