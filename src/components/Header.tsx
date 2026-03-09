@@ -5,10 +5,6 @@ import { Phone, X, Menu } from 'lucide-react';
 // Константа с URL вашей Яндекс Функции
 const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
-// Убираем прямые переменные Telegram, они больше не нужны на фронте
-// const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-// const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
-
 const Header = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -21,6 +17,11 @@ const Header = () => {
   });
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Отладка: логируем состояние при загрузке компонента
+  console.log('📍 Header загружен');
+  console.log('📍 Текущий pathname:', location.pathname);
+  console.log('📦 State из навигации:', location.state);
 
   // Блокировка скролла при открытом меню или модальном окне
   useEffect(() => {
@@ -46,13 +47,18 @@ const Header = () => {
   useEffect(() => {
     if (location.pathname === '/' && location.state?.scrollTo) {
       const sectionId = location.state.scrollTo;
+      console.log('🎯 Попытка скролла к секции:', sectionId);
       
       const timer = setTimeout(() => {
         const element = document.getElementById(sectionId);
         if (element) {
+          console.log('✅ Элемент найден, скроллим к', sectionId);
           const yOffset = -80;
           const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
           window.scrollTo({ top: y, behavior: 'smooth' });
+        } else {
+          console.log('❌ Элемент не найден:', sectionId);
+          console.log('🔍 Проверьте, есть ли на странице элемент с id="' + sectionId + '"');
         }
       }, 500);
       
@@ -71,6 +77,7 @@ const Header = () => {
 
   const handleNavClick = (href: string) => {
     const sectionId = href.substring(1);
+    console.log('🔗 Навигация к секции:', sectionId);
     
     if (location.pathname === '/') {
       const element = document.getElementById(sectionId);
@@ -87,6 +94,7 @@ const Header = () => {
   };
 
   const goToHome = () => {
+    console.log('🏠 Возврат на главную');
     if (location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -134,74 +142,82 @@ const Header = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (!isAgreed) {
-    alert('Необходимо согласиться с политикой конфиденциальности');
-    return;
-  }
-  
-  setIsSubmitting(true);
-  
-  try {
-    await sendToTelegram(formData);
+    e.preventDefault();
     
-    setIsModalOpen(false);
+    if (!isAgreed) {
+      alert('Необходимо согласиться с политикой конфиденциальности');
+      return;
+    }
     
-    // ===== ВАЖНО: Определяем текущую секцию =====
-    let currentSection = 'hero'; // по умолчанию
+    setIsSubmitting(true);
     
-    if (location.pathname === '/') {
-      // Массив всех секций на главной
-      const sections = [
-        { id: 'hero', element: document.getElementById('hero') },
-        { id: 'portfolio', element: document.getElementById('portfolio') },
-        { id: 'types', element: document.getElementById('types') },
-        { id: 'why-us', element: document.getElementById('why-us') },
-        { id: 'process', element: document.getElementById('process') },
-        { id: 'benefits', element: document.getElementById('benefits') },
-        { id: 'cta', element: document.getElementById('cta') },
-        { id: 'contact', element: document.getElementById('contact') }
-      ];
+    try {
+      await sendToTelegram(formData);
       
-      // Текущая позиция скролла
-      const scrollPosition = window.scrollY + 200; // +200 для учёта шапки
+      setIsModalOpen(false);
       
-      // Ищем секцию, в которой находится пользователь
-      for (const section of sections) {
-        if (section.element) {
-          const rect = section.element.getBoundingClientRect();
-          const sectionTop = window.scrollY + rect.top;
-          const sectionBottom = sectionTop + rect.height;
-          
-          // Если текущая позиция скролла внутри этой секции
-          if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
-            currentSection = section.id;
-            console.log(`Пользователь в секции: ${section.id}`); // Для отладки
-            break;
+      // ===== ВАЖНО: Определяем текущую секцию =====
+      let currentSection = 'hero'; // по умолчанию
+      
+      if (location.pathname === '/') {
+        // Массив всех секций на главной
+        const sections = [
+          { id: 'hero', element: document.getElementById('hero') },
+          { id: 'portfolio', element: document.getElementById('portfolio') },
+          { id: 'types', element: document.getElementById('types') },
+          { id: 'why-us', element: document.getElementById('why-us') },
+          { id: 'process', element: document.getElementById('process') },
+          { id: 'benefits', element: document.getElementById('benefits') },
+          { id: 'cta', element: document.getElementById('cta') },
+          { id: 'contact', element: document.getElementById('contact') }
+        ];
+        
+        // Текущая позиция скролла
+        const scrollPosition = window.scrollY + 200; // +200 для учёта шапки
+        
+        console.log('📏 Текущая позиция скролла:', scrollPosition);
+        
+        // Ищем секцию, в которой находится пользователь
+        for (const section of sections) {
+          if (section.element) {
+            const rect = section.element.getBoundingClientRect();
+            const sectionTop = window.scrollY + rect.top;
+            const sectionBottom = sectionTop + rect.height;
+            
+            console.log(`🔍 Секция ${section.id}: от ${sectionTop} до ${sectionBottom}`);
+            
+            // Если текущая позиция скролла внутри этой секции
+            if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
+              currentSection = section.id;
+              console.log(`✅ Пользователь в секции: ${section.id}`);
+              break;
+            }
+          } else {
+            console.log(`⚠️ Элемент ${section.id} не найден на странице`);
           }
         }
       }
+      // ============================================
+      
+      console.log('📤 Отправляем на thanks с секцией:', currentSection);
+      
+      navigate('/thanks', { 
+        state: { 
+          from: '/',
+          section: currentSection
+        } 
+      });
+      
+      setFormData({ name: '', phone: '' });
+      setIsAgreed(false);
+      
+    } catch (error) {
+      console.error('❌ Ошибка отправки:', error);
+      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
+    } finally {
+      setIsSubmitting(false);
     }
-    // ============================================
-    
-    navigate('/thanks', { 
-      state: { 
-        from: '/',
-        section: currentSection // Передаём реальную секцию, а не 'header'
-      } 
-    });
-    
-    setFormData({ name: '', phone: '' });
-    setIsAgreed(false);
-    
-  } catch (error) {
-    console.error('Ошибка отправки:', error);
-    alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -211,6 +227,7 @@ const Header = () => {
   };
 
   const openModal = () => {
+    console.log('📱 Открытие модального окна');
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
@@ -326,11 +343,9 @@ const Header = () => {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="group flex items-center justify-center gap-3 mb-6 text-xl transition-all duration-300"
                 >
-                  {/* Иконка с подсветкой */}
                   <div className="w-12 h-12 rounded-full bg-gold/10 group-hover:bg-gold/20 flex items-center justify-center transition-colors">
                     <Phone className="w-6 h-6 text-gold group-hover:scale-110 transition-transform" />
                   </div>
-                  {/* Номер с подсветкой */}
                   <span className="text-gold font-medium group-hover:text-gold-light group-hover:scale-105 transition-all">
                     +7 (922) 74-74-4-74
                   </span>
