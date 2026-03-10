@@ -44,76 +44,78 @@ const Header = () => {
   }, []);
 
   // Обработка скролла при возврате с якорем
-  useEffect(() => {
-    if (location.pathname === '/' && location.state?.scrollTo) {
-      const sectionId = location.state.scrollTo;
-      const originalScreenWidth = location.state?.originalScreenWidth;
-      
-      console.log('🎯 Попытка скролла к секции:', sectionId);
-      console.log('📱 Текущая ширина экрана:', window.innerWidth);
-      console.log('📱 Исходная ширина экрана:', originalScreenWidth);
-      console.log('📦 Полный state:', location.state);
-      
-      // Проверяем, есть ли элемент в DOM прямо сейчас
-      const elementNow = document.getElementById(sectionId);
-      console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
-      
-      if (elementNow) {
-        const rect = elementNow.getBoundingClientRect();
-        console.log('📐 Позиция элемента сейчас:', {
-          top: rect.top,
-          bottom: rect.bottom,
-          height: rect.height,
-          offsetTop: elementNow.offsetTop,
-          pageYOffset: window.pageYOffset
-        });
-      } else {
-        // Если элемента нет, выведем все ID на странице
-        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
-        console.log('📋 Все ID на странице:', allIds);
-      }
-      
-      const timer = setTimeout(() => {
-        const element = document.getElementById(sectionId);
-        console.log('⏰ Через 800мс - элемент найден:', !!element);
-        
-        if (element) {
-          console.log('✅ Элемент найден, скроллим к', sectionId);
-          
-          const getYOffsetByScreenWidth = (width: number) => {
-            if (width < 640) return -40;
-            if (width < 768) return -50;
-            if (width < 1024) return -60;
-            if (width < 1280) return -70;
-            return -80;
-          };
-          
-          const widthForOffset = originalScreenWidth || window.innerWidth;
-          const yOffset = getYOffsetByScreenWidth(widthForOffset);
-          console.log('📏 Отступ для ширины', widthForOffset, ':', yOffset);
-          
-          const targetY = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-          console.log('🎯 Целевая позиция скролла:', targetY);
-          console.log('📍 Текущая позиция скролла ДО:', window.scrollY);
-          
-          window.scrollTo({ top: targetY, behavior: 'smooth' });
-          
-          // Проверим, куда реально проскроллило через 100мс
-          setTimeout(() => {
-            console.log('📍 ПОСЛЕ скролла позиция:', window.scrollY);
-            console.log('🎯 Должны были попасть в:', targetY);
-            console.log('📐 Разница:', Math.abs(window.scrollY - targetY));
-          }, 100);
-        } else {
-          console.log('❌ Элемент не найден через 800мс');
-        }
-      }, 800);
-      
-      navigate('/', { replace: true, state: {} });
-      
-      return () => clearTimeout(timer);
+useEffect(() => {
+  if (location.pathname === '/' && location.state?.scrollTo) {
+    const sectionId = location.state.scrollTo;
+    const originalScreenWidth = location.state?.originalScreenWidth;
+    
+    console.log('🎯 Попытка скролла к секции:', sectionId);
+    console.log('📱 Текущая ширина экрана:', window.innerWidth);
+    console.log('📱 Исходная ширина экрана:', originalScreenWidth);
+    console.log('📦 Полный state:', location.state);
+    
+    // Проверяем, есть ли элемент в DOM прямо сейчас
+    const elementNow = document.getElementById(sectionId);
+    console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
+    
+    if (elementNow) {
+      const rect = elementNow.getBoundingClientRect();
+      console.log('📐 Позиция элемента сейчас:', {
+        top: rect.top,
+        bottom: rect.bottom,
+        height: rect.height,
+        offsetTop: elementNow.offsetTop,
+        pageYOffset: window.pageYOffset
+      });
+    } else {
+      const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+      console.log('📋 Все ID на странице:', allIds);
     }
-  }, [location, navigate]);
+    
+    const timer = setTimeout(() => {
+      const element = document.getElementById(sectionId);
+      console.log('⏰ Через 800мс - элемент найден:', !!element);
+      
+      if (element) {
+        console.log('✅ Элемент найден, скроллим к', sectionId);
+        
+        const getYOffsetByScreenWidth = (width: number) => {
+          if (width < 640) return -40;
+          if (width < 768) return -50;
+          if (width < 1024) return -60;
+          if (width < 1280) return -70;
+          return -80;
+        };
+        
+        const widthForOffset = originalScreenWidth || window.innerWidth;
+        const yOffset = getYOffsetByScreenWidth(widthForOffset);
+        console.log('📏 Отступ для ширины', widthForOffset, ':', yOffset);
+        
+        const targetY = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        console.log('🎯 Целевая позиция скролла:', targetY);
+        console.log('📍 Текущая позиция скролла ДО:', window.scrollY);
+        
+        window.scrollTo({ top: targetY, behavior: 'smooth' });
+        
+        // Проверим, куда реально проскроллило через 100мс
+        setTimeout(() => {
+          console.log('📍 ПОСЛЕ скролла позиция:', window.scrollY);
+          console.log('🎯 Должны были попасть в:', targetY);
+          console.log('📐 Разница:', Math.abs(window.scrollY - targetY));
+          
+          // Очищаем state ТОЛЬКО после того, как скролл выполнился
+          navigate('/', { replace: true, state: {} });
+        }, 100);
+      } else {
+        console.log('❌ Элемент не найден через 800мс');
+        // Очищаем state даже если элемент не найден
+        navigate('/', { replace: true, state: {} });
+      }
+    }, 800);
+    
+    return () => clearTimeout(timer);
+  }
+}, [location, navigate]);
 
   const navLinks = [
     { name: 'Портфолио', href: '#portfolio' },
