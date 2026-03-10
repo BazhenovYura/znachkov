@@ -149,10 +149,11 @@ const Hero = () => {
   return (
     <>
       <section
-        ref={heroRef}
-        className="relative min-h-[90vh] flex items-center overflow-hidden"
-        style={{ backgroundColor: '#0A0A0A' }}
-      >
+  id="hero"  // ← Добавьте эту строку!
+  ref={heroRef}
+  className="relative min-h-[90vh] flex items-center overflow-hidden"
+  style={{ backgroundColor: '#0A0A0A' }}
+>
         {/* Background gradient */}
         <div className="absolute inset-0">
           <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-gold/5 to-transparent" />
