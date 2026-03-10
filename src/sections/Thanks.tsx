@@ -7,26 +7,31 @@ const ThanksPage = () => {
   const location = useLocation();
   const from = location.state?.from || '/';
   const section = location.state?.section;
+  const originalScreenWidth = location.state?.screenWidth; // Ширина экрана при отправке
+
+  console.log('🙏 Thanks page loaded with section:', section);
+  console.log('📱 Исходная ширина экрана:', originalScreenWidth);
 
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
 
   const handleReturnHome = () => {
-  if (section) {
-    // Сначала переходим
-    navigate('/', { state: { scrollTo: section } });
-    // И сразу прокручиваем (запасной вариант)
-    setTimeout(() => {
-      const element = document.getElementById(section);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-  } else {
-    navigate(from);
-  }
-};
+    console.log('🔙 Возврат на главную с секцией:', section);
+    console.log('📱 Текущая ширина экрана:', window.innerWidth);
+    console.log('📱 Исходная ширина экрана:', originalScreenWidth);
+    
+    if (section) {
+      navigate('/', { 
+        state: { 
+          scrollTo: section,
+          originalScreenWidth: originalScreenWidth // Передаём дальше
+        } 
+      });
+    } else {
+      navigate(from);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
