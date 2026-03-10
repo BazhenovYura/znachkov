@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Gem, Crown, Circle, Dot, X, Upload } from 'lucide-react';
 
 // Константа с URL вашей Яндекс Функции для файлов
-const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/ваш-новый-id-функции';
+const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
 interface BadgeType {
