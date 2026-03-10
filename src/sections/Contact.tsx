@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle, Upload, X } from 'lucide-react';
 
-// Константа с URL вашей Яндекс Функции
-const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+// Константы с URL ваших Яндекс Функций
+const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
 const Contact = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
+  
+  // Состояния для формы
   const [formData, setFormData] = useState({
     name: '',
     company: '',
@@ -16,6 +19,8 @@ const Contact = () => {
     email: '',
     comment: '',
   });
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [consentError, setConsentError] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -56,16 +61,42 @@ const Contact = () => {
     }
   };
 
-  // Функция отправки через Яндекс Функцию
-  const sendToTelegram = async (formDataToSend: typeof formData) => {
-    const message = `
-🔥 <b>Новая заявка с сайта ЗНАЧКОВ.РФ</b>
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      
+      // Если это изображение, создаем превью
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreview(null);
+      }
+    }
+  };
 
-👤 <b>Имя:</b> ${formDataToSend.name || 'Не указано'}
-🏢 <b>Компания:</b> ${formDataToSend.company || 'Не указана'}
-📞 <b>Телефон:</b> ${formDataToSend.phone}
-📧 <b>Email:</b> ${formDataToSend.email || 'Не указан'}
-💬 <b>Комментарий:</b> ${formDataToSend.comment || 'Без комментария'}
+  const removeFile = () => {
+    setUploadedFile(null);
+    setFilePreview(null);
+  };
+
+  // Функция отправки текста (без файла)
+  const sendTextToTelegram = async (data: typeof formData) => {
+    const message = `
+🔥 <b>НОВАЯ ЗАЯВКА С САЙТА ЗНАЧКОВ.РФ</b>
+━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "Контакты" (низ страницы)
+
+👤 <b>Имя:</b> ${data.name || 'Не указано'}
+🏢 <b>Компания:</b> ${data.company || 'Не указана'}
+📞 <b>Телефон:</b> ${data.phone}
+📧 <b>Email:</b> ${data.email || 'Не указан'}
+💬 <b>Комментарий:</b> ${data.comment || 'Без комментария'}
 
 ⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
   timeZone: 'Asia/Yekaterinburg',
@@ -77,12 +108,56 @@ const Contact = () => {
 })}
     `;
 
-    const response = await fetch(YANDEX_FUNCTION_URL, {
+    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ message }),
+    });
+
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
+    }
+
+    return responseData;
+  };
+
+  // Функция отправки с файлом
+  const sendFileToTelegram = async (data: typeof formData, file: File) => {
+    const caption = `
+🔥 <b>НОВАЯ ЗАЯВКА С САЙТА ЗНАЧКОВ.РФ (С ФАЙЛОМ)</b>
+━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "Контакты" (низ страницы)
+
+👤 <b>Имя:</b> ${data.name || 'Не указано'}
+🏢 <b>Компания:</b> ${data.company || 'Не указана'}
+📞 <b>Телефон:</b> ${data.phone}
+📧 <b>Email:</b> ${data.email || 'Не указан'}
+💬 <b>Комментарий:</b> ${data.comment || 'Без комментария'}
+
+📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
+
+⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
+  timeZone: 'Asia/Yekaterinburg',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}
+    `;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caption', caption);
+    
+    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
+      method: 'POST',
+      body: formData,
     });
 
     const responseData = await response.json();
@@ -111,10 +186,16 @@ const Contact = () => {
     setIsSubmitting(true);
     
     try {
-      await sendToTelegram(formData);
+      if (uploadedFile) {
+        await sendFileToTelegram(formData, uploadedFile);
+      } else {
+        await sendTextToTelegram(formData);
+      }
       
       setIsSubmitted(true);
       setFormData({ name: '', company: '', phone: '', email: '', comment: '' });
+      setUploadedFile(null);
+      setFilePreview(null);
       setIsAgreed(false);
       
       // Переход на страницу благодарности с передачей секции и ширины экрана
@@ -321,6 +402,59 @@ const Contact = () => {
                   className="w-full px-4 py-3 bg-dark-light border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors resize-none"
                   placeholder="Опишите ваши пожелания: количество, размер, материал..."
                 />
+              </div>
+
+              {/* File Upload */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">
+                  Прикрепить файл <span className="text-gray-600">(необязательно)</span>
+                </label>
+                
+                {!uploadedFile ? (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="contact-file-upload"
+                    />
+                    <label
+                      htmlFor="contact-file-upload"
+                      className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark-light border border-gray-800 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
+                    >
+                      <Upload className="w-5 h-5" />
+                      <span>Выберите файл (изображение, PDF, документ)</span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-dark-light border border-gray-800 rounded-lg">
+                    {filePreview ? (
+                      <img
+                        src={filePreview}
+                        alt="Preview"
+                        className="w-12 h-12 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center">
+                        <Upload className="w-6 h-6 text-gold" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm truncate">{uploadedFile.name}</p>
+                      <p className="text-gray-500 text-xs">
+                        {(uploadedFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeFile}
+                      className="text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Privacy Policy Checkbox */}
