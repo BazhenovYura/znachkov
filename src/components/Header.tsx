@@ -142,82 +142,81 @@ const Header = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
+  
+  if (!isAgreed) {
+    alert('Необходимо согласиться с политикой конфиденциальности');
+    return;
+  }
+  
+  setIsSubmitting(true);
+  
+  try {
+    await sendToTelegram(formData);
     
-    if (!isAgreed) {
-      alert('Необходимо согласиться с политикой конфиденциальности');
-      return;
-    }
+    setIsModalOpen(false);
     
-    setIsSubmitting(true);
+    // ===== ВАЖНО: Определяем текущую секцию =====
+    let currentSection = 'hero'; // по умолчанию
+    let currentScreenWidth = window.innerWidth; // ЗАПОМИНАЕМ ШИРИНУ ЭКРАНА
     
-    try {
-      await sendToTelegram(formData);
+    if (location.pathname === '/') {
+      // Массив всех секций на главной
+      const sections = [
+        { id: 'hero', element: document.getElementById('hero') },
+        { id: 'portfolio', element: document.getElementById('portfolio') },
+        { id: 'types', element: document.getElementById('types') },
+        { id: 'why-us', element: document.getElementById('why-us') },
+        { id: 'process', element: document.getElementById('process') },
+        { id: 'benefits', element: document.getElementById('benefits') },
+        { id: 'cta', element: document.getElementById('cta') },
+        { id: 'contact', element: document.getElementById('contact') }
+      ];
       
-      setIsModalOpen(false);
+      // Текущая позиция скролла
+      const scrollPosition = window.scrollY + 200;
       
-      // ===== ВАЖНО: Определяем текущую секцию =====
-      let currentSection = 'hero'; // по умолчанию
+      console.log('📏 Текущая позиция скролла:', scrollPosition);
+      console.log('📱 Ширина экрана при отправке:', currentScreenWidth);
       
-      if (location.pathname === '/') {
-        // Массив всех секций на главной
-        const sections = [
-          { id: 'hero', element: document.getElementById('hero') },
-          { id: 'portfolio', element: document.getElementById('portfolio') },
-          { id: 'types', element: document.getElementById('types') },
-          { id: 'why-us', element: document.getElementById('why-us') },
-          { id: 'process', element: document.getElementById('process') },
-          { id: 'benefits', element: document.getElementById('benefits') },
-          { id: 'cta', element: document.getElementById('cta') },
-          { id: 'contact', element: document.getElementById('contact') }
-        ];
-        
-        // Текущая позиция скролла
-        const scrollPosition = window.scrollY + 200; // +200 для учёта шапки
-        
-        console.log('📏 Текущая позиция скролла:', scrollPosition);
-        
-        // Ищем секцию, в которой находится пользователь
-        for (const section of sections) {
-          if (section.element) {
-            const rect = section.element.getBoundingClientRect();
-            const sectionTop = window.scrollY + rect.top;
-            const sectionBottom = sectionTop + rect.height;
-            
-            console.log(`🔍 Секция ${section.id}: от ${sectionTop} до ${sectionBottom}`);
-            
-            // Если текущая позиция скролла внутри этой секции
-            if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
-              currentSection = section.id;
-              console.log(`✅ Пользователь в секции: ${section.id}`);
-              break;
-            }
-          } else {
-            console.log(`⚠️ Элемент ${section.id} не найден на странице`);
+      // Ищем секцию, в которой находится пользователь
+      for (const section of sections) {
+        if (section.element) {
+          const rect = section.element.getBoundingClientRect();
+          const sectionTop = window.scrollY + rect.top;
+          const sectionBottom = sectionTop + rect.height;
+          
+          if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
+            currentSection = section.id;
+            console.log(`✅ Пользователь в секции: ${section.id}`);
+            break;
           }
         }
       }
-      // ============================================
-      
-      console.log('📤 Отправляем на thanks с секцией:', currentSection);
-      
-      navigate('/thanks', { 
-        state: { 
-          from: '/',
-          section: currentSection
-        } 
-      });
-      
-      setFormData({ name: '', phone: '' });
-      setIsAgreed(false);
-      
-    } catch (error) {
-      console.error('❌ Ошибка отправки:', error);
-      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
-    } finally {
-      setIsSubmitting(false);
     }
-  };
+    // ============================================
+    
+    console.log('📤 Отправляем на thanks с секцией:', currentSection);
+    console.log('📱 Передаём ширину экрана:', currentScreenWidth);
+    
+    navigate('/thanks', { 
+      state: { 
+        from: '/',
+        section: currentSection,
+        screenWidth: currentScreenWidth // ПЕРЕДАЁМ ШИРИНУ ЭКРАНА
+      } 
+    });
+    
+    setFormData({ name: '', phone: '' });
+    setIsAgreed(false);
+    
+  } catch (error) {
+    console.error('❌ Ошибка отправки:', error);
+    alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
