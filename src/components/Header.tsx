@@ -44,68 +44,76 @@ const Header = () => {
   }, []);
 
   // Обработка скролла при возврате с якорем
-useEffect(() => {
-  if (location.pathname === '/' && location.state?.scrollTo) {
-    const sectionId = location.state.scrollTo;
-    const originalScreenWidth = location.state?.originalScreenWidth;
-    
-    console.log('🎯 Попытка скролла к секции:', sectionId);
-    console.log('📱 Текущая ширина экрана:', window.innerWidth);
-    console.log('📱 Исходная ширина экрана:', originalScreenWidth);
-    console.log('📦 Полный state:', location.state);
-    
-    // Проверяем, есть ли элемент в DOM прямо сейчас
-    const elementNow = document.getElementById(sectionId);
-    console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
-    
-    if (elementNow) {
-      const rect = elementNow.getBoundingClientRect();
-      console.log('📐 Позиция элемента сейчас:', {
-        top: rect.top,
-        bottom: rect.bottom,
-        height: rect.height,
-        offsetTop: elementNow.offsetTop
-      });
-    } else {
-      // Если элемента нет, выведем все ID на странице
-      const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
-      console.log('📋 Все ID на странице:', allIds);
-    }
-    
-    const timer = setTimeout(() => {
-      const element = document.getElementById(sectionId);
-      console.log('⏰ Через 800мс - элемент найден:', !!element);
+  useEffect(() => {
+    if (location.pathname === '/' && location.state?.scrollTo) {
+      const sectionId = location.state.scrollTo;
+      const originalScreenWidth = location.state?.originalScreenWidth;
       
-      if (element) {
-        console.log('✅ Элемент найден, скроллим к', sectionId);
-        
-        const getYOffsetByScreenWidth = (width: number) => {
-          if (width < 640) return -40;
-          if (width < 768) return -50;
-          if (width < 1024) return -60;
-          if (width < 1280) return -70;
-          return -80;
-        };
-        
-        const widthForOffset = originalScreenWidth || window.innerWidth;
-        const yOffset = getYOffsetByScreenWidth(widthForOffset);
-        console.log('📏 Отступ:', yOffset);
-        
-        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-        console.log('🎯 Целевая позиция скролла:', y);
-        console.log('📍 Текущая позиция скролла:', window.scrollY);
-        
-        window.scrollTo({ top: y, behavior: 'smooth' });
+      console.log('🎯 Попытка скролла к секции:', sectionId);
+      console.log('📱 Текущая ширина экрана:', window.innerWidth);
+      console.log('📱 Исходная ширина экрана:', originalScreenWidth);
+      console.log('📦 Полный state:', location.state);
+      
+      // Проверяем, есть ли элемент в DOM прямо сейчас
+      const elementNow = document.getElementById(sectionId);
+      console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
+      
+      if (elementNow) {
+        const rect = elementNow.getBoundingClientRect();
+        console.log('📐 Позиция элемента сейчас:', {
+          top: rect.top,
+          bottom: rect.bottom,
+          height: rect.height,
+          offsetTop: elementNow.offsetTop,
+          pageYOffset: window.pageYOffset
+        });
       } else {
-        console.log('❌ Элемент не найден через 800мс');
+        // Если элемента нет, выведем все ID на странице
+        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+        console.log('📋 Все ID на странице:', allIds);
       }
-    }, 800);
-    
-    navigate('/', { replace: true, state: {} });
-    
-    return () => clearTimeout(timer);
-  }
-}, [location, navigate]);
+      
+      const timer = setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        console.log('⏰ Через 800мс - элемент найден:', !!element);
+        
+        if (element) {
+          console.log('✅ Элемент найден, скроллим к', sectionId);
+          
+          const getYOffsetByScreenWidth = (width: number) => {
+            if (width < 640) return -40;
+            if (width < 768) return -50;
+            if (width < 1024) return -60;
+            if (width < 1280) return -70;
+            return -80;
+          };
+          
+          const widthForOffset = originalScreenWidth || window.innerWidth;
+          const yOffset = getYOffsetByScreenWidth(widthForOffset);
+          console.log('📏 Отступ для ширины', widthForOffset, ':', yOffset);
+          
+          const targetY = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          console.log('🎯 Целевая позиция скролла:', targetY);
+          console.log('📍 Текущая позиция скролла ДО:', window.scrollY);
+          
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+          
+          // Проверим, куда реально проскроллило через 100мс
+          setTimeout(() => {
+            console.log('📍 ПОСЛЕ скролла позиция:', window.scrollY);
+            console.log('🎯 Должны были попасть в:', targetY);
+            console.log('📐 Разница:', Math.abs(window.scrollY - targetY));
+          }, 100);
+        } else {
+          console.log('❌ Элемент не найден через 800мс');
+        }
+      }, 800);
+      
+      navigate('/', { replace: true, state: {} });
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location, navigate]);
 
   const navLinks = [
     { name: 'Портфолио', href: '#portfolio' },
@@ -181,81 +189,86 @@ useEffect(() => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (!isAgreed) {
-    alert('Необходимо согласиться с политикой конфиденциальности');
-    return;
-  }
-  
-  setIsSubmitting(true);
-  
-  try {
-    await sendToTelegram(formData);
+    e.preventDefault();
     
-    setIsModalOpen(false);
+    if (!isAgreed) {
+      alert('Необходимо согласиться с политикой конфиденциальности');
+      return;
+    }
     
-    // ===== ВАЖНО: Определяем текущую секцию =====
-    let currentSection = 'hero'; // по умолчанию
-    let currentScreenWidth = window.innerWidth; // ЗАПОМИНАЕМ ШИРИНУ ЭКРАНА
+    setIsSubmitting(true);
     
-    if (location.pathname === '/') {
-      // Массив всех секций на главной
-      const sections = [
-        { id: 'hero', element: document.getElementById('hero') },
-        { id: 'portfolio', element: document.getElementById('portfolio') },
-        { id: 'types', element: document.getElementById('types') },
-        { id: 'why-us', element: document.getElementById('why-us') },
-        { id: 'process', element: document.getElementById('process') },
-        { id: 'benefits', element: document.getElementById('benefits') },
-        { id: 'cta', element: document.getElementById('cta') },
-        { id: 'contact', element: document.getElementById('contact') }
-      ];
+    try {
+      await sendToTelegram(formData);
       
-      // Текущая позиция скролла
-      const scrollPosition = window.scrollY + 200;
+      setIsModalOpen(false);
       
-      console.log('📏 Текущая позиция скролла:', scrollPosition);
-      console.log('📱 Ширина экрана при отправке:', currentScreenWidth);
+      // ===== ВАЖНО: Определяем текущую секцию =====
+      let currentSection = 'hero'; // по умолчанию
+      let currentScreenWidth = window.innerWidth;
       
-      // Ищем секцию, в которой находится пользователь
-      for (const section of sections) {
-        if (section.element) {
-          const rect = section.element.getBoundingClientRect();
-          const sectionTop = window.scrollY + rect.top;
-          const sectionBottom = sectionTop + rect.height;
-          
-          if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
-            currentSection = section.id;
-            console.log(`✅ Пользователь в секции: ${section.id}`);
-            break;
+      if (location.pathname === '/') {
+        // Массив всех секций на главной
+        const sections = [
+          { id: 'hero', element: document.getElementById('hero') },
+          { id: 'portfolio', element: document.getElementById('portfolio') },
+          { id: 'types', element: document.getElementById('types') },
+          { id: 'why-us', element: document.getElementById('why-us') },
+          { id: 'process', element: document.getElementById('process') },
+          { id: 'benefits', element: document.getElementById('benefits') },
+          { id: 'cta', element: document.getElementById('cta') },
+          { id: 'contact', element: document.getElementById('contact') }
+        ];
+        
+        // Текущая позиция скролла с учётом шапки
+        const scrollPosition = window.scrollY + 200;
+        
+        console.log('📏 Текущая позиция скролла:', scrollPosition);
+        console.log('📱 Ширина экрана при отправке:', currentScreenWidth);
+        
+        // Ищем секцию, в которой находится пользователь
+        for (const section of sections) {
+          if (section.element) {
+            const rect = section.element.getBoundingClientRect();
+            const sectionTop = window.scrollY + rect.top;
+            const sectionBottom = sectionTop + rect.height;
+            
+            console.log(`🔍 Секция ${section.id}: от ${sectionTop} до ${sectionBottom}, текущая ${scrollPosition}`);
+            
+            // Если текущая позиция скролла внутри этой секции
+            if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
+              currentSection = section.id;
+              console.log(`✅ Пользователь в секции: ${section.id}`);
+              break;
+            }
+          } else {
+            console.log(`⚠️ Элемент ${section.id} не найден на странице`);
           }
         }
       }
+      // ============================================
+      
+      console.log('📤 Отправляем на thanks с секцией:', currentSection);
+      console.log('📱 Передаём ширину экрана:', currentScreenWidth);
+      
+      navigate('/thanks', { 
+        state: { 
+          from: '/',
+          section: currentSection,
+          screenWidth: currentScreenWidth
+        } 
+      });
+      
+      setFormData({ name: '', phone: '' });
+      setIsAgreed(false);
+      
+    } catch (error) {
+      console.error('❌ Ошибка отправки:', error);
+      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
+    } finally {
+      setIsSubmitting(false);
     }
-    // ============================================
-    
-    console.log('📤 Отправляем на thanks с секцией:', currentSection);
-    console.log('📱 Передаём ширину экрана:', currentScreenWidth);
-    
-    navigate('/thanks', { 
-      state: { 
-        from: '/',
-        section: currentSection,
-        screenWidth: currentScreenWidth // ПЕРЕДАЁМ ШИРИНУ ЭКРАНА
-      } 
-    });
-    
-    setFormData({ name: '', phone: '' });
-    setIsAgreed(false);
-    
-  } catch (error) {
-    console.error('❌ Ошибка отправки:', error);
-    alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -345,10 +358,8 @@ useEffect(() => {
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        {/* Затемнение фона меню */}
         <div className="absolute inset-0 bg-dark/98 backdrop-blur-md" />
         
-        {/* Контент меню */}
         <div className="relative h-full overflow-y-auto">
           <button
             onClick={() => setIsMobileMenuOpen(false)}
@@ -360,7 +371,6 @@ useEffect(() => {
 
           <div className="min-h-full flex flex-col justify-center px-6 py-20">
             <div className="space-y-6 text-center">
-              {/* Навигационные ссылки */}
               {navLinks.map((link) => (
                 <button
                   key={link.name}
@@ -374,7 +384,6 @@ useEffect(() => {
                 </button>
               ))}
               
-              {/* Контакты с подсветкой */}
               <div className="pt-8 mt-8 border-t border-gray-800">
                 <a
                   href="tel:+79227474474"
