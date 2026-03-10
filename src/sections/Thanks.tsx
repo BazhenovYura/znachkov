@@ -13,14 +13,20 @@ const ThanksPage = () => {
   }, []);
 
   const handleReturnHome = () => {
-    if (section) {
-      // Если есть секция, переходим на главную с якорем
-      navigate('/', { state: { scrollTo: section } });
-    } else {
-      // Иначе просто на главную
-      navigate(from);
-    }
-  };
+  if (section) {
+    // Сначала переходим
+    navigate('/', { state: { scrollTo: section } });
+    // И сразу прокручиваем (запасной вариант)
+    setTimeout(() => {
+      const element = document.getElementById(section);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  } else {
+    navigate(from);
+  }
+};
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
