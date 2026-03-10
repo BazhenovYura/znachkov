@@ -177,10 +177,10 @@ ${featuresList}
   };
 
   // Функция отправки с файлом
-  const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
-    const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
+const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
+  const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
-    const caption = `
+  const caption = `
 📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ С ЛОГОТИПОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -196,25 +196,28 @@ ${featuresList}
 • Телефон: ${data.phone}
 
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
+  `;
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caption', caption);
-    
-    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-      method: 'POST',
-      body: formData,
-    });
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('caption', caption);
+  
+  const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
+    method: 'POST',
+    headers: {
+      // НЕ указываем Content-Type - браузер сам установит правильный с boundary
+    },
+    body: formData,
+  });
 
-    const responseData = await response.json();
-    
-    if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
-    }
+  const responseData = await response.json();
+  
+  if (!responseData.ok) {
+    throw new Error('Ошибка отправки в Telegram');
+  }
 
-    return responseData;
-  };
+  return responseData;
+};
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
