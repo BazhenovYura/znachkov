@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gem, Crown, Circle, Dot, X, Upload } from 'lucide-react';
 
-// Константа с URL вашей Яндекс Функции для файлов
-const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
+// Константы с URL ваших Яндекс Функций
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
 interface BadgeType {
   id: string;
@@ -176,7 +176,7 @@ ${featuresList}
     return responseData;
   };
 
-  // Функция отправки с файлом - ИСПРАВЛЕНО
+  // Функция отправки с файлом - ИСПРАВЛЕНО для новой функции
   const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
     const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
@@ -195,18 +195,16 @@ ${featuresList}
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
 
-📎 <b>Логотип:</b> ${file.name}
-
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('caption', caption); // Добавляем caption как часть FormData, а не в headers
+    formData.append('caption', caption);
     
     const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
       method: 'POST',
-      body: formData, // Убираем headers, так как FormData сама устанавливает нужный Content-Type
+      body: formData,
     });
 
     const responseData = await response.json();
