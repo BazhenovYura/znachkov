@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gem, Crown, Circle, Dot, X, Upload } from 'lucide-react';
 
-const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
+// Константа с URL вашей Яндекс Функции
+const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
 interface BadgeType {
   id: string;
@@ -132,19 +132,15 @@ const Types = () => {
       month: 'long',
       day: 'numeric',
       hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
+      minute: '2-digit'
     });
   };
 
+  // Функция отправки через Яндекс Функцию
   const sendToTelegram = async (data: typeof formData, type: BadgeType, logo?: File) => {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      throw new Error('Отсутствует токен Telegram');
-    }
-
     const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
-    const message = `
+    let message = `
 📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -158,56 +154,31 @@ ${featuresList}
 👤 <b>Клиент:</b>
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
-
-${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к сообщению' : ''}
-
-⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
     if (logo) {
-      const formData = new FormData();
-      formData.append('chat_id', TELEGRAM_CHAT_ID);
-      formData.append('photo', logo);
-      formData.append('caption', message);
-      formData.append('parse_mode', 'HTML');
-
-      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-      });
-
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(responseData.description || 'Ошибка отправки в Telegram');
-      }
-
-      return responseData;
-    } else {
-      const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-      
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          chat_id: TELEGRAM_CHAT_ID,
-          text: message,
-          parse_mode: 'HTML',
-        }),
-      });
-
-      const responseData = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(responseData.description || 'Ошибка отправки в Telegram');
-      }
-
-      return responseData;
+      // Если есть логотип, добавляем информацию, но сам файл не отправляем
+      // В текущей реализации Яндекс Функция не принимает файлы
+      message += `\n\n🖼️ <b>Логотип:</b> Приложен (файл: ${logo.name})`;
     }
+
+    message += `\n\n⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}`;
+
+    const response = await fetch(YANDEX_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message }),
+    });
+
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
+    }
+
+    return responseData;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,10 +212,13 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
       await sendToTelegram(formData, selectedType!, logoFile || undefined);
       
       setIsModalOpen(false);
+      
+      // Передаём секцию и ширину экрана
       navigate('/thanks', { 
         state: { 
           from: '/',
-          section: 'types' 
+          section: 'types',
+          screenWidth: window.innerWidth
         } 
       });
       
@@ -276,6 +250,7 @@ ${logo ? '🖼️ <b>Логотип клиента:</b> Прикреплен к 
   return (
     <>
       <section
+        id="types"
         ref={sectionRef}
         className="py-20 lg:py-32"
         style={{ backgroundColor: '#0A0A0A' }}
