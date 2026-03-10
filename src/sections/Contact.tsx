@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle } from 'lucide-react';
 
-// Конфигурация Telegram из переменных окружения Vite
-const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
+// Константа с URL вашей Яндекс Функции
+const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
 const Contact = () => {
+  const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -55,12 +56,8 @@ const Contact = () => {
     }
   };
 
-  // Функция отправки в Telegram
+  // Функция отправки через Яндекс Функцию
   const sendToTelegram = async (formDataToSend: typeof formData) => {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      throw new Error('Отсутствует токен Telegram');
-    }
-
     const message = `
 🔥 <b>Новая заявка с сайта ЗНАЧКОВ.РФ</b>
 
@@ -70,27 +67,28 @@ const Contact = () => {
 📧 <b>Email:</b> ${formDataToSend.email || 'Не указан'}
 💬 <b>Комментарий:</b> ${formDataToSend.comment || 'Без комментария'}
 
-⏰ <b>Время отправки:</b> ${new Date().toLocaleString('ru-RU')}
+⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
+  timeZone: 'Asia/Yekaterinburg',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}
     `;
 
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
-    
-    const response = await fetch(url, {
+    const response = await fetch(YANDEX_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        text: message,
-        parse_mode: 'HTML',
-      }),
+      body: JSON.stringify({ message }),
     });
 
     const responseData = await response.json();
     
-    if (!response.ok) {
-      throw new Error(responseData.description || 'Ошибка отправки в Telegram');
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
     }
 
     return responseData;
@@ -118,6 +116,15 @@ const Contact = () => {
       setIsSubmitted(true);
       setFormData({ name: '', company: '', phone: '', email: '', comment: '' });
       setIsAgreed(false);
+      
+      // Переход на страницу благодарности с передачей секции и ширины экрана
+      navigate('/thanks', { 
+        state: { 
+          from: '/',
+          section: 'contact',
+          screenWidth: window.innerWidth
+        } 
+      });
       
       setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
