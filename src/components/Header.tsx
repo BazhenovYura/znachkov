@@ -60,7 +60,7 @@ const Header = () => {
           console.log('❌ Элемент не найден:', sectionId);
           console.log('🔍 Проверьте, есть ли на странице элемент с id="' + sectionId + '"');
         }
-      }, 500);
+      }, 800);
       
       navigate('/', { replace: true, state: {} });
       
