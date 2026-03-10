@@ -176,47 +176,44 @@ ${featuresList}
     return responseData;
   };
 
- // Функция отправки с файлом - ИСПРАВЛЕНО
+ // Функция отправки с файлом - МАКСИМАЛЬНО УПРОЩЕНО
 const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
   const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
   const caption = `
-📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ С ЛОГОТИПОМ</b>
+📌 НОВАЯ ЗАЯВКА НА МАКЕТ С ЛОГОТИПОМ
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-🔹 <b>Выбранный формат:</b> ${type.name} (${type.size})
-📝 <b>Описание формата:</b> ${type.description}
+🔹 Выбранный формат: ${type.name} (${type.size})
+📝 Описание формата: ${type.description}
 
-<b>Характеристики формата ${type.name}:</b>
+Характеристики формата ${type.name}:
 ${featuresList}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Клиент:</b>
+👤 Клиент:
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
 
-⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
+⏰ Время отправки (Екатеринбург): ${getEkaterinburgTime()}
   `;
 
   const formData = new FormData();
   formData.append('file', file);
   formData.append('caption', caption);
   
-  // Убираем headers полностью! Браузер сам установит правильный Content-Type
+  // Убираем ВСЕ заголовки
   const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
     method: 'POST',
     body: formData,
   });
 
-  const responseData = await response.json();
-  
-  if (!responseData.ok) {
+  if (!response.ok) {
     throw new Error('Ошибка отправки в Telegram');
   }
 
-  return responseData;
+  return { ok: true };
 };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
