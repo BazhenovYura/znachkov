@@ -47,34 +47,57 @@ const Header = () => {
 useEffect(() => {
   if (location.pathname === '/' && location.state?.scrollTo) {
     const sectionId = location.state.scrollTo;
-    const originalScreenWidth = location.state?.originalScreenWidth || window.innerWidth;
+    const originalScreenWidth = location.state?.originalScreenWidth;
     
     console.log('🎯 Попытка скролла к секции:', sectionId);
     console.log('📱 Текущая ширина экрана:', window.innerWidth);
     console.log('📱 Исходная ширина экрана:', originalScreenWidth);
+    console.log('📦 Полный state:', location.state);
+    
+    // Проверяем, есть ли элемент в DOM прямо сейчас
+    const elementNow = document.getElementById(sectionId);
+    console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
+    
+    if (elementNow) {
+      const rect = elementNow.getBoundingClientRect();
+      console.log('📐 Позиция элемента сейчас:', {
+        top: rect.top,
+        bottom: rect.bottom,
+        height: rect.height,
+        offsetTop: elementNow.offsetTop
+      });
+    } else {
+      // Если элемента нет, выведем все ID на странице
+      const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+      console.log('📋 Все ID на странице:', allIds);
+    }
     
     const timer = setTimeout(() => {
       const element = document.getElementById(sectionId);
+      console.log('⏰ Через 800мс - элемент найден:', !!element);
+      
       if (element) {
         console.log('✅ Элемент найден, скроллим к', sectionId);
         
-        // Функция для определения отступа на основе ИСХОДНОЙ ширины экрана
         const getYOffsetByScreenWidth = (width: number) => {
-          if (width < 640) return -40;  // sm: телефоны
-          if (width < 768) return -50;  // md: маленькие планшеты
-          if (width < 1024) return -60; // lg: планшеты/ноутбуки
-          if (width < 1280) return -70; // xl: небольшие десктопы
-          return -80; // 2xl: большие десктопы
+          if (width < 640) return -40;
+          if (width < 768) return -50;
+          if (width < 1024) return -60;
+          if (width < 1280) return -70;
+          return -80;
         };
         
-        // Используем ИСХОДНУЮ ширину экрана для расчёта отступа
-        const yOffset = getYOffsetByScreenWidth(originalScreenWidth);
-        console.log(`📏 Отступ для исходного экрана ${originalScreenWidth}px: ${yOffset}px`);
+        const widthForOffset = originalScreenWidth || window.innerWidth;
+        const yOffset = getYOffsetByScreenWidth(widthForOffset);
+        console.log('📏 Отступ:', yOffset);
         
         const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        console.log('🎯 Целевая позиция скролла:', y);
+        console.log('📍 Текущая позиция скролла:', window.scrollY);
+        
         window.scrollTo({ top: y, behavior: 'smooth' });
       } else {
-        console.log('❌ Элемент не найден:', sectionId);
+        console.log('❌ Элемент не найден через 800мс');
       }
     }, 800);
     
