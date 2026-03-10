@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Gem, Crown, Circle, Dot, X, Upload } from 'lucide-react';
 
-// Константа с URL вашей Яндекс Функции
-const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+// Константа с URL вашей Яндекс Функции для файлов
+const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/ваш-новый-id-функции';
+const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
 interface BadgeType {
   id: string;
@@ -136,11 +137,11 @@ const Types = () => {
     });
   };
 
-  // Функция отправки через Яндекс Функцию
-  const sendToTelegram = async (data: typeof formData, type: BadgeType, logo?: File) => {
+  // Функция отправки текста (без файла)
+  const sendTextToTelegram = async (data: typeof formData, type: BadgeType) => {
     const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
-    let message = `
+    const message = `
 📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -154,21 +155,60 @@ ${featuresList}
 👤 <b>Клиент:</b>
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
+
+⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    if (logo && logoPreview) {
-      // Если есть логотип, добавляем информацию и превью (base64)
-      message += `\n\n🖼️ <b>Логотип клиента:</b>\n${logoPreview.substring(0, 100)}...`;
-    }
-
-    message += `\n\n⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}`;
-
-    const response = await fetch(YANDEX_FUNCTION_URL, {
+    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ message }),
+    });
+
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
+    }
+
+    return responseData;
+  };
+
+  // Функция отправки с файлом
+  const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
+    const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
+
+    const caption = `
+📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ С ЛОГОТИПОМ</b>
+━━━━━━━━━━━━━━━━━━━━━━━
+
+🔹 <b>Выбранный формат:</b> ${type.name} (${type.size})
+📝 <b>Описание формата:</b> ${type.description}
+
+<b>Характеристики формата ${type.name}:</b>
+${featuresList}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Клиент:</b>
+• Имя: ${data.name || 'Не указано'}
+• Телефон: ${data.phone}
+
+📎 <b>Логотип:</b> ${file.name}
+
+⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
+    `;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
+      method: 'POST',
+      headers: {
+        'X-Message': caption,
+      },
+      body: formData,
     });
 
     const responseData = await response.json();
@@ -208,11 +248,14 @@ ${featuresList}
     setIsSubmitting(true);
     
     try {
-      await sendToTelegram(formData, selectedType!, logoFile || undefined);
+      if (logoFile) {
+        await sendFileToTelegram(formData, selectedType!, logoFile);
+      } else {
+        await sendTextToTelegram(formData, selectedType!);
+      }
       
       setIsModalOpen(false);
       
-      // Передаём секцию и ширину экрана
       navigate('/thanks', { 
         state: { 
           from: '/',
