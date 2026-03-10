@@ -107,11 +107,12 @@ const Hero = () => {
       
       setIsModalOpen(false);
       navigate('/thanks', { 
-        state: { 
-          from: '/',
-          section: 'hero' 
-        } 
-      });
+  state: { 
+    from: '/',
+    section: 'hero',
+    screenWidth: window.innerWidth  // ← ЭТО ВАЖНО!
+  } 
+});
       
       setFormData({ name: '', phone: '' });
       setIsAgreed(false);
