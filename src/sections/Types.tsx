@@ -138,7 +138,7 @@ const Types = () => {
   };
 
   // Функция отправки текста (без файла)
-  const sendTextToTelegram = async (data: typeof formData, type: BadgeType) => {
+  const TextToTelegram = async (data: typeof formData, type: BadgeType) => {
     const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
     const message = `
@@ -202,13 +202,9 @@ ${featuresList}
   formData.append('file', file);
   formData.append('caption', caption);
   
-  // Явно указываем заголовки, включая content-type
+  // Убираем headers полностью! Браузер сам установит правильный Content-Type
   const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
     method: 'POST',
-    headers: {
-      'X-Message': caption, // Оставляем для обратной совместимости
-      // НЕ указываем Content-Type - браузер сам установит правильный для FormData
-    },
     body: formData,
   });
 
