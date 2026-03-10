@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ZoomIn } from 'lucide-react';
 
-const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN;
-const TELEGRAM_CHAT_ID = import.meta.env.VITE_TELEGRAM_CHAT_ID;
+// Константа с URL вашей Яндекс Функции
+const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
 interface PortfolioItem {
   id: number;
@@ -100,15 +100,12 @@ const Portfolio = () => {
     };
   }, [selectedItem]);
 
+  // Функция отправки через Яндекс Функцию
   const sendToTelegram = async (data: typeof formData, item: PortfolioItem) => {
-    if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHAT_ID) {
-      throw new Error('Отсутствует токен Telegram');
-    }
-
     const baseUrl = window.location.origin;
     const imageUrl = `${baseUrl}${item.image}`;
 
-    const caption = `
+    const message = `
 🛍️ <b>Заказ похожего значка с сайта ЗНАЧКОВ.РФ</b>
 
 📌 <b>Выбранный образец:</b>
@@ -121,29 +118,30 @@ const Portfolio = () => {
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
 
-⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { timeZone: 'Asia/Yekaterinburg' })}
+🖼️ <b>Фото:</b> ${imageUrl}
+
+⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
+  timeZone: 'Asia/Yekaterinburg',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}
     `;
 
-    const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendPhoto`;
-    
-    const response = await fetch(url, {
+    const response = await fetch(YANDEX_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        chat_id: TELEGRAM_CHAT_ID,
-        photo: imageUrl,
-        caption: caption,
-        parse_mode: 'HTML',
-      }),
+      body: JSON.stringify({ message }),
     });
 
     const responseData = await response.json();
     
-    if (!response.ok) {
-      console.error('Telegram API error:', responseData);
-      throw new Error(responseData.description || 'Ошибка отправки в Telegram');
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
     }
 
     return responseData;
@@ -165,10 +163,12 @@ const Portfolio = () => {
       setSelectedItem(null);
       setShowOrderForm(false);
       
+      // Передаём секцию и ширину экрана
       navigate('/thanks', { 
         state: { 
           from: '/',
-          section: 'portfolio' 
+          section: 'portfolio',
+          screenWidth: window.innerWidth
         } 
       });
       
