@@ -176,7 +176,7 @@ ${featuresList}
     return responseData;
   };
 
-  // Функция отправки с файлом
+  // Функция отправки с файлом - ИСПРАВЛЕНО
   const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
     const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
@@ -202,13 +202,11 @@ ${featuresList}
 
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('caption', caption); // Добавляем caption как часть FormData, а не в headers
     
     const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
       method: 'POST',
-      headers: {
-        'X-Message': caption,
-      },
-      body: formData,
+      body: formData, // Убираем headers, так как FormData сама устанавливает нужный Content-Type
     });
 
     const responseData = await response.json();
