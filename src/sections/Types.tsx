@@ -138,7 +138,7 @@ const Types = () => {
   };
 
   // Функция отправки текста (без файла)
-  const TextToTelegram = async (data: typeof formData, type: BadgeType) => {
+  const sendTextToTelegram = async (data: typeof formData, type: BadgeType) => {
     const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
     const message = `
@@ -176,44 +176,46 @@ ${featuresList}
     return responseData;
   };
 
- // Функция отправки с файлом - МАКСИМАЛЬНО УПРОЩЕНО
-const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
-  const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
+  // Функция отправки с файлом
+  const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
+    const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
-  const caption = `
-📌 НОВАЯ ЗАЯВКА НА МАКЕТ С ЛОГОТИПОМ
+    const caption = `
+📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ С ЛОГОТИПОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-🔹 Выбранный формат: ${type.name} (${type.size})
-📝 Описание формата: ${type.description}
+🔹 <b>Выбранный формат:</b> ${type.name} (${type.size})
+📝 <b>Описание формата:</b> ${type.description}
 
-Характеристики формата ${type.name}:
+<b>Характеристики формата ${type.name}:</b>
 ${featuresList}
 
 ━━━━━━━━━━━━━━━━━━━━━━━
-👤 Клиент:
+👤 <b>Клиент:</b>
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
 
-⏰ Время отправки (Екатеринбург): ${getEkaterinburgTime()}
-  `;
+⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
+    `;
 
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('caption', caption);
-  
-  // Убираем ВСЕ заголовки
-  const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-    method: 'POST',
-    body: formData,
-  });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caption', caption);
+    
+    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
+      method: 'POST',
+      body: formData,
+    });
 
-  if (!response.ok) {
-    throw new Error('Ошибка отправки в Telegram');
-  }
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
+    }
 
-  return { ok: true };
-};
+    return responseData;
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
