@@ -73,6 +73,7 @@ const Portfolio = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [tappedItemId, setTappedItemId] = useState<number | null>(null);
 
   // Отслеживаем изменение размера окна
   useEffect(() => {
@@ -84,7 +85,9 @@ const Portfolio = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Определяем, является ли устройство мобильным на основе ширины окна
+  // Определяем режимы на основе ширины окна
+  const isLargeDesktop = windowWidth >= 1200;
+  const isSmallDesktop = windowWidth >= 768 && windowWidth < 1200;
   const isMobile = windowWidth < 768;
 
   useEffect(() => {
@@ -117,11 +120,12 @@ const Portfolio = () => {
     };
   }, [selectedItem]);
 
-  // Сброс файла при закрытии модального окна
+  // Сброс файла и tapped при закрытии модального окна
   useEffect(() => {
     if (!selectedItem) {
       setUploadedFile(null);
       setFilePreview(null);
+      setTappedItemId(null);
     }
   }, [selectedItem]);
 
@@ -324,6 +328,16 @@ const Portfolio = () => {
     setFilePreview(null);
   };
 
+  const handleItemClick = (item: PortfolioItem) => {
+    if (isMobile) {
+      // На мобильных при клике на фото показываем кнопку под фото
+      setTappedItemId(tappedItemId === item.id ? null : item.id);
+    } else {
+      // На десктопах сразу открываем модалку
+      setSelectedItem(item);
+    }
+  };
+
   return (
     <section
       id="portfolio"
@@ -352,7 +366,10 @@ const Portfolio = () => {
               key={item.id}
               className={`reveal opacity-0 animation-delay-${(index % 5) * 100 + 200} group relative`}
             >
-              <div className="relative aspect-square overflow-hidden rounded-lg bg-dark-light cursor-pointer card-hover group">
+              <div 
+                className="relative aspect-square overflow-hidden rounded-lg bg-dark-light cursor-pointer card-hover"
+                onClick={() => handleItemClick(item)}
+              >
                 <img
                   src={item.image}
                   alt={item.title}
@@ -361,33 +378,52 @@ const Portfolio = () => {
                 
                 <div className="absolute inset-0 bg-gradient-to-t from-dark/90 via-dark/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                {/* Описание всегда видно на мобильных, на десктопах при наведении */}
+                <div className={`absolute inset-0 flex flex-col justify-end p-4 sm:p-6 transition-opacity duration-300 ${
+                  isMobile 
+                    ? 'opacity-100' 
+                    : 'opacity-0 group-hover:opacity-100'
+                }`}>
                   <span className="text-gold text-xs sm:text-sm mb-1 sm:mb-2">{item.material}</span>
                   <h3 className="text-white font-serif text-base sm:text-xl mb-0.5 sm:mb-1">{item.title}</h3>
                   <p className="text-gray-400 text-xs sm:text-sm">{item.description}</p>
                 </div>
 
-                {/* Кнопка в правом верхнем углу с адаптивным размером */}
-                <button
-                  onClick={() => setSelectedItem(item)}
-                  className={`absolute top-2 right-2 sm:top-4 sm:right-4 flex items-center justify-center bg-gold/90 rounded-full hover:bg-gold shadow-lg z-10 transition-all duration-300 ${
-                    isMobile 
-                      ? 'w-10 h-10 opacity-100' 
-                      : 'w-12 h-12 opacity-0 group-hover:opacity-100'
-                  }`}
-                  aria-label="Рассчитать похожий"
-                >
-                  <ShoppingCart className={`${isMobile ? 'w-5 h-5' : 'w-6 h-6'} text-dark`} />
-                </button>
+                {/* Большой десктоп (>=1200px) - текстовая кнопка в правом нижнем углу */}
+                {isLargeDesktop && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedItem(item);
+                    }}
+                    className="absolute bottom-4 right-4 px-4 py-2 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm opacity-0 group-hover:opacity-100"
+                  >
+                    Рассчитать похожий
+                  </button>
+                )}
+
+                {/* Маленький десктоп (768-1199px) - иконка в правом верхнем углу */}
+                {isSmallDesktop && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedItem(item);
+                    }}
+                    className="absolute top-3 right-3 w-10 h-10 bg-gold/90 rounded-full flex items-center justify-center text-dark hover:bg-gold shadow-lg transition-all duration-300 opacity-0 group-hover:opacity-100"
+                    aria-label="Рассчитать похожий"
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                  </button>
+                )}
 
                 <div className="absolute inset-0 border-2 border-gold/0 group-hover:border-gold/50 rounded-lg transition-colors duration-300 pointer-events-none" />
               </div>
               
-              {/* Текстовая кнопка под фото для мобильных (дублирующая) */}
-              {isMobile && (
+              {/* Мобильная версия - кнопка под фото появляется при клике на фото */}
+              {isMobile && tappedItemId === item.id && (
                 <button
                   onClick={() => setSelectedItem(item)}
-                  className="w-full mt-3 py-3 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm"
+                  className="w-full mt-3 py-3 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm animate-fade-in-up"
                 >
                   Рассчитать похожий
                 </button>
@@ -405,7 +441,6 @@ const Portfolio = () => {
           <div
             className="relative w-full max-w-4xl bg-dark-light rounded-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
-            style={{ maxHeight: isMobile ? '95vh' : '90vh' }}
           >
             <button
               onClick={() => setSelectedItem(null)}
@@ -414,9 +449,9 @@ const Portfolio = () => {
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             
-            {/* Единое окно с фото, описанием и формой */}
+            {/* Модальное окно с фото и формой */}
             <div className={`grid ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'} max-h-[95vh] sm:max-h-[90vh] overflow-y-auto`}>
-              {/* Левая колонка - фото - скроллится вместе с формой */}
+              {/* Левая колонка - фото */}
               <div className={`w-full ${!isMobile && 'md:sticky md:top-0 md:h-fit'}`}>
                 <img
                   src={selectedItem.image}
@@ -443,7 +478,7 @@ const Portfolio = () => {
                   {selectedItem.description}
                 </p>
 
-                {/* Форма заказа */}
+                {/* Форма заказа (та же, что и раньше) */}
                 <form onSubmit={handleSubmit} className={`space-y-${isMobile ? '3' : '4'}`}>
                   <div>
                     <label className={`block text-gray-400 mb-1 ${
