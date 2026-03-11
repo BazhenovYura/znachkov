@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, ZoomIn } from 'lucide-react';
+import { X, Minus, Plus } from 'lucide-react';
 
-// Константа с URL вашей Яндекс Функции
-const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+// Константы с URL ваших Яндекс Функций
+const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
 interface PortfolioItem {
   id: number;
@@ -62,10 +62,10 @@ const Portfolio = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
   const [selectedItem, setSelectedItem] = useState<PortfolioItem | null>(null);
-  const [showOrderForm, setShowOrderForm] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    quantity: 1,
   });
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -106,7 +106,10 @@ const Portfolio = () => {
     const imageUrl = `${baseUrl}${item.image}`;
 
     const message = `
-🛍️ <b>Заказ похожего значка с сайта ЗНАЧКОВ.РФ</b>
+🛍️ <b>ЗАКАЗ ПОХОЖЕГО ЗНАЧКА</b>
+━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "Портфолио"
 
 📌 <b>Выбранный образец:</b>
 • Название: ${item.title}
@@ -114,9 +117,11 @@ const Portfolio = () => {
 • Материал: ${item.material}
 • ID: ${item.id}
 
+━━━━━━━━━━━━━━━━━━━━━━━
 👤 <b>Клиент:</b>
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
+• Количество: ${data.quantity} шт.
 
 🖼️ <b>Фото:</b> ${imageUrl}
 
@@ -130,7 +135,7 @@ const Portfolio = () => {
 })}
     `;
 
-    const response = await fetch(YANDEX_FUNCTION_URL, {
+    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -161,7 +166,6 @@ const Portfolio = () => {
       await sendToTelegram(formData, selectedItem!);
       
       setSelectedItem(null);
-      setShowOrderForm(false);
       
       // Передаём секцию и ширину экрана
       navigate('/thanks', { 
@@ -172,7 +176,7 @@ const Portfolio = () => {
         } 
       });
       
-      setFormData({ name: '', phone: '' });
+      setFormData({ name: '', phone: '', quantity: 1 });
       setIsAgreed(false);
       
     } catch (error) {
@@ -190,12 +194,26 @@ const Portfolio = () => {
     });
   };
 
-  const openOrderForm = () => {
-    setShowOrderForm(true);
+  const handleQuantityChange = (delta: number) => {
+    setFormData(prev => ({
+      ...prev,
+      quantity: Math.max(1, prev.quantity + delta)
+    }));
   };
 
-  const backToItem = () => {
-    setShowOrderForm(false);
+  const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value);
+    if (!isNaN(value) && value >= 1) {
+      setFormData(prev => ({
+        ...prev,
+        quantity: value
+      }));
+    } else if (e.target.value === '') {
+      setFormData(prev => ({
+        ...prev,
+        quantity: 1
+      }));
+    }
   };
 
   return (
@@ -241,14 +259,12 @@ const Portfolio = () => {
                   <p className="text-gray-400 text-sm">{item.description}</p>
                 </div>
 
+                {/* Кнопка "Рассчитать похожий" в правом нижнем углу */}
                 <button
-                  onClick={() => {
-                    setSelectedItem(item);
-                    setShowOrderForm(false);
-                  }}
-                  className="absolute top-4 right-4 w-10 h-10 bg-dark/80 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gold hover:text-dark"
+                  onClick={() => setSelectedItem(item)}
+                  className="absolute bottom-4 right-4 px-4 py-2 bg-gold text-dark font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gold-light text-sm"
                 >
-                  <ZoomIn className="w-5 h-5" />
+                  Рассчитать похожий →
                 </button>
 
                 <div className="absolute inset-0 border-2 border-gold/0 group-hover:border-gold/50 rounded-lg transition-colors duration-300 pointer-events-none" />
@@ -261,145 +277,148 @@ const Portfolio = () => {
       {selectedItem && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/95 backdrop-blur-sm"
-          onClick={() => {
-            setSelectedItem(null);
-            setShowOrderForm(false);
-          }}
+          onClick={() => setSelectedItem(null)}
         >
           <div
             className="relative max-w-4xl w-full bg-dark-light rounded-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() => {
-                setSelectedItem(null);
-                setShowOrderForm(false);
-              }}
+              onClick={() => setSelectedItem(null)}
               className="absolute top-4 right-4 z-20 w-10 h-10 bg-dark/80 rounded-full flex items-center justify-center hover:bg-gold hover:text-dark transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
             
-            {!showOrderForm ? (
-              <div className="grid md:grid-cols-2">
-                <div className="aspect-square">
-                  <img
-                    src={selectedItem.image}
-                    alt={selectedItem.title}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div className="p-8 flex flex-col justify-center">
-                  <span className="text-gold text-sm uppercase tracking-wider mb-4">
-                    {selectedItem.material}
-                  </span>
-                  <h3 className="font-serif text-3xl text-white mb-4">
-                    {selectedItem.title}
-                  </h3>
-                  <p className="text-gray-400 text-lg mb-6">
-                    {selectedItem.description}
-                  </p>
-                  <button
-                    onClick={openOrderForm}
-                    className="btn-primary w-fit"
-                  >
-                    Заказать похожий
-                  </button>
-                </div>
+            {/* Единое окно с фото, описанием и формой */}
+            <div className="grid md:grid-cols-2">
+              {/* Левая колонка - фото */}
+              <div className="aspect-square">
+                <img
+                  src={selectedItem.image}
+                  alt={selectedItem.title}
+                  className="w-full h-full object-cover"
+                />
               </div>
-            ) : (
-              <div className="p-8">
-                <button
-                  onClick={backToItem}
-                  className="flex items-center gap-2 text-gray-400 hover:text-gold transition-colors mb-6"
-                >
-                  <span>←</span>
-                  <span>Вернуться к просмотру</span>
-                </button>
+              
+              {/* Правая колонка - описание и форма */}
+              <div className="p-8 flex flex-col justify-center">
+                <span className="text-gold text-sm uppercase tracking-wider mb-4">
+                  {selectedItem.material}
+                </span>
+                <h3 className="font-serif text-3xl text-white mb-4">
+                  {selectedItem.title}
+                </h3>
+                <p className="text-gray-400 text-lg mb-6">
+                  {selectedItem.description}
+                </p>
 
-                <div className="max-w-md mx-auto">
-                  <div className="text-center mb-6">
-                    <h3 className="font-serif text-2xl text-white mb-2">
-                      Заказать похожий значок
-                    </h3>
-                    <p className="text-gray-400 text-sm">
-                      Вы выбрали: <span className="text-gold">{selectedItem.title}</span>
-                    </p>
+                {/* Форма заказа */}
+                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Ваше имя *
+                    </label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                      placeholder="Иван Иванов"
+                    />
                   </div>
 
-                  <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-2">
-                        Ваше имя *
-                      </label>
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Телефон *
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                      placeholder="+7 (___) ___-__-__"
+                    />
+                  </div>
+
+                  {/* Поле количества с кнопками + и - */}
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Количество (шт.) *
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange(-1)}
+                        className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                      >
+                        <Minus className="w-4 h-4" />
+                      </button>
                       <input
-                        type="text"
-                        name="name"
-                        value={formData.name}
-                        onChange={handleChange}
+                        type="number"
+                        name="quantity"
+                        value={formData.quantity}
+                        onChange={handleQuantityInput}
+                        min="1"
                         required
-                        className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
-                        placeholder="Иван Иванов"
+                        className="flex-1 px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors text-center"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleQuantityChange(1)}
+                        className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Чекбокс согласия */}
+                  <div className="flex items-start gap-3">
+                    <div className="relative flex items-center h-6">
+                      <input
+                        type="checkbox"
+                        id="privacy-portfolio"
+                        checked={isAgreed}
+                        onChange={(e) => setIsAgreed(e.target.checked)}
+                        className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
                       />
                     </div>
+                    <label htmlFor="privacy-portfolio" className="text-sm text-gray-400 cursor-pointer">
+                      Я соглашаюсь с{' '}
+                      <a 
+                        href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-gold hover:text-gold-light underline transition-colors"
+                      >
+                        политикой конфиденциальности
+                      </a>
+                      {' '}и даю согласие на обработку персональных данных *
+                    </label>
+                  </div>
 
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-2">
-                        Телефон *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone"
-                        value={formData.phone}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
-                        placeholder="+7 (___) ___-__-__"
-                      />
-                    </div>
-
-                    <div className="flex items-start gap-3">
-                      <div className="relative flex items-center h-6">
-                        <input
-                          type="checkbox"
-                          id="privacy-portfolio"
-                          checked={isAgreed}
-                          onChange={(e) => setIsAgreed(e.target.checked)}
-                          className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
-                        />
-                      </div>
-                      <label htmlFor="privacy-portfolio" className="text-sm text-gray-400 cursor-pointer">
-                        Я соглашаюсь с{' '}
-                        <a 
-                          href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-gold hover:text-gold-light underline transition-colors"
-                        >
-                          политикой конфиденциальности
-                        </a>
-                        {' '}и даю согласие на обработку персональных данных *
-                      </label>
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
-                          <span>Отправка...</span>
-                        </>
-                      ) : (
-                        <span>ОТПРАВИТЬ ЗАЯВКУ</span>
-                      )}
-                    </button>
-                  </form>
-                </div>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-6"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="w-5 h-5 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
+                        <span>Отправка...</span>
+                      </>
+                    ) : (
+                      <span>ОТПРАВИТЬ ЗАЯВКУ</span>
+                    )}
+                  </button>
+                </form>
               </div>
-            )}
+            </div>
           </div>
         </div>
       )}
