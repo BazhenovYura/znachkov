@@ -347,16 +347,16 @@ const Portfolio = () => {
                 
                 <div className="absolute inset-0 bg-gradient-to-t from-dark/90 via-dark/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                <div className="absolute inset-0 flex flex-col justify-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                <div className="absolute inset-0 flex flex-col justify-end p-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
                   <span className="text-gold text-sm mb-2">{item.material}</span>
                   <h3 className="text-white font-serif text-xl mb-1">{item.title}</h3>
                   <p className="text-gray-400 text-sm">{item.description}</p>
                 </div>
 
-                {/* Кнопка "Рассчитать похожий" - появляется при наведении */}
+                {/* Кнопка "Рассчитать похожий" - адаптирована для мобильных */}
                 <button
                   onClick={() => setSelectedItem(item)}
-                  className="absolute left-1/2 -translate-x-1/2 bottom-4 w-[calc(100%-2rem)] sm:w-auto sm:left-auto sm:right-4 sm:translate-x-0 px-3 py-2 sm:px-4 sm:py-2 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-xs sm:text-sm text-center whitespace-normal break-words opacity-0 group-hover:opacity-100"
+                  className="absolute bottom-4 right-4 px-3 py-1.5 sm:px-4 sm:py-2 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-[10px] sm:text-sm opacity-0 group-hover:opacity-100 z-10 max-w-[100px] sm:max-w-none text-center break-words"
                 >
                   Рассчитать похожий
                 </button>
