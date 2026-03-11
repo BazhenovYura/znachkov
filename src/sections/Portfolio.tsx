@@ -353,10 +353,10 @@ const Portfolio = () => {
                   <p className="text-gray-400 text-sm">{item.description}</p>
                 </div>
 
-                {/* Кнопка "Рассчитать похожий" - адаптивная для мобильных */}
+                {/* Кнопка "Рассчитать похожий" в стиле "Заказать обратный звонок" */}
                 <button
                   onClick={() => setSelectedItem(item)}
-                  className="absolute bottom-4 right-4 px-3 py-1.5 sm:px-4 sm:py-2 bg-gold text-dark font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gold-light text-xs sm:text-sm max-w-[120px] sm:max-w-none text-center break-words"
+                  className="absolute left-1/2 -translate-x-1/2 bottom-4 w-[calc(100%-2rem)] sm:w-auto sm:left-auto sm:right-4 sm:translate-x-0 px-3 py-2 sm:px-4 sm:py-2 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-xs sm:text-sm text-center whitespace-normal break-words"
                 >
                   Рассчитать похожий
                 </button>
