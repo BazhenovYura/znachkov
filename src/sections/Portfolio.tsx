@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Minus, Plus, Upload, ShoppingCart } from 'lucide-react';
+import { X, Minus, Plus, Upload, ZoomIn, ArrowLeft } from 'lucide-react';
 
 // Константы с URL ваших Яндекс Функций
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
@@ -73,7 +73,6 @@ const Portfolio = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  const [tappedItemId, setTappedItemId] = useState<number | null>(null);
 
   // Отслеживаем изменение размера окна
   useEffect(() => {
@@ -87,7 +86,7 @@ const Portfolio = () => {
 
   // Определяем режимы на основе ширины окна
   const isLargeDesktop = windowWidth >= 1200;
-  const isSmallDesktop = windowWidth >= 768 && windowWidth < 1200;
+  const isMediumDesktop = windowWidth >= 768 && windowWidth < 1200;
   const isMobile = windowWidth < 768;
 
   useEffect(() => {
@@ -120,12 +119,11 @@ const Portfolio = () => {
     };
   }, [selectedItem]);
 
-  // Сброс файла и tapped при закрытии модального окна
+  // Сброс файла при закрытии модального окна
   useEffect(() => {
     if (!selectedItem) {
       setUploadedFile(null);
       setFilePreview(null);
-      setTappedItemId(null);
     }
   }, [selectedItem]);
 
@@ -329,13 +327,7 @@ const Portfolio = () => {
   };
 
   const handleItemClick = (item: PortfolioItem) => {
-    if (isMobile) {
-      // На мобильных при клике на фото показываем кнопку под фото
-      setTappedItemId(tappedItemId === item.id ? null : item.id);
-    } else {
-      // На десктопах сразу открываем модалку
-      setSelectedItem(item);
-    }
+    setSelectedItem(item);
   };
 
   return (
@@ -367,7 +359,7 @@ const Portfolio = () => {
               className={`reveal opacity-0 animation-delay-${(index % 5) * 100 + 200} group relative`}
             >
               <div 
-                className="relative aspect-square overflow-hidden rounded-lg bg-dark-light cursor-pointer card-hover"
+                className="relative aspect-square overflow-hidden rounded-lg bg-dark-light cursor-pointer card-hover group"
                 onClick={() => handleItemClick(item)}
               >
                 <img
@@ -378,23 +370,19 @@ const Portfolio = () => {
                 
                 <div className="absolute inset-0 bg-gradient-to-t from-dark/90 via-dark/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                {/* Описание всегда видно на мобильных, на десктопах при наведении */}
-                <div className={`absolute inset-0 flex flex-col justify-end p-4 sm:p-6 transition-opacity duration-300 ${
-                  isMobile 
-                    ? 'opacity-100' 
-                    : 'opacity-0 group-hover:opacity-100'
-                }`}>
+                {/* Описание всегда видно для всех размеров */}
+                <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 opacity-100">
                   <span className="text-gold text-xs sm:text-sm mb-1 sm:mb-2">{item.material}</span>
                   <h3 className="text-white font-serif text-base sm:text-xl mb-0.5 sm:mb-1">{item.title}</h3>
                   <p className="text-gray-400 text-xs sm:text-sm">{item.description}</p>
                 </div>
 
-                {/* Большой десктоп (>=1200px) - текстовая кнопка в правом нижнем углу */}
+                {/* Большой десктоп (>=1200px) - текстовая кнопка в правом нижнем углу, появляется при наведении */}
                 {isLargeDesktop && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedItem(item);
+                      handleItemClick(item);
                     }}
                     className="absolute bottom-4 right-4 px-4 py-2 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm opacity-0 group-hover:opacity-100"
                   >
@@ -402,32 +390,36 @@ const Portfolio = () => {
                   </button>
                 )}
 
-                {/* Маленький десктоп (768-1199px) - иконка в правом верхнем углу */}
-                {isSmallDesktop && (
+                {/* Средний десктоп (768-1199px) - иконка лупы в правом верхнем углу, появляется при наведении */}
+                {isMediumDesktop && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      setSelectedItem(item);
+                      handleItemClick(item);
                     }}
                     className="absolute top-3 right-3 w-10 h-10 bg-gold/90 rounded-full flex items-center justify-center text-dark hover:bg-gold shadow-lg transition-all duration-300 opacity-0 group-hover:opacity-100"
-                    aria-label="Рассчитать похожий"
+                    aria-label="Рассмотреть подробнее"
                   >
-                    <ShoppingCart className="w-5 h-5" />
+                    <ZoomIn className="w-5 h-5" />
+                  </button>
+                )}
+
+                {/* Мобильная версия (<768px) - иконка лупы всегда видна */}
+                {isMobile && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleItemClick(item);
+                    }}
+                    className="absolute top-3 right-3 w-10 h-10 bg-gold/90 rounded-full flex items-center justify-center text-dark hover:bg-gold shadow-lg transition-all duration-300"
+                    aria-label="Рассмотреть подробнее"
+                  >
+                    <ZoomIn className="w-5 h-5" />
                   </button>
                 )}
 
                 <div className="absolute inset-0 border-2 border-gold/0 group-hover:border-gold/50 rounded-lg transition-colors duration-300 pointer-events-none" />
               </div>
-              
-              {/* Мобильная версия - кнопка под фото появляется при клике на фото */}
-              {isMobile && tappedItemId === item.id && (
-                <button
-                  onClick={() => setSelectedItem(item)}
-                  className="w-full mt-3 py-3 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm animate-fade-in-up"
-                >
-                  Рассчитать похожий
-                </button>
-              )}
             </div>
           ))}
         </div>
@@ -445,6 +437,7 @@ const Portfolio = () => {
             <button
               onClick={() => setSelectedItem(null)}
               className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 w-8 h-8 sm:w-10 sm:h-10 bg-dark/80 rounded-full flex items-center justify-center hover:bg-gold hover:text-dark transition-colors"
+              aria-label="Закрыть"
             >
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
@@ -478,7 +471,7 @@ const Portfolio = () => {
                   {selectedItem.description}
                 </p>
 
-                {/* Форма заказа (та же, что и раньше) */}
+                {/* Форма заказа */}
                 <form onSubmit={handleSubmit} className={`space-y-${isMobile ? '3' : '4'}`}>
                   <div>
                     <label className={`block text-gray-400 mb-1 ${
@@ -683,6 +676,16 @@ const Portfolio = () => {
                     ) : (
                       <span>ОТПРАВИТЬ ЗАЯВКУ</span>
                     )}
+                  </button>
+
+                  {/* Кнопка "Назад" под кнопкой отправки */}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedItem(null)}
+                    className="w-full flex items-center justify-center gap-2 text-gray-400 hover:text-gold transition-colors py-2 text-sm sm:text-base"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Вернуться назад</span>
                   </button>
                 </form>
               </div>
