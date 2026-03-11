@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Minus, Plus } from 'lucide-react';
+import { X, Minus, Plus, Upload } from 'lucide-react';
 
 // Константы с URL ваших Яндекс Функций
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
 interface PortfolioItem {
   id: number;
@@ -67,6 +68,8 @@ const Portfolio = () => {
     phone: '',
     quantity: 1,
   });
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -100,8 +103,16 @@ const Portfolio = () => {
     };
   }, [selectedItem]);
 
-  // Функция отправки через Яндекс Функцию
-  const sendToTelegram = async (data: typeof formData, item: PortfolioItem) => {
+  // Сброс файла при закрытии модального окна
+  useEffect(() => {
+    if (!selectedItem) {
+      setUploadedFile(null);
+      setFilePreview(null);
+    }
+  }, [selectedItem]);
+
+  // Функция отправки текста (без файла)
+  const sendTextToTelegram = async (data: typeof formData, item: PortfolioItem) => {
     const baseUrl = window.location.origin;
     const imageUrl = `${baseUrl}${item.image}`;
 
@@ -123,7 +134,7 @@ const Portfolio = () => {
 • Телефон: ${data.phone}
 • Количество: ${data.quantity} шт.
 
-🖼️ <b>Фото:</b> ${imageUrl}
+🖼️ <b>Фото образца:</b> ${imageUrl}
 
 ⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
   timeZone: 'Asia/Yekaterinburg',
@@ -152,6 +163,60 @@ const Portfolio = () => {
     return responseData;
   };
 
+  // Функция отправки с файлом
+  const sendFileToTelegram = async (data: typeof formData, item: PortfolioItem, file: File) => {
+    const baseUrl = window.location.origin;
+    const imageUrl = `${baseUrl}${item.image}`;
+
+    const caption = `
+🛍️ <b>ЗАКАЗ ПОХОЖЕГО ЗНАЧКА (С ФАЙЛОМ)</b>
+━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "Портфолио"
+
+📌 <b>Выбранный образец:</b>
+• Название: ${item.title}
+• Описание: ${item.description}
+• Материал: ${item.material}
+• ID: ${item.id}
+
+━━━━━━━━━━━━━━━━━━━━━━━
+👤 <b>Клиент:</b>
+• Имя: ${data.name || 'Не указано'}
+• Телефон: ${data.phone}
+• Количество: ${data.quantity} шт.
+
+📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
+🖼️ <b>Фото образца:</b> ${imageUrl}
+
+⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
+  timeZone: 'Asia/Yekaterinburg',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+})}
+    `;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caption', caption);
+    
+    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
+    }
+
+    return responseData;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -163,7 +228,11 @@ const Portfolio = () => {
     setIsSubmitting(true);
     
     try {
-      await sendToTelegram(formData, selectedItem!);
+      if (uploadedFile) {
+        await sendFileToTelegram(formData, selectedItem!, uploadedFile);
+      } else {
+        await sendTextToTelegram(formData, selectedItem!);
+      }
       
       setSelectedItem(null);
       
@@ -177,6 +246,8 @@ const Portfolio = () => {
       });
       
       setFormData({ name: '', phone: '', quantity: 1 });
+      setUploadedFile(null);
+      setFilePreview(null);
       setIsAgreed(false);
       
     } catch (error) {
@@ -214,6 +285,29 @@ const Portfolio = () => {
         quantity: 1
       }));
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      
+      // Если это изображение, создаем превью
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreview(null);
+      }
+    }
+  };
+
+  const removeFile = () => {
+    setUploadedFile(null);
+    setFilePreview(null);
   };
 
   return (
@@ -259,12 +353,12 @@ const Portfolio = () => {
                   <p className="text-gray-400 text-sm">{item.description}</p>
                 </div>
 
-                {/* Кнопка "Рассчитать похожий" в правом нижнем углу */}
+                {/* Кнопка "Рассчитать похожий" - адаптивная для мобильных */}
                 <button
                   onClick={() => setSelectedItem(item)}
-                  className="absolute bottom-4 right-4 px-4 py-2 bg-gold text-dark font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gold-light text-sm"
+                  className="absolute bottom-4 right-4 px-3 py-1.5 sm:px-4 sm:py-2 bg-gold text-dark font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gold-light text-xs sm:text-sm max-w-[120px] sm:max-w-none text-center break-words"
                 >
-                  Рассчитать похожий →
+                  Рассчитать похожий
                 </button>
 
                 <div className="absolute inset-0 border-2 border-gold/0 group-hover:border-gold/50 rounded-lg transition-colors duration-300 pointer-events-none" />
@@ -291,9 +385,9 @@ const Portfolio = () => {
             </button>
             
             {/* Единое окно с фото, описанием и формой */}
-            <div className="grid md:grid-cols-2">
+            <div className="grid md:grid-cols-2 max-h-[90vh] overflow-y-auto">
               {/* Левая колонка - фото */}
-              <div className="aspect-square">
+              <div className="aspect-square sticky top-0">
                 <img
                   src={selectedItem.image}
                   alt={selectedItem.title}
@@ -302,7 +396,7 @@ const Portfolio = () => {
               </div>
               
               {/* Правая колонка - описание и форма */}
-              <div className="p-8 flex flex-col justify-center">
+              <div className="p-8 overflow-y-auto">
                 <span className="text-gold text-sm uppercase tracking-wider mb-4">
                   {selectedItem.material}
                 </span>
@@ -314,7 +408,7 @@ const Portfolio = () => {
                 </p>
 
                 {/* Форма заказа */}
-                <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="block text-gray-400 text-sm mb-2">
                       Ваше имя *
@@ -375,6 +469,59 @@ const Portfolio = () => {
                         <Plus className="w-4 h-4" />
                       </button>
                     </div>
+                  </div>
+
+                  {/* Загрузка файла */}
+                  <div>
+                    <label className="block text-gray-400 text-sm mb-2">
+                      Прикрепить свой эскиз <span className="text-gray-600">(необязательно)</span>
+                    </label>
+                    
+                    {!uploadedFile ? (
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept="image/*,.pdf,.doc,.docx"
+                          onChange={handleFileChange}
+                          className="hidden"
+                          id="portfolio-file-upload"
+                        />
+                        <label
+                          htmlFor="portfolio-file-upload"
+                          className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
+                        >
+                          <Upload className="w-5 h-5" />
+                          <span>Выберите файл</span>
+                        </label>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
+                        {filePreview ? (
+                          <img
+                            src={filePreview}
+                            alt="Preview"
+                            className="w-12 h-12 object-cover rounded-lg"
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center">
+                            <Upload className="w-6 h-6 text-gold" />
+                          </div>
+                        )}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm truncate">{uploadedFile.name}</p>
+                          <p className="text-gray-500 text-xs">
+                            {(uploadedFile.size / 1024).toFixed(1)} KB
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={removeFile}
+                          className="text-gray-500 hover:text-red-500 transition-colors"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Чекбокс согласия */}
