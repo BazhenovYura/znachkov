@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Clock, Shield, Truck, X } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, Shield, Truck, X, Upload } from 'lucide-react';
 
-// URL вашей Яндекс Функции
-const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+// Константы с URL ваших Яндекс Функций
+const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
+const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -15,6 +16,8 @@ const Hero = () => {
     name: '',
     phone: '',
   });
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,6 +52,14 @@ const Hero = () => {
     };
   }, [isModalOpen]);
 
+  // Сброс файла при закрытии модального окна
+  useEffect(() => {
+    if (!isModalOpen) {
+      setUploadedFile(null);
+      setFilePreview(null);
+    }
+  }, [isModalOpen]);
+
   const scrollToPortfolio = () => {
     const element = document.querySelector('#portfolio');
     if (element) {
@@ -56,25 +67,32 @@ const Hero = () => {
     }
   };
 
-  // Функция отправки через Яндекс Функцию
-  const sendToTelegram = async (data: typeof formData) => {
+  const getEkaterinburgTime = () => {
+    return new Date().toLocaleString('ru-RU', { 
+      timeZone: 'Asia/Yekaterinburg',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Функция отправки текста (без файла)
+  const sendTextToTelegram = async (data: typeof formData) => {
     const message = `
-🎨 <b>Запрос бесплатного макета с сайта ЗНАЧКОВ.РФ</b>
+🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА (HERO блок)</b>
+━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "Hero" (первый экран)
 
 👤 <b>Имя:</b> ${data.name || 'Не указано'}
 📞 <b>Телефон:</b> ${data.phone}
 
-⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
-  timeZone: 'Asia/Yekaterinburg',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
+⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    const response = await fetch(YANDEX_FUNCTION_URL, {
+    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -91,7 +109,40 @@ const Hero = () => {
     return responseData;
   };
 
-  // Обработка отправки формы
+  // Функция отправки с файлом
+  const sendFileToTelegram = async (data: typeof formData, file: File) => {
+    const caption = `
+🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА С ФАЙЛОМ (HERO блок)</b>
+━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "Hero" (первый экран)
+
+👤 <b>Имя:</b> ${data.name || 'Не указано'}
+📞 <b>Телефон:</b> ${data.phone}
+
+📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
+
+⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
+    `;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caption', caption);
+    
+    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
+      method: 'POST',
+      body: formData,
+    });
+
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
+    }
+
+    return responseData;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -103,18 +154,24 @@ const Hero = () => {
     setIsSubmitting(true);
     
     try {
-      await sendToTelegram(formData);
+      if (uploadedFile) {
+        await sendFileToTelegram(formData, uploadedFile);
+      } else {
+        await sendTextToTelegram(formData);
+      }
       
       setIsModalOpen(false);
       navigate('/thanks', { 
-  state: { 
-    from: '/',
-    section: 'hero',
-    screenWidth: window.innerWidth  // ← ЭТО ВАЖНО!
-  } 
-});
+        state: { 
+          from: '/',
+          section: 'hero',
+          screenWidth: window.innerWidth
+        } 
+      });
       
       setFormData({ name: '', phone: '' });
+      setUploadedFile(null);
+      setFilePreview(null);
       setIsAgreed(false);
       
     } catch (error) {
@@ -125,7 +182,6 @@ const Hero = () => {
     }
   };
 
-  // Обработка изменений в форме
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
@@ -133,7 +189,29 @@ const Hero = () => {
     });
   };
 
-  // Открытие модального окна
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      
+      // Если это изображение, создаем превью
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreview(null);
+      }
+    }
+  };
+
+  const removeFile = () => {
+    setUploadedFile(null);
+    setFilePreview(null);
+  };
+
   const openModal = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
@@ -150,11 +228,10 @@ const Hero = () => {
   return (
     <>
       <section
-  id="hero"  // ← Добавьте эту строку!
-  ref={heroRef}
-  className="relative min-h-[90vh] flex items-center overflow-hidden"
-  style={{ backgroundColor: '#0A0A0A' }}
->
+        ref={heroRef}
+        className="relative min-h-[90vh] flex items-center overflow-hidden"
+        style={{ backgroundColor: '#0A0A0A' }}
+      >
         {/* Background gradient */}
         <div className="absolute inset-0">
           <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-gold/5 to-transparent" />
@@ -309,6 +386,59 @@ const Hero = () => {
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="+7 (___) ___-__-__"
                 />
+              </div>
+
+              {/* Загрузка файла */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">
+                  Прикрепить свой эскиз <span className="text-gray-600">(необязательно)</span>
+                </label>
+                
+                {!uploadedFile ? (
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="image/*,.pdf,.doc,.docx"
+                      onChange={handleFileChange}
+                      className="hidden"
+                      id="hero-file-upload"
+                    />
+                    <label
+                      htmlFor="hero-file-upload"
+                      className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
+                    >
+                      <Upload className="w-5 h-5" />
+                      <span>Выберите файл</span>
+                    </label>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
+                    {filePreview ? (
+                      <img
+                        src={filePreview}
+                        alt="Preview"
+                        className="w-12 h-12 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center">
+                        <Upload className="w-6 h-6 text-gold" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm truncate">{uploadedFile.name}</p>
+                      <p className="text-gray-500 text-xs">
+                        {(uploadedFile.size / 1024).toFixed(1)} KB
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={removeFile}
+                      className="text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Privacy Policy Checkbox */}
