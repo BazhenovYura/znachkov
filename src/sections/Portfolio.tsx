@@ -85,8 +85,8 @@ const Portfolio = () => {
   }, []);
 
   // Определяем режимы на основе ширины окна
-  const isLargeDesktop = windowWidth >= 1200;
-  const isMediumDesktop = windowWidth >= 768 && windowWidth < 1200;
+  const isLargeDesktop = windowWidth > 1600;
+  const isMediumDesktop = windowWidth >= 768 && windowWidth <= 1600;
   const isMobile = windowWidth < 768;
 
   useEffect(() => {
@@ -377,7 +377,7 @@ const Portfolio = () => {
                   <p className="text-gray-400 text-xs sm:text-sm">{item.description}</p>
                 </div>
 
-                {/* Большой десктоп (>=1200px) - текстовая кнопка в правом нижнем углу, появляется при наведении */}
+                {/* Большой десктоп (>1600px) - текстовая кнопка в правом нижнем углу, появляется при наведении */}
                 {isLargeDesktop && (
                   <button
                     onClick={(e) => {
@@ -390,7 +390,7 @@ const Portfolio = () => {
                   </button>
                 )}
 
-                {/* Средний десктоп (768-1199px) - иконка лупы в правом верхнем углу, появляется при наведении */}
+                {/* Средний десктоп (768-1600px) - иконка лупы в правом верхнем углу, появляется при наведении */}
                 {isMediumDesktop && (
                   <button
                     onClick={(e) => {
