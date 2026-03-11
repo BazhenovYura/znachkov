@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Home, ArrowLeft, AlertCircle, MessageSquare, Sparkles, Calculator, Zap } from 'lucide-react';
 
 const NotFound = () => {
   const navigate = useNavigate();
@@ -47,7 +47,7 @@ const NotFound = () => {
           <div className="w-24 h-0.5 bg-gold/30 mx-auto mb-6" />
           <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto">
             Возможно, она была удалена или вы перешли по неверной ссылке. 
-            Давайте вернём вас на главную, где всё начинается.
+            Но это не повод расстраиваться!
           </p>
         </div>
 
@@ -88,8 +88,63 @@ const NotFound = () => {
           </div>
         </div>
 
+        {/* Блок с Telegram ботом */}
+        <div className="bg-dark-light/30 border border-gold/20 rounded-2xl p-8 md:p-10 mb-8 animate-fade-in-up animation-delay-300 backdrop-blur-sm">
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4 animate-pulse">
+              <MessageSquare className="w-8 h-8 text-gold" />
+            </div>
+            
+            <h2 className="font-serif text-xl md:text-2xl text-white mb-3">
+              Наш бот работает <span className="text-gold-gradient">24/7</span>
+            </h2>
+            
+            <p className="text-gray-400 mb-6 max-w-md">
+              Не хотите ждать? Получите предварительный расчет прямо сейчас в Telegram!
+              Бот ответит на все вопросы и поможет с выбором.
+            </p>
+
+            {/* Преимущества бота */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full mb-6">
+              <div className="bg-dark border border-gray-800 rounded-xl p-4 text-center hover:border-gold/30 transition-all duration-300">
+                <Calculator className="w-6 h-6 text-gold mx-auto mb-2" />
+                <h3 className="text-white text-sm font-medium mb-1">Мгновенный расчет</h3>
+                <p className="text-gray-500 text-xs">Любой партии значков</p>
+              </div>
+
+              <div className="bg-dark border border-gray-800 rounded-xl p-4 text-center hover:border-gold/30 transition-all duration-300">
+                <Zap className="w-6 h-6 text-gold mx-auto mb-2" />
+                <h3 className="text-white text-sm font-medium mb-1">Круглосуточно</h3>
+                <p className="text-gray-500 text-xs">Всегда на связи</p>
+              </div>
+
+              <div className="bg-dark border border-gray-800 rounded-xl p-4 text-center hover:border-gold/30 transition-all duration-300">
+                <Sparkles className="w-6 h-6 text-gold mx-auto mb-2" />
+                <h3 className="text-white text-sm font-medium mb-1">Акции и новости</h3>
+                <p className="text-gray-500 text-xs">Персональные предложения</p>
+              </div>
+            </div>
+
+            <a
+              href="https://t.me/znachkoff_bot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="group relative inline-flex items-center justify-center w-full bg-gradient-to-r from-gold/20 to-gold/5 hover:from-gold/30 hover:to-gold/10 border-2 border-gold/30 rounded-xl px-6 py-4 overflow-hidden transition-all duration-300"
+            >
+              <div className="absolute inset-0 bg-gold/0 group-hover:bg-gold/5 transition-all duration-300" />
+              <div className="relative flex items-center gap-3">
+                <MessageSquare className="w-5 h-5 text-gold" />
+                <span className="text-gold font-medium">
+                  Перейти в Telegram бота
+                </span>
+                <ArrowLeft className="w-4 h-4 text-gold rotate-180 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </a>
+          </div>
+        </div>
+
         {/* Дополнительные ссылки */}
-        <div className="animate-fade-in-up animation-delay-300">
+        <div className="animate-fade-in-up animation-delay-400">
           <p className="text-gray-500 text-sm mb-3">
             Или посмотрите наши популярные разделы:
           </p>
