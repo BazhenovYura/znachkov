@@ -338,7 +338,7 @@ const Portfolio = () => {
               key={item.id}
               className={`reveal opacity-0 animation-delay-${(index % 5) * 100 + 200} group relative`}
             >
-              <div className="relative aspect-square overflow-hidden rounded-lg bg-dark-light cursor-pointer card-hover">
+              <div className="relative aspect-square overflow-hidden rounded-lg bg-dark-light cursor-pointer card-hover group">
                 <img
                   src={item.image}
                   alt={item.title}
@@ -353,10 +353,10 @@ const Portfolio = () => {
                   <p className="text-gray-400 text-sm">{item.description}</p>
                 </div>
 
-                {/* Кнопка "Рассчитать похожий" в стиле "Заказать обратный звонок" */}
+                {/* Кнопка "Рассчитать похожий" - появляется при наведении */}
                 <button
                   onClick={() => setSelectedItem(item)}
-                  className="absolute left-1/2 -translate-x-1/2 bottom-4 w-[calc(100%-2rem)] sm:w-auto sm:left-auto sm:right-4 sm:translate-x-0 px-3 py-2 sm:px-4 sm:py-2 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-xs sm:text-sm text-center whitespace-normal break-words"
+                  className="absolute left-1/2 -translate-x-1/2 bottom-4 w-[calc(100%-2rem)] sm:w-auto sm:left-auto sm:right-4 sm:translate-x-0 px-3 py-2 sm:px-4 sm:py-2 bg-gold/10 text-gold border border-gold/30 rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-xs sm:text-sm text-center whitespace-normal break-words opacity-0 group-hover:opacity-100"
                 >
                   Рассчитать похожий
                 </button>
