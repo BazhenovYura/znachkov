@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSwipeable } from 'react-swipeable';
 import { X, Minus, Plus, Upload, ZoomIn, ArrowLeft } from 'lucide-react';
 
 // Константы с URL ваших Яндекс Функций
@@ -126,6 +127,24 @@ const Portfolio = () => {
       setFilePreview(null);
     }
   }, [selectedItem]);
+
+  // Настройка свайпа для закрытия модального окна
+  const swipeHandlers = useSwipeable({
+    onSwipedRight: () => {
+      if (selectedItem) {
+        setSelectedItem(null);
+      }
+    },
+    onSwiping: (eventData) => {
+      // Предотвращаем навигацию браузера при горизонтальном свайпе
+      if (Math.abs(eventData.deltaX) > 20) {
+        eventData.event.preventDefault();
+      }
+    },
+    trackMouse: true, // Для тестирования на десктопе
+    delta: 50, // Минимальное расстояние для свайпа
+    swipeDuration: 500, // Максимальная длительность свайпа
+  });
 
   // Функция отправки текста (без файла)
   const sendTextToTelegram = async (data: typeof formData, item: PortfolioItem) => {
@@ -431,8 +450,10 @@ const Portfolio = () => {
           onClick={() => setSelectedItem(null)}
         >
           <div
+            {...swipeHandlers}
             className="relative w-full max-w-4xl bg-dark-light rounded-lg overflow-hidden"
             onClick={(e) => e.stopPropagation()}
+            style={{ touchAction: 'pan-y' }}
           >
             <button
               onClick={() => setSelectedItem(null)}
