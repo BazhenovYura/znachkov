@@ -11,6 +11,7 @@ import CTA from './sections/CTA';
 import Contact from './sections/Contact';
 import Footer from './sections/Footer';
 import Thanks from './sections/Thanks';
+import NotFound from './sections/NotFound';
 
 // Создаем отдельный компонент для маршрутизации
 const AppRoutes = () => {
@@ -38,6 +39,8 @@ const AppRoutes = () => {
           </main>
         } />
         <Route path="/thanks" element={<Thanks />} />
+        {/* Маршрут для 404 - должен быть последним */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
     </>
