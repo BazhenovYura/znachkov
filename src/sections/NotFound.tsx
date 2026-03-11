@@ -51,45 +51,8 @@ const NotFound = () => {
           </p>
         </div>
 
-        {/* Блок с предложениями */}
-        <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-8 md:p-10 mb-8 animate-fade-in-up animation-delay-200 backdrop-blur-sm">
-          <div className="flex flex-col items-center">
-            <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4">
-              <AlertCircle className="w-8 h-8 text-gold" />
-            </div>
-            
-            <h2 className="font-serif text-xl md:text-2xl text-white mb-3">
-              Что можно сделать?
-            </h2>
-            
-            <p className="text-gray-400 mb-6 max-w-md">
-              Вы можете вернуться на предыдущую страницу или перейти на главную, 
-              чтобы продолжить знакомство с нашими работами.
-            </p>
-
-            {/* Кнопки действий */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
-              <button
-                onClick={goBack}
-                className="flex-1 px-6 py-3 bg-dark border border-gray-700 text-white rounded-lg hover:border-gold/50 hover:text-gold transition-all duration-300 flex items-center justify-center gap-2 group"
-              >
-                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
-                <span>Назад</span>
-              </button>
-              
-              <button
-                onClick={goHome}
-                className="flex-1 px-6 py-3 bg-gold text-dark font-semibold rounded-lg hover:bg-gold-light transition-all duration-300 flex items-center justify-center gap-2 group"
-              >
-                <Home className="w-5 h-5" />
-                <span>На главную</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Блок с Telegram ботом */}
-        <div className="bg-dark-light/30 border border-gold/20 rounded-2xl p-8 md:p-10 mb-8 animate-fade-in-up animation-delay-300 backdrop-blur-sm">
+        {/* Блок с Telegram ботом - теперь ПЕРВЫЙ */}
+        <div className="bg-dark-light/30 border border-gold/20 rounded-2xl p-8 md:p-10 mb-8 animate-fade-in-up animation-delay-200 backdrop-blur-sm">
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4 animate-pulse">
               <MessageSquare className="w-8 h-8 text-gold" />
@@ -140,6 +103,43 @@ const NotFound = () => {
                 <ArrowLeft className="w-4 h-4 text-gold rotate-180 group-hover:translate-x-1 transition-transform" />
               </div>
             </a>
+          </div>
+        </div>
+
+        {/* Блок с предложениями - теперь ВТОРОЙ */}
+        <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-8 md:p-10 mb-8 animate-fade-in-up animation-delay-300 backdrop-blur-sm">
+          <div className="flex flex-col items-center">
+            <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4">
+              <AlertCircle className="w-8 h-8 text-gold" />
+            </div>
+            
+            <h2 className="font-serif text-xl md:text-2xl text-white mb-3">
+              Что можно сделать?
+            </h2>
+            
+            <p className="text-gray-400 mb-6 max-w-md">
+              Вы можете вернуться на предыдущую страницу или перейти на главную, 
+              чтобы продолжить знакомство с нашими работами.
+            </p>
+
+            {/* Кнопки действий */}
+            <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+              <button
+                onClick={goBack}
+                className="flex-1 px-6 py-3 bg-dark border border-gray-700 text-white rounded-lg hover:border-gold/50 hover:text-gold transition-all duration-300 flex items-center justify-center gap-2 group"
+              >
+                <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+                <span>Назад</span>
+              </button>
+              
+              <button
+                onClick={goHome}
+                className="flex-1 px-6 py-3 bg-gold text-dark font-semibold rounded-lg hover:bg-gold-light transition-all duration-300 flex items-center justify-center gap-2 group"
+              >
+                <Home className="w-5 h-5" />
+                <span>На главную</span>
+              </button>
+            </div>
           </div>
         </div>
 
