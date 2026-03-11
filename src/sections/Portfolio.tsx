@@ -465,8 +465,11 @@ const Portfolio = () => {
             
             {/* Модальное окно с фото и формой */}
             <div className={`grid ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'} max-h-[95vh] sm:max-h-[90vh] overflow-y-auto`}>
-              {/* Левая колонка - фото */}
-              <div className={`w-full ${!isMobile && 'md:sticky md:top-0 md:h-fit'}`}>
+              {/* Левая колонка - фото - теперь клик по фото закрывает модалку */}
+              <div 
+                className={`w-full cursor-pointer ${!isMobile && 'md:sticky md:top-0 md:h-fit'}`}
+                onClick={() => setSelectedItem(null)}
+              >
                 <img
                   src={selectedItem.image}
                   alt={selectedItem.title}
@@ -475,7 +478,10 @@ const Portfolio = () => {
               </div>
               
               {/* Правая колонка - описание и форма */}
-              <div className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}>
+              <div 
+                className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}
+                onClick={(e) => e.stopPropagation()}
+              >
                 <span className={`text-gold uppercase tracking-wider mb-2 block ${
                   isMobile ? 'text-xs' : 'text-sm'
                 }`}>
