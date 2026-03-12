@@ -18,8 +18,6 @@ const Header = () => {
   });
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [fieldFocused, setFieldFocused] = useState<string | null>(null);
 
   // Отладка: логируем состояние при загрузке компонента
   console.log('📍 Header загружен');
@@ -315,13 +313,8 @@ useEffect(() => {
   };
 
   const handleFocus = (fieldName: string) => {
-    setFieldFocused(fieldName);
     // Отправляем событие о фокусе на поле
     sendMetrikaEvent('form_field_focus', { field: fieldName });
-  };
-
-  const handleBlur = () => {
-    setFieldFocused(null);
   };
 
   const openModal = () => {
@@ -332,7 +325,6 @@ useEffect(() => {
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
     setIsMobileMenuOpen(false);
-    setFieldFocused(null);
   };
 
   const closeModal = () => {
@@ -517,7 +509,6 @@ useEffect(() => {
                   value={formData.name}
                   onChange={handleChange}
                   onFocus={() => handleFocus('name')}
-                  onBlur={handleBlur}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="Иван Иванов"
@@ -534,7 +525,6 @@ useEffect(() => {
                   value={formData.phone}
                   onChange={handleChange}
                   onFocus={() => handleFocus('phone')}
-                  onBlur={handleBlur}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="+7 (___) ___-__-__"
