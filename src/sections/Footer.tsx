@@ -1,11 +1,45 @@
 import { Phone, Mail, MapPin } from 'lucide-react';
+import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 const Footer = () => {
   const scrollToSection = (href: string) => {
+    const sectionId = href.substring(1);
     const element = document.querySelector(href);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
+    // Отправляем событие в Метрику
+    sendMetrikaEvent('navigation', { to: sectionId, from: 'footer' });
+  };
+
+  const handlePhoneClick = () => {
+    // Отправляем событие в Метрику - клик по телефону
+    sendMetrikaGoal('phone_click');
+    console.log('📞 Клик по телефону в футере');
+  };
+
+  const handleMailClick = () => {
+    // Отправляем событие в Метрику - клик по email
+    sendMetrikaEvent('email_click', { from: 'footer' });
+    console.log('📧 Клик по email в футере');
+  };
+
+  const handleAddressClick = () => {
+    // Отправляем событие в Метрику - клик по адресу
+    sendMetrikaEvent('address_click', { from: 'footer' });
+    console.log('📍 Клик по адресу в футере');
+  };
+
+  const handleLogoClick = () => {
+    // Отправляем событие в Метрику - клик по логотипу
+    sendMetrikaEvent('navigation', { to: 'home', from: 'footer_logo' });
+    console.log('🏠 Клик по логотипу в футере');
+  };
+
+  const handlePrivacyClick = () => {
+    // Отправляем событие в Метрику - клик по политике конфиденциальности
+    sendMetrikaEvent('privacy_policy_click', { from: 'footer' });
+    console.log('📄 Клик по политике конфиденциальности');
   };
 
   const navLinks = [
@@ -21,7 +55,11 @@ const Footer = () => {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Logo & Description */}
           <div className="lg:col-span-2">
-            <a href="#" className="inline-block mb-4">
+            <a 
+              href="#" 
+              onClick={handleLogoClick}
+              className="inline-block mb-4"
+            >
               <span className="font-serif text-2xl font-bold text-gold-gradient">
                 ЗНАЧКОВ.РФ
               </span>
@@ -61,6 +99,7 @@ const Footer = () => {
               <li>
                 <a
                   href="tel:+79227474474"
+                  onClick={handlePhoneClick}
                   className="flex items-center gap-2 text-gray-400 hover:text-gold transition-colors text-sm"
                 >
                   <Phone className="w-4 h-4" />
@@ -70,6 +109,7 @@ const Footer = () => {
               <li>
                 <a
                   href="mailto:znachkoff@gmail.com"
+                  onClick={handleMailClick}
                   className="flex items-center gap-2 text-gray-400 hover:text-gold transition-colors text-sm"
                 >
                   <Mail className="w-4 h-4" />
@@ -81,6 +121,7 @@ const Footer = () => {
                   href="https://yandex.ru/maps/org/uralskiy_yuvelir/1119071637/"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={handleAddressClick}
                   className="flex items-center gap-2 text-gray-400 hover:text-gold transition-colors text-sm"
                 >
                   <MapPin className="w-4 h-4" />
@@ -102,6 +143,7 @@ const Footer = () => {
               href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handlePrivacyClick}
               className="text-gray-500 hover:text-gold transition-colors text-xs"
             >
               Политика конфиденциальности
