@@ -89,19 +89,6 @@ const Types = () => {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-
-  // Отслеживаем изменение размера окна
-  useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const isMobile = windowWidth < 768;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
