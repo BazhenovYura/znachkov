@@ -130,7 +130,7 @@ useEffect(() => {
     console.log('🔗 Навигация к секции:', sectionId);
     
     // Отправляем событие в Метрику
-    sendMetrikaEvent('navigation', { to: sectionId });
+    sendMetrikaEvent('navigation', { to: sectionId, from: 'header_menu' });
     
     if (location.pathname === '/') {
       const element = document.getElementById(sectionId);
@@ -146,8 +146,17 @@ useEffect(() => {
     setIsMobileMenuOpen(false);
   };
 
+  const handlePhoneClick = () => {
+    // Отправляем событие в Метрику - клик по телефону
+    sendMetrikaGoal('phone_click');
+    console.log('📞 Клик по телефону');
+  };
+
   const goToHome = () => {
     console.log('🏠 Возврат на главную');
+    // Отправляем событие в Метрику - клик по логотипу
+    sendMetrikaEvent('navigation', { to: 'home', from: 'logo' });
+    
     if (location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
@@ -315,6 +324,7 @@ useEffect(() => {
       >
         <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
           <div className="flex items-center justify-between">
+            {/* Логотип - добавили обработчик клика */}
             <button 
               onClick={goToHome} 
               className="flex items-center gap-2"
@@ -337,8 +347,10 @@ useEffect(() => {
             </nav>
 
             <div className="hidden lg:flex items-center gap-6">
+              {/* Телефон - добавили обработчик клика */}
               <a
                 href="tel:+79227474474"
+                onClick={handlePhoneClick}
                 className="flex items-center gap-2 text-gold hover:text-gold-light transition-colors"
               >
                 <Phone className="w-4 h-4" />
@@ -396,9 +408,13 @@ useEffect(() => {
               ))}
               
               <div className="pt-8 mt-8 border-t border-gray-800">
+                {/* Телефон в мобильном меню - добавили обработчик */}
                 <a
                   href="tel:+79227474474"
-                  onClick={() => setIsMobileMenuOpen(false)}
+                  onClick={(e) => {
+                    handlePhoneClick();
+                    setIsMobileMenuOpen(false);
+                  }}
                   className="group flex items-center justify-center gap-3 mb-6 text-xl transition-all duration-300"
                 >
                   <div className="w-12 h-12 rounded-full bg-gold/10 group-hover:bg-gold/20 flex items-center justify-center transition-colors">
