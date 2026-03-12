@@ -1,21 +1,45 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, ArrowLeft, AlertCircle, MessageSquare, Sparkles, Calculator, Zap } from 'lucide-react';
+import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 const NotFound = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     // Скролл наверх при загрузке страницы
     window.scrollTo(0, 0);
-  }, []);
+    
+    // Отправляем просмотр страницы 404 в Метрику
+    const fullUrl = location.pathname + location.search + location.hash;
+    sendMetrikaEvent('404_page_view', { 
+      url: fullUrl,
+      referrer: document.referrer || 'direct'
+    });
+  }, [location]);
 
   const goBack = () => {
-    navigate(-1); // Возврат на предыдущую страницу
+    // Отправляем событие о возврате на предыдущую страницу
+    sendMetrikaGoal('404_go_back');
+    navigate(-1);
   };
 
   const goHome = () => {
-    navigate('/'); // Переход на главную
+    // Отправляем событие о переходе на главную
+    sendMetrikaGoal('404_go_home');
+    navigate('/');
+  };
+
+  const handleNavClick = (section: string) => {
+    // Отправляем событие о переходе к разделу с 404 страницы
+    sendMetrikaEvent('404_navigation', { to: section });
+    navigate('/', { state: { scrollTo: section } });
+  };
+
+  const handleBotClick = () => {
+    // Отправляем событие о клике на бота
+    sendMetrikaGoal('404_bot_click');
   };
 
   return (
@@ -51,7 +75,7 @@ const NotFound = () => {
           </p>
         </div>
 
-        {/* Блок с Telegram ботом - теперь ПЕРВЫЙ */}
+        {/* Блок с Telegram ботом */}
         <div className="bg-dark-light/30 border border-gold/20 rounded-2xl p-8 md:p-10 mb-8 animate-fade-in-up animation-delay-200 backdrop-blur-sm">
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4 animate-pulse">
@@ -92,6 +116,7 @@ const NotFound = () => {
               href="https://t.me/znachkoff_bot"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={handleBotClick}
               className="group relative inline-flex items-center justify-center w-full bg-gradient-to-r from-gold/20 to-gold/5 hover:from-gold/30 hover:to-gold/10 border-2 border-gold/30 rounded-xl px-6 py-4 overflow-hidden transition-all duration-300"
             >
               <div className="absolute inset-0 bg-gold/0 group-hover:bg-gold/5 transition-all duration-300" />
@@ -106,7 +131,7 @@ const NotFound = () => {
           </div>
         </div>
 
-        {/* Блок с предложениями - теперь ВТОРОЙ */}
+        {/* Блок с предложениями */}
         <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-8 md:p-10 mb-8 animate-fade-in-up animation-delay-300 backdrop-blur-sm">
           <div className="flex flex-col items-center">
             <div className="w-16 h-16 rounded-full bg-gold/10 flex items-center justify-center mb-4">
@@ -149,49 +174,33 @@ const NotFound = () => {
             Или посмотрите наши популярные разделы:
           </p>
           <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
-            <a 
-              href="/#portfolio" 
+            <button
+              onClick={() => handleNavClick('portfolio')}
               className="text-gray-400 hover:text-gold transition-colors underline underline-offset-4 decoration-gold/30"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/', { state: { scrollTo: 'portfolio' } });
-              }}
             >
               Портфолио
-            </a>
+            </button>
             <span className="text-gray-700">•</span>
-            <a 
-              href="/#types" 
+            <button
+              onClick={() => handleNavClick('types')}
               className="text-gray-400 hover:text-gold transition-colors underline underline-offset-4 decoration-gold/30"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/', { state: { scrollTo: 'types' } });
-              }}
             >
               Виды значков
-            </a>
+            </button>
             <span className="text-gray-700">•</span>
-            <a 
-              href="/#process" 
+            <button
+              onClick={() => handleNavClick('process')}
               className="text-gray-400 hover:text-gold transition-colors underline underline-offset-4 decoration-gold/30"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/', { state: { scrollTo: 'process' } });
-              }}
             >
               Процесс
-            </a>
+            </button>
             <span className="text-gray-700">•</span>
-            <a 
-              href="/#contact" 
+            <button
+              onClick={() => handleNavClick('contact')}
               className="text-gray-400 hover:text-gold transition-colors underline underline-offset-4 decoration-gold/30"
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/', { state: { scrollTo: 'contact' } });
-              }}
             >
               Контакты
-            </a>
+            </button>
           </div>
         </div>
       </div>
