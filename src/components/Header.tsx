@@ -18,6 +18,7 @@ const Header = () => {
   });
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fieldFocused, setFieldFocused] = useState<string | null>(null);
 
   // Отладка: логируем состояние при загрузке компонента
   console.log('📍 Header загружен');
@@ -207,7 +208,16 @@ useEffect(() => {
     e.preventDefault();
     
     if (!isAgreed) {
+      // Отправляем событие о неудачной попытке (не согласился с политикой)
+      sendMetrikaEvent('form_validation_error', { reason: 'privacy_not_agreed' });
       alert('Необходимо согласиться с политикой конфиденциальности');
+      return;
+    }
+    
+    // Валидация полей
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      sendMetrikaEvent('form_validation_error', { reason: 'empty_fields' });
+      alert('Пожалуйста, заполните все обязательные поля');
       return;
     }
     
@@ -282,6 +292,8 @@ useEffect(() => {
       
     } catch (error) {
       console.error('❌ Ошибка отправки:', error);
+      // Отправляем событие об ошибке
+      sendMetrikaEvent('form_submit_error', { error: String(error) });
       alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
@@ -289,10 +301,26 @@ useEffect(() => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    
+    // Отправляем событие о начале заполнения поля (только первый раз)
+    if (!formData[name as keyof typeof formData] && value) {
+      sendMetrikaEvent('form_field_filled', { field: name });
+    }
+  };
+
+  const handleFocus = (fieldName: string) => {
+    setFieldFocused(fieldName);
+    // Отправляем событие о фокусе на поле
+    sendMetrikaEvent('form_field_focus', { field: fieldName });
+  };
+
+  const handleBlur = (fieldName: string) => {
+    setFieldFocused(null);
   };
 
   const openModal = () => {
@@ -303,6 +331,17 @@ useEffect(() => {
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
     setIsMobileMenuOpen(false);
+    setFieldFocused(null);
+  };
+
+  const closeModal = () => {
+    // Отправляем событие о закрытии модалки
+    if (formData.name || formData.phone) {
+      sendMetrikaEvent('modal_closed_with_data');
+    } else {
+      sendMetrikaEvent('modal_closed_empty');
+    }
+    setIsModalOpen(false);
   };
 
   return (
@@ -444,12 +483,12 @@ useEffect(() => {
         <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => !isSubmitting && setIsModalOpen(false)}
+            onClick={closeModal}
           />
           
           <div className="relative bg-dark-light border border-gray-800 rounded-2xl max-w-md w-full p-8 shadow-2xl animate-fade-in-up">
             <button
-              onClick={() => !isSubmitting && setIsModalOpen(false)}
+              onClick={closeModal}
               className="absolute top-4 right-4 text-gray-500 hover:text-gold transition-colors"
               disabled={isSubmitting}
               aria-label="Закрыть"
@@ -476,6 +515,8 @@ useEffect(() => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('name')}
+                  onBlur={() => handleBlur('name')}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="Иван Иванов"
@@ -491,6 +532,8 @@ useEffect(() => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('phone')}
+                  onBlur={() => handleBlur('phone')}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="+7 (___) ___-__-__"
@@ -503,7 +546,12 @@ useEffect(() => {
                     type="checkbox"
                     id="privacy-header"
                     checked={isAgreed}
-                    onChange={(e) => setIsAgreed(e.target.checked)}
+                    onChange={(e) => {
+                      setIsAgreed(e.target.checked);
+                      if (e.target.checked) {
+                        sendMetrikaEvent('privacy_agreed');
+                      }
+                    }}
                     className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
                   />
                 </div>
