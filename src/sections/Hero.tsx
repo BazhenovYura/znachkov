@@ -66,7 +66,8 @@ const Hero = () => {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
-    // Отправляем событие в Метрику
+    // Отправляем событие в Метрику - клик по кнопке "Смотреть портфолио"
+    sendMetrikaGoal('click_portfolio_button');
     sendMetrikaEvent('navigation', { to: 'portfolio', from: 'hero_button' });
   };
 
@@ -150,7 +151,16 @@ const Hero = () => {
     e.preventDefault();
     
     if (!isAgreed) {
+      // Отправляем событие о неудачной попытке (не согласился с политикой)
+      sendMetrikaEvent('form_validation_error', { reason: 'privacy_not_agreed', form: 'hero' });
       alert('Необходимо согласиться с политикой конфиденциальности');
+      return;
+    }
+    
+    // Валидация полей
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      sendMetrikaEvent('form_validation_error', { reason: 'empty_fields', form: 'hero' });
+      alert('Пожалуйста, заполните все обязательные поля');
       return;
     }
     
@@ -183,6 +193,8 @@ const Hero = () => {
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
+      // Отправляем событие об ошибке
+      sendMetrikaEvent('form_submit_error', { form: 'hero', error: String(error) });
       alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
@@ -190,16 +202,35 @@ const Hero = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    
+    // Отправляем событие о начале заполнения поля (только первый раз)
+    if (!formData[name as keyof typeof formData] && value) {
+      sendMetrikaEvent('form_field_filled', { field: name, form: 'hero' });
+    }
+  };
+
+  const handleFocus = (fieldName: string) => {
+    // Отправляем событие о фокусе на поле
+    sendMetrikaEvent('form_field_focus', { field: fieldName, form: 'hero' });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
+      
+      // Отправляем событие о загрузке файла
+      sendMetrikaEvent('file_uploaded', { 
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        form: 'hero'
+      });
       
       // Если это изображение, создаем превью
       if (file.type.startsWith('image/')) {
@@ -217,6 +248,8 @@ const Hero = () => {
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
+    // Отправляем событие об удалении файла
+    sendMetrikaEvent('file_removed', { form: 'hero' });
   };
 
   const openModal = () => {
@@ -225,6 +258,16 @@ const Hero = () => {
     setIsAgreed(false);
     // Отправляем цель в Метрику - открытие модалки
     sendMetrikaGoal('open_hero_modal');
+  };
+
+  const closeModal = () => {
+    // Отправляем событие о закрытии модалки
+    if (formData.name || formData.phone || uploadedFile) {
+      sendMetrikaEvent('modal_closed_with_data', { form: 'hero' });
+    } else {
+      sendMetrikaEvent('modal_closed_empty', { form: 'hero' });
+    }
+    setIsModalOpen(false);
   };
 
   const benefits = [
@@ -340,14 +383,14 @@ const Hero = () => {
           {/* Overlay */}
           <div 
             className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => !isSubmitting && setIsModalOpen(false)}
+            onClick={closeModal}
           />
           
           {/* Modal Content */}
           <div className="relative bg-dark-light border border-gray-800 rounded-2xl max-w-md w-full p-8 shadow-2xl animate-fade-in-up">
             {/* Close button */}
             <button
-              onClick={() => !isSubmitting && setIsModalOpen(false)}
+              onClick={closeModal}
               className="absolute top-4 right-4 text-gray-500 hover:text-gold transition-colors"
               disabled={isSubmitting}
               aria-label="Закрыть"
@@ -376,6 +419,7 @@ const Hero = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('name')}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="Иван Иванов"
@@ -391,6 +435,7 @@ const Hero = () => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('phone')}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="+7 (___) ___-__-__"
@@ -457,7 +502,12 @@ const Hero = () => {
                     type="checkbox"
                     id="privacy-hero"
                     checked={isAgreed}
-                    onChange={(e) => setIsAgreed(e.target.checked)}
+                    onChange={(e) => {
+                      setIsAgreed(e.target.checked);
+                      if (e.target.checked) {
+                        sendMetrikaEvent('privacy_agreed', { form: 'hero' });
+                      }
+                    }}
                     className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
                   />
                 </div>
