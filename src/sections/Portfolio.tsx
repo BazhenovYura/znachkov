@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSwipeable } from 'react-swipeable';
 import { X, Minus, Plus, Upload, ZoomIn, ArrowLeft } from 'lucide-react';
+import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
@@ -132,6 +133,12 @@ const Portfolio = () => {
   const swipeHandlers = useSwipeable({
     onSwipedRight: () => {
       if (selectedItem) {
+        // Отправляем событие о закрытии свайпом
+        if (formData.name || formData.phone || uploadedFile || formData.quantity > 1) {
+          sendMetrikaEvent('modal_closed_with_data', { form: 'portfolio', method: 'swipe' });
+        } else {
+          sendMetrikaEvent('modal_closed_empty', { form: 'portfolio', method: 'swipe' });
+        }
         setSelectedItem(null);
       }
     },
@@ -141,10 +148,21 @@ const Portfolio = () => {
         eventData.event.preventDefault();
       }
     },
-    trackMouse: true, // Для тестирования на десктопе
-    delta: 50, // Минимальное расстояние для свайпа
-    swipeDuration: 500, // Максимальная длительность свайпа
+    trackMouse: true,
+    delta: 50,
+    swipeDuration: 500,
   });
+
+  const getEkaterinburgTime = () => {
+    return new Date().toLocaleString('ru-RU', { 
+      timeZone: 'Asia/Yekaterinburg',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
 
   // Функция отправки текста (без файла)
   const sendTextToTelegram = async (data: typeof formData, item: PortfolioItem) => {
@@ -171,14 +189,7 @@ const Portfolio = () => {
 
 🖼️ <b>Фото образца:</b> ${imageUrl}
 
-⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
-  timeZone: 'Asia/Yekaterinburg',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
+⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
     const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
@@ -224,14 +235,7 @@ const Portfolio = () => {
 📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
 🖼️ <b>Фото образца:</b> ${imageUrl}
 
-⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
-  timeZone: 'Asia/Yekaterinburg',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
+⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
     const formData = new FormData();
@@ -256,7 +260,24 @@ const Portfolio = () => {
     e.preventDefault();
     
     if (!isAgreed) {
+      // Отправляем событие о неудачной попытке (не согласился с политикой)
+      sendMetrikaEvent('form_validation_error', { 
+        reason: 'privacy_not_agreed', 
+        form: 'portfolio',
+        itemId: selectedItem?.id 
+      });
       alert('Необходимо согласиться с политикой конфиденциальности');
+      return;
+    }
+    
+    // Валидация полей
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      sendMetrikaEvent('form_validation_error', { 
+        reason: 'empty_fields', 
+        form: 'portfolio',
+        itemId: selectedItem?.id 
+      });
+      alert('Пожалуйста, заполните все обязательные поля');
       return;
     }
     
@@ -265,8 +286,20 @@ const Portfolio = () => {
     try {
       if (uploadedFile) {
         await sendFileToTelegram(formData, selectedItem!, uploadedFile);
+        // Отправляем цель в Метрику - отправка формы с файлом
+        sendMetrikaGoal('portfolio_form_submit_with_file', { 
+          itemId: selectedItem?.id,
+          itemTitle: selectedItem?.title,
+          quantity: formData.quantity
+        });
       } else {
         await sendTextToTelegram(formData, selectedItem!);
+        // Отправляем цель в Метрику - отправка формы без файла
+        sendMetrikaGoal('portfolio_form_submit', { 
+          itemId: selectedItem?.id,
+          itemTitle: selectedItem?.title,
+          quantity: formData.quantity
+        });
       }
       
       setSelectedItem(null);
@@ -287,6 +320,12 @@ const Portfolio = () => {
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
+      // Отправляем событие об ошибке
+      sendMetrikaEvent('form_submit_error', { 
+        form: 'portfolio',
+        itemId: selectedItem?.id,
+        error: String(error) 
+      });
       alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
@@ -294,17 +333,46 @@ const Portfolio = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
+    });
+    
+    // Отправляем событие о начале заполнения поля (только первый раз)
+    if (!formData[name as keyof typeof formData] && value) {
+      sendMetrikaEvent('form_field_filled', { 
+        field: name, 
+        form: 'portfolio',
+        itemId: selectedItem?.id 
+      });
+    }
+  };
+
+  const handleFocus = (fieldName: string) => {
+    // Отправляем событие о фокусе на поле
+    sendMetrikaEvent('form_field_focus', { 
+      field: fieldName, 
+      form: 'portfolio',
+      itemId: selectedItem?.id 
     });
   };
 
   const handleQuantityChange = (delta: number) => {
+    const newQuantity = Math.max(1, formData.quantity + delta);
     setFormData(prev => ({
       ...prev,
-      quantity: Math.max(1, prev.quantity + delta)
+      quantity: newQuantity
     }));
+    
+    // Отправляем событие об изменении количества
+    sendMetrikaEvent('quantity_changed', { 
+      form: 'portfolio',
+      itemId: selectedItem?.id,
+      oldValue: formData.quantity,
+      newValue: newQuantity,
+      method: delta > 0 ? 'increment' : 'decrement'
+    });
   };
 
   const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -314,6 +382,12 @@ const Portfolio = () => {
         ...prev,
         quantity: value
       }));
+      // Отправляем событие о ручном вводе количества
+      sendMetrikaEvent('quantity_manually_entered', { 
+        form: 'portfolio',
+        itemId: selectedItem?.id,
+        value: value
+      });
     } else if (e.target.value === '') {
       setFormData(prev => ({
         ...prev,
@@ -326,6 +400,15 @@ const Portfolio = () => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
+      
+      // Отправляем событие о загрузке файла
+      sendMetrikaEvent('file_uploaded', { 
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        form: 'portfolio',
+        itemId: selectedItem?.id
+      });
       
       // Если это изображение, создаем превью
       if (file.type.startsWith('image/')) {
@@ -343,10 +426,39 @@ const Portfolio = () => {
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
+    // Отправляем событие об удалении файла
+    sendMetrikaEvent('file_removed', { 
+      form: 'portfolio',
+      itemId: selectedItem?.id 
+    });
   };
 
   const handleItemClick = (item: PortfolioItem) => {
     setSelectedItem(item);
+    // Отправляем цель в Метрику - открытие модалки с конкретным значком
+    sendMetrikaGoal('open_portfolio_modal', { 
+      itemId: item.id, 
+      itemTitle: item.title,
+      itemMaterial: item.material
+    });
+  };
+
+  const closeModal = () => {
+    // Отправляем событие о закрытии модалки
+    if (formData.name || formData.phone || uploadedFile || formData.quantity > 1) {
+      sendMetrikaEvent('modal_closed_with_data', { 
+        form: 'portfolio',
+        itemId: selectedItem?.id,
+        method: 'button'
+      });
+    } else {
+      sendMetrikaEvent('modal_closed_empty', { 
+        form: 'portfolio',
+        itemId: selectedItem?.id,
+        method: 'button'
+      });
+    }
+    setSelectedItem(null);
   };
 
   return (
@@ -447,7 +559,7 @@ const Portfolio = () => {
       {selectedItem && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-dark/95 backdrop-blur-sm"
-          onClick={() => setSelectedItem(null)}
+          onClick={closeModal}
         >
           <div
             {...swipeHandlers}
@@ -456,7 +568,7 @@ const Portfolio = () => {
             style={{ touchAction: 'pan-y' }}
           >
             <button
-              onClick={() => setSelectedItem(null)}
+              onClick={closeModal}
               className="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 w-8 h-8 sm:w-10 sm:h-10 bg-dark/80 rounded-full flex items-center justify-center hover:bg-gold hover:text-dark transition-colors"
               aria-label="Закрыть"
             >
@@ -465,10 +577,10 @@ const Portfolio = () => {
             
             {/* Модальное окно с фото и формой */}
             <div className={`grid ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'} max-h-[95vh] sm:max-h-[90vh] overflow-y-auto`}>
-              {/* Левая колонка - фото - теперь клик по фото закрывает модалку */}
+              {/* Левая колонка - фото */}
               <div 
                 className={`w-full cursor-pointer ${!isMobile && 'md:sticky md:top-0 md:h-fit'}`}
-                onClick={() => setSelectedItem(null)}
+                onClick={closeModal}
               >
                 <img
                   src={selectedItem.image}
@@ -511,6 +623,7 @@ const Portfolio = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
+                      onFocus={() => handleFocus('name')}
                       required
                       className={`w-full bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors ${
                         isMobile 
@@ -532,6 +645,7 @@ const Portfolio = () => {
                       name="phone"
                       value={formData.phone}
                       onChange={handleChange}
+                      onFocus={() => handleFocus('phone')}
                       required
                       className={`w-full bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors ${
                         isMobile 
@@ -662,7 +776,15 @@ const Portfolio = () => {
                         type="checkbox"
                         id="privacy-portfolio"
                         checked={isAgreed}
-                        onChange={(e) => setIsAgreed(e.target.checked)}
+                        onChange={(e) => {
+                          setIsAgreed(e.target.checked);
+                          if (e.target.checked) {
+                            sendMetrikaEvent('privacy_agreed', { 
+                              form: 'portfolio',
+                              itemId: selectedItem?.id 
+                            });
+                          }
+                        }}
                         className={`bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer ${
                           isMobile ? 'w-4 h-4' : 'w-5 h-5'
                         }`}
@@ -708,7 +830,7 @@ const Portfolio = () => {
                   {/* Кнопка "Назад" под кнопкой отправки */}
                   <button
                     type="button"
-                    onClick={() => setSelectedItem(null)}
+                    onClick={closeModal}
                     className="w-full flex items-center justify-center gap-2 text-gray-400 hover:text-gold transition-colors py-2 text-sm sm:text-base"
                   >
                     <ArrowLeft className="w-4 h-4" />
