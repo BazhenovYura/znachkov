@@ -20,7 +20,7 @@ const badgeTypes: BadgeType[] = [
   {
     id: 'maxi',
     name: 'MAXI',
-    image: '/images/types-maxi.jpg',
+    image: '/images/types-maxi.png',
     description: 'Максимальная детализация для премиальных брендов',
     features: [
       'Полный логотип с названием',
@@ -34,7 +34,7 @@ const badgeTypes: BadgeType[] = [
   {
     id: 'midi',
     name: 'MIDI',
-    image: '/images/types-midi.jpg',
+    image: '/images/types-midi.png',
     description: 'Оптимальный баланс размера и детализации',
     features: [
       'Основной символ компании',
@@ -48,7 +48,7 @@ const badgeTypes: BadgeType[] = [
   {
     id: 'mini',
     name: 'MINI',
-    image: '/images/types-mini.jpg',
+    image: '/images/types-mini.png',
     description: 'Компактный формат для повседневного использования',
     features: [
       'Компактный символ бренда',
@@ -62,7 +62,7 @@ const badgeTypes: BadgeType[] = [
   {
     id: 'micro',
     name: 'MICRO',
-    image: '/images/types-micro.jpg',
+    image: '/images/types-micro.png',
     description: 'Минимальный размер для массовых мероприятий',
     features: [
       'Упрощённый символ',
@@ -422,7 +422,7 @@ ${featuresList}
                 className={`reveal opacity-0 animation-delay-${(index + 2) * 100} group relative`}
               >
                 <div className="h-full p-6 lg:p-8 bg-dark-light rounded-lg border border-gray-800 hover:border-gold/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col">
-                  {/* Фото значка */}
+                  {/* Фото значка с прозрачным фоном */}
                   <div className="relative w-40 h-40 sm:w-44 sm:h-44 lg:w-48 lg:h-48 mx-auto mb-6">
                     <div className="absolute inset-0 bg-gold/10 rounded-full blur-2xl transform scale-75 opacity-50 group-hover:opacity-100 transition-opacity" />
                     <img
