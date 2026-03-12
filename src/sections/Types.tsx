@@ -419,12 +419,12 @@ ${featuresList}
             {badgeTypes.map((type, index) => (
               <div
                 key={type.id}
-                className={`reveal opacity-0 animation-delay-${(index + 2) * 100} group relative`}
+                className={`reveal opacity-0 animation-delay-${(index + 2) * 100} group`}
               >
                 <div className="h-full p-6 lg:p-8 bg-dark-light rounded-lg border border-gray-800 hover:border-gold/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col">
                   {/* Фото значка с прозрачным фоном */}
                   <div className="relative w-40 h-40 sm:w-44 sm:h-44 lg:w-48 lg:h-48 mx-auto mb-6">
-                    <div className="absolute inset-0 bg-gold/10 rounded-full blur-2xl transform scale-75 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <div className="absolute inset-0 bg-gold/10 rounded-full blur-2xl transform scale-75 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <img
                       src={type.image}
                       alt={type.name}
