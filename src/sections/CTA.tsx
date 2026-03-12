@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Phone, X, Upload } from 'lucide-react';
+import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
@@ -16,8 +17,8 @@ const CTA = () => {
     name: '',
     phone: '',
   });
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -52,13 +53,22 @@ const CTA = () => {
     };
   }, [isModalOpen]);
 
-  // Очистка превью при закрытии
+  // Сброс файла при закрытии модального окна
   useEffect(() => {
     if (!isModalOpen) {
-      setLogoFile(null);
-      setLogoPreview(null);
+      setUploadedFile(null);
+      setFilePreview(null);
     }
   }, [isModalOpen]);
+
+  const scrollToContact = () => {
+    const element = document.querySelector('#contact');
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+    // Отправляем событие в Метрику - клик по ссылке контакты
+    sendMetrikaEvent('navigation', { to: 'contact', from: 'cta_button' });
+  };
 
   const getEkaterinburgTime = () => {
     return new Date().toLocaleString('ru-RU', { 
@@ -74,8 +84,10 @@ const CTA = () => {
   // Функция отправки текста (без файла)
   const sendTextToTelegram = async (data: typeof formData) => {
     const message = `
-🎨 <b>ЗАЯВКА НА БЕСПЛАТНЫЙ МАКЕТ (CTA блок)</b>
+🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА (CTA блок)</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "CTA" (специальное предложение)
 
 👤 <b>Имя:</b> ${data.name || 'Не указано'}
 📞 <b>Телефон:</b> ${data.phone}
@@ -103,13 +115,15 @@ const CTA = () => {
   // Функция отправки с файлом
   const sendFileToTelegram = async (data: typeof formData, file: File) => {
     const caption = `
-🎨 <b>ЗАЯВКА НА БЕСПЛАТНЫЙ МАКЕТ С ЛОГОТИПОМ (CTA блок)</b>
+🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА С ФАЙЛОМ (CTA блок)</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "CTA" (специальное предложение)
 
 👤 <b>Имя:</b> ${data.name || 'Не указано'}
 📞 <b>Телефон:</b> ${data.phone}
 
-📎 <b>Логотип:</b> ${file.name}
+📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
 
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
@@ -132,42 +146,43 @@ const CTA = () => {
     return responseData;
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeLogo = () => {
-    setLogoFile(null);
-    setLogoPreview(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!isAgreed) {
+      // Отправляем событие о неудачной попытке (не согласился с политикой)
+      sendMetrikaEvent('form_validation_error', { 
+        reason: 'privacy_not_agreed', 
+        form: 'cta'
+      });
       alert('Необходимо согласиться с политикой конфиденциальности');
+      return;
+    }
+    
+    // Валидация полей
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      sendMetrikaEvent('form_validation_error', { 
+        reason: 'empty_fields', 
+        form: 'cta'
+      });
+      alert('Пожалуйста, заполните все обязательные поля');
       return;
     }
     
     setIsSubmitting(true);
     
     try {
-      if (logoFile) {
-        await sendFileToTelegram(formData, logoFile);
+      if (uploadedFile) {
+        await sendFileToTelegram(formData, uploadedFile);
+        // Отправляем цель в Метрику - отправка формы с файлом
+        sendMetrikaGoal('cta_form_submit_with_file');
       } else {
         await sendTextToTelegram(formData);
+        // Отправляем цель в Метрику - отправка формы без файла
+        sendMetrikaGoal('cta_form_submit');
       }
       
       setIsModalOpen(false);
-      
       navigate('/thanks', { 
         state: { 
           from: '/',
@@ -177,12 +192,17 @@ const CTA = () => {
       });
       
       setFormData({ name: '', phone: '' });
-      setLogoFile(null);
-      setLogoPreview(null);
+      setUploadedFile(null);
+      setFilePreview(null);
       setIsAgreed(false);
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
+      // Отправляем событие об ошибке
+      sendMetrikaEvent('form_submit_error', { 
+        form: 'cta', 
+        error: String(error) 
+      });
       alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
@@ -190,16 +210,78 @@ const CTA = () => {
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
+    
+    // Отправляем событие о начале заполнения поля (только первый раз)
+    if (!formData[name as keyof typeof formData] && value) {
+      sendMetrikaEvent('form_field_filled', { field: name, form: 'cta' });
+    }
+  };
+
+  const handleFocus = (fieldName: string) => {
+    // Отправляем событие о фокусе на поле
+    sendMetrikaEvent('form_field_focus', { field: fieldName, form: 'cta' });
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setUploadedFile(file);
+      
+      // Отправляем событие о загрузке файла
+      sendMetrikaEvent('file_uploaded', { 
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        form: 'cta'
+      });
+      
+      // Если это изображение, создаем превью
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFilePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setFilePreview(null);
+      }
+    }
+  };
+
+  const removeFile = () => {
+    setUploadedFile(null);
+    setFilePreview(null);
+    // Отправляем событие об удалении файла
+    sendMetrikaEvent('file_removed', { form: 'cta' });
   };
 
   const openModal = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
+    // Отправляем цель в Метрику - открытие модалки
+    sendMetrikaGoal('open_cta_modal');
+  };
+
+  const closeModal = () => {
+    // Отправляем событие о закрытии модалки
+    if (formData.name || formData.phone || uploadedFile) {
+      sendMetrikaEvent('modal_closed_with_data', { form: 'cta' });
+    } else {
+      sendMetrikaEvent('modal_closed_empty', { form: 'cta' });
+    }
+    setIsModalOpen(false);
+  };
+
+  const handlePhoneClick = () => {
+    // Отправляем событие в Метрику - клик по телефону
+    sendMetrikaGoal('phone_click');
+    console.log('📞 Клик по телефону в CTA блоке');
   };
 
   return (
@@ -249,6 +331,7 @@ const CTA = () => {
               
               <a
                 href="tel:+79227474474"
+                onClick={handlePhoneClick}
                 className="flex items-center gap-2 text-dark font-semibold hover:text-dark/80 transition-colors"
               >
                 <Phone className="w-5 h-5" />
@@ -259,34 +342,39 @@ const CTA = () => {
         </div>
       </section>
 
-      {/* Модальное окно */}
+      {/* Модальное окно для получения макета */}
       {isModalOpen && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/95 backdrop-blur-sm"
-          onClick={() => !isSubmitting && setIsModalOpen(false)}
-        >
-          <div
-            className="relative max-w-lg w-full bg-dark-light border border-gray-800 rounded-2xl overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={closeModal}
+          />
+          
+          {/* Modal Content */}
+          <div className="relative bg-dark-light border border-gray-800 rounded-2xl max-w-md w-full p-8 shadow-2xl animate-fade-in-up">
+            {/* Close button */}
             <button
-              onClick={() => !isSubmitting && setIsModalOpen(false)}
-              className="absolute top-4 right-4 z-10 w-10 h-10 bg-dark/80 rounded-full flex items-center justify-center hover:bg-gold hover:text-dark transition-colors"
+              onClick={closeModal}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gold transition-colors"
               disabled={isSubmitting}
+              aria-label="Закрыть"
             >
-              <X className="w-5 h-5" />
+              <X className="w-6 h-6" />
             </button>
 
-            <div className="p-6 border-b border-gray-800">
-              <h3 className="font-serif text-2xl text-white">
+            {/* Header */}
+            <div className="text-center mb-6">
+              <h3 className="font-serif text-2xl text-white mb-2">
                 Получить бесплатный макет
               </h3>
-              <p className="text-gray-400 text-sm mt-1">
-                Заполните форму и мы создадим 3D-визуализацию вашего значка
+              <p className="text-gray-400 text-sm">
+                Оставьте контакты и мы создадим 3D-визуализацию вашего значка
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {/* Form */}
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
                   Ваше имя *
@@ -296,6 +384,7 @@ const CTA = () => {
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('name')}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="Иван Иванов"
@@ -311,28 +400,30 @@ const CTA = () => {
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('phone')}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="+7 (___) ___-__-__"
                 />
               </div>
 
+              {/* Загрузка файла */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
-                  Загрузить свой логотип <span className="text-gray-600">(необязательно)</span>
+                  Прикрепить свой эскиз <span className="text-gray-600">(необязательно)</span>
                 </label>
                 
-                {!logoPreview ? (
+                {!uploadedFile ? (
                   <div className="relative">
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,.pdf,.doc,.docx"
                       onChange={handleFileChange}
                       className="hidden"
-                      id="cta-logo-upload"
+                      id="cta-file-upload"
                     />
                     <label
-                      htmlFor="cta-logo-upload"
+                      htmlFor="cta-file-upload"
                       className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
                     >
                       <Upload className="w-5 h-5" />
@@ -341,20 +432,26 @@ const CTA = () => {
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
-                    <img
-                      src={logoPreview}
-                      alt="Logo preview"
-                      className="w-12 h-12 object-cover rounded-lg"
-                    />
+                    {filePreview ? (
+                      <img
+                        src={filePreview}
+                        alt="Preview"
+                        className="w-12 h-12 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center">
+                        <Upload className="w-6 h-6 text-gold" />
+                      </div>
+                    )}
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm truncate">{logoFile?.name}</p>
+                      <p className="text-white text-sm truncate">{uploadedFile.name}</p>
                       <p className="text-gray-500 text-xs">
-                        {(logoFile?.size && (logoFile.size / 1024).toFixed(1))} KB
+                        {(uploadedFile.size / 1024).toFixed(1)} KB
                       </p>
                     </div>
                     <button
                       type="button"
-                      onClick={removeLogo}
+                      onClick={removeFile}
                       className="text-gray-500 hover:text-red-500 transition-colors"
                     >
                       <X className="w-5 h-5" />
@@ -363,17 +460,23 @@ const CTA = () => {
                 )}
               </div>
 
+              {/* Privacy Policy Checkbox */}
               <div className="flex items-start gap-3">
                 <div className="relative flex items-center h-6">
                   <input
                     type="checkbox"
-                    id="cta-privacy"
+                    id="privacy-cta"
                     checked={isAgreed}
-                    onChange={(e) => setIsAgreed(e.target.checked)}
+                    onChange={(e) => {
+                      setIsAgreed(e.target.checked);
+                      if (e.target.checked) {
+                        sendMetrikaEvent('privacy_agreed', { form: 'cta' });
+                      }
+                    }}
                     className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
                   />
                 </div>
-                <label htmlFor="cta-privacy" className="text-sm text-gray-400 cursor-pointer">
+                <label htmlFor="privacy-cta" className="text-sm text-gray-400 cursor-pointer">
                   Я соглашаюсь с{' '}
                   <a 
                     href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
