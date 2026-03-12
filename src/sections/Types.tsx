@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Gem, Crown, Circle, Dot, X, Upload } from 'lucide-react';
+import { X, Upload } from 'lucide-react';
+import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
@@ -9,7 +10,7 @@ const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abd
 interface BadgeType {
   id: string;
   name: string;
-  icon: React.ElementType;
+  image: string;
   description: string;
   features: string[];
   size: string;
@@ -19,7 +20,7 @@ const badgeTypes: BadgeType[] = [
   {
     id: 'maxi',
     name: 'MAXI',
-    icon: Gem,
+    image: '/images/types-maxi.jpg',
     description: 'Максимальная детализация для премиальных брендов',
     features: [
       'Полный логотип с названием',
@@ -33,7 +34,7 @@ const badgeTypes: BadgeType[] = [
   {
     id: 'midi',
     name: 'MIDI',
-    icon: Crown,
+    image: '/images/types-midi.jpg',
     description: 'Оптимальный баланс размера и детализации',
     features: [
       'Основной символ компании',
@@ -47,7 +48,7 @@ const badgeTypes: BadgeType[] = [
   {
     id: 'mini',
     name: 'MINI',
-    icon: Circle,
+    image: '/images/types-mini.jpg',
     description: 'Компактный формат для повседневного использования',
     features: [
       'Компактный символ бренда',
@@ -61,7 +62,7 @@ const badgeTypes: BadgeType[] = [
   {
     id: 'micro',
     name: 'MICRO',
-    icon: Dot,
+    image: '/images/types-micro.jpg',
     description: 'Минимальный размер для массовых мероприятий',
     features: [
       'Упрощённый символ',
@@ -88,6 +89,19 @@ const Types = () => {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // Отслеживаем изменение размера окна
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const isMobile = windowWidth < 768;
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -145,6 +159,8 @@ const Types = () => {
 📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
+<b>📍 Откуда:</b> Блок "Типы значков"
+
 🔹 <b>Выбранный формат:</b> ${type.name} (${type.size})
 📝 <b>Описание формата:</b> ${type.description}
 
@@ -177,12 +193,14 @@ ${featuresList}
   };
 
   // Функция отправки с файлом
-const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
-  const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
+  const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
+    const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
-  const caption = `
+    const caption = `
 📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ С ЛОГОТИПОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>📍 Откуда:</b> Блок "Типы значков"
 
 🔹 <b>Выбранный формат:</b> ${type.name} (${type.size})
 📝 <b>Описание формата:</b> ${type.description}
@@ -195,34 +213,44 @@ ${featuresList}
 • Имя: ${data.name || 'Не указано'}
 • Телефон: ${data.phone}
 
+📎 <b>Прикрепленный логотип:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
+
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-  `;
+    `;
 
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('caption', caption);
-  
-  const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-    method: 'POST',
-    headers: {
-      // НЕ указываем Content-Type - браузер сам установит правильный с boundary
-    },
-    body: formData,
-  });
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('caption', caption);
+    
+    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
+      method: 'POST',
+      body: formData,
+    });
 
-  const responseData = await response.json();
-  
-  if (!responseData.ok) {
-    throw new Error('Ошибка отправки в Telegram');
-  }
+    const responseData = await response.json();
+    
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в Telegram');
+    }
 
-  return responseData;
-};
+    return responseData;
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setLogoFile(file);
+      
+      // Отправляем событие о загрузке файла
+      sendMetrikaEvent('file_uploaded', { 
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        form: 'types',
+        typeId: selectedType?.id,
+        typeName: selectedType?.name
+      });
+      
       const reader = new FileReader();
       reader.onloadend = () => {
         setLogoPreview(reader.result as string);
@@ -234,13 +262,38 @@ ${featuresList}
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
+    // Отправляем событие об удалении файла
+    sendMetrikaEvent('file_removed', { 
+      form: 'types',
+      typeId: selectedType?.id,
+      typeName: selectedType?.name
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!isAgreed) {
+      // Отправляем событие о неудачной попытке (не согласился с политикой)
+      sendMetrikaEvent('form_validation_error', { 
+        reason: 'privacy_not_agreed', 
+        form: 'types',
+        typeId: selectedType?.id,
+        typeName: selectedType?.name
+      });
       alert('Необходимо согласиться с политикой конфиденциальности');
+      return;
+    }
+    
+    // Валидация полей
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      sendMetrikaEvent('form_validation_error', { 
+        reason: 'empty_fields', 
+        form: 'types',
+        typeId: selectedType?.id,
+        typeName: selectedType?.name
+      });
+      alert('Пожалуйста, заполните все обязательные поля');
       return;
     }
     
@@ -249,8 +302,20 @@ ${featuresList}
     try {
       if (logoFile) {
         await sendFileToTelegram(formData, selectedType!, logoFile);
+        // Отправляем цель в Метрику - отправка формы с файлом
+        sendMetrikaGoal('types_form_submit_with_logo', { 
+          typeId: selectedType?.id,
+          typeName: selectedType?.name,
+          typeSize: selectedType?.size
+        });
       } else {
         await sendTextToTelegram(formData, selectedType!);
+        // Отправляем цель в Метрику - отправка формы без файла
+        sendMetrikaGoal('types_form_submit', { 
+          typeId: selectedType?.id,
+          typeName: selectedType?.name,
+          typeSize: selectedType?.size
+        });
       }
       
       setIsModalOpen(false);
@@ -270,6 +335,13 @@ ${featuresList}
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
+      // Отправляем событие об ошибке
+      sendMetrikaEvent('form_submit_error', { 
+        form: 'types',
+        typeId: selectedType?.id,
+        typeName: selectedType?.name,
+        error: String(error) 
+      });
       alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
@@ -277,15 +349,60 @@ ${featuresList}
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
+    });
+    
+    // Отправляем событие о начале заполнения поля (только первый раз)
+    if (!formData[name as keyof typeof formData] && value) {
+      sendMetrikaEvent('form_field_filled', { 
+        field: name, 
+        form: 'types',
+        typeId: selectedType?.id,
+        typeName: selectedType?.name
+      });
+    }
+  };
+
+  const handleFocus = (fieldName: string) => {
+    // Отправляем событие о фокусе на поле
+    sendMetrikaEvent('form_field_focus', { 
+      field: fieldName, 
+      form: 'types',
+      typeId: selectedType?.id,
+      typeName: selectedType?.name
     });
   };
 
   const openModal = (type: BadgeType) => {
     setSelectedType(type);
     setIsModalOpen(true);
+    // Отправляем цель в Метрику - открытие модалки с конкретным типом
+    sendMetrikaGoal('open_types_modal', { 
+      typeId: type.id, 
+      typeName: type.name,
+      typeSize: type.size
+    });
+  };
+
+  const closeModal = () => {
+    // Отправляем событие о закрытии модалки
+    if (formData.name || formData.phone || logoFile) {
+      sendMetrikaEvent('modal_closed_with_data', { 
+        form: 'types',
+        typeId: selectedType?.id,
+        typeName: selectedType?.name
+      });
+    } else {
+      sendMetrikaEvent('modal_closed_empty', { 
+        form: 'types',
+        typeId: selectedType?.id,
+        typeName: selectedType?.name
+      });
+    }
+    setIsModalOpen(false);
   };
 
   return (
@@ -317,23 +434,29 @@ ${featuresList}
                 key={type.id}
                 className={`reveal opacity-0 animation-delay-${(index + 2) * 100} group relative`}
               >
-                <div className="h-full p-6 lg:p-8 bg-dark-light rounded-lg border border-gray-800 hover:border-gold/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold">
-                  <div className="w-14 h-14 rounded-full bg-gold/10 flex items-center justify-center mb-6 group-hover:bg-gold/20 transition-colors">
-                    <type.icon className="w-7 h-7 text-gold" />
+                <div className="h-full p-6 lg:p-8 bg-dark-light rounded-lg border border-gray-800 hover:border-gold/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col">
+                  {/* Фото значка */}
+                  <div className="relative w-40 h-40 sm:w-44 sm:h-44 lg:w-48 lg:h-48 mx-auto mb-6">
+                    <div className="absolute inset-0 bg-gold/10 rounded-full blur-2xl transform scale-75 opacity-50 group-hover:opacity-100 transition-opacity" />
+                    <img
+                      src={type.image}
+                      alt={type.name}
+                      className="relative z-10 w-full h-full object-contain drop-shadow-2xl"
+                    />
                   </div>
 
-                  <div className="flex items-baseline gap-3 mb-4">
+                  <div className="flex items-baseline gap-3 mb-4 justify-center">
                     <h3 className="font-serif text-2xl font-bold text-white">
                       {type.name}
                     </h3>
                     <span className="text-gold text-sm">{type.size}</span>
                   </div>
 
-                  <p className="text-gray-400 text-sm mb-6">
+                  <p className="text-gray-400 text-sm mb-6 text-center">
                     {type.description}
                   </p>
 
-                  <ul className="space-y-3 mb-6">
+                  <ul className="space-y-3 mb-6 flex-grow">
                     {type.features.map((feature, featureIndex) => (
                       <li
                         key={featureIndex}
@@ -347,7 +470,7 @@ ${featuresList}
 
                   <button
                     onClick={() => openModal(type)}
-                    className="w-full py-2 px-4 bg-gold/10 text-gold rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm"
+                    className="w-full py-2 px-4 bg-gold/10 text-gold rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm mt-auto"
                   >
                     Получить макет
                   </button>
@@ -361,14 +484,14 @@ ${featuresList}
       {isModalOpen && selectedType && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-dark/95 backdrop-blur-sm"
-          onClick={() => !isSubmitting && setIsModalOpen(false)}
+          onClick={closeModal}
         >
           <div
             className="relative max-w-lg w-full bg-dark-light border border-gray-800 rounded-2xl overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
             <button
-              onClick={() => !isSubmitting && setIsModalOpen(false)}
+              onClick={closeModal}
               className="absolute top-4 right-4 z-10 w-10 h-10 bg-dark/80 rounded-full flex items-center justify-center hover:bg-gold hover:text-dark transition-colors"
               disabled={isSubmitting}
             >
@@ -376,12 +499,23 @@ ${featuresList}
             </button>
 
             <div className="p-6 border-b border-gray-800">
-              <h3 className="font-serif text-2xl text-white">
-                Получить макет в формате <span className="text-gold-gradient">{selectedType.name}</span>
-              </h3>
-              <p className="text-gray-400 text-sm mt-1">
-                Размер: {selectedType.size}
-              </p>
+              <div className="flex items-center gap-4 mb-2">
+                <div className="w-20 h-20 sm:w-24 sm:h-24">
+                  <img
+                    src={selectedType.image}
+                    alt={selectedType.name}
+                    className="w-full h-full object-contain"
+                  />
+                </div>
+                <div>
+                  <h3 className="font-serif text-2xl text-white">
+                    Получить макет в формате <span className="text-gold-gradient">{selectedType.name}</span>
+                  </h3>
+                  <p className="text-gray-400 text-sm mt-1">
+                    Размер: {selectedType.size}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
@@ -394,6 +528,7 @@ ${featuresList}
                   name="name"
                   value={formData.name}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('name')}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="Иван Иванов"
@@ -409,6 +544,7 @@ ${featuresList}
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('phone')}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="+7 (___) ___-__-__"
@@ -467,7 +603,16 @@ ${featuresList}
                     type="checkbox"
                     id="privacy-types"
                     checked={isAgreed}
-                    onChange={(e) => setIsAgreed(e.target.checked)}
+                    onChange={(e) => {
+                      setIsAgreed(e.target.checked);
+                      if (e.target.checked) {
+                        sendMetrikaEvent('privacy_agreed', { 
+                          form: 'types',
+                          typeId: selectedType.id,
+                          typeName: selectedType.name
+                        });
+                      }
+                    }}
                     className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold transition-colors cursor-pointer"
                   />
                 </div>
