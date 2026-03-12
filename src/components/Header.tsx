@@ -440,10 +440,10 @@ useEffect(() => {
               ))}
               
               <div className="pt-8 mt-8 border-t border-gray-800">
-                {/* Телефон в мобильном меню - добавили обработчик */}
+                {/* Телефон в мобильном меню - убрали неиспользуемый параметр e */}
                 <a
                   href="tel:+79227474474"
-                  onClick={(e) => {
+                  onClick={() => {
                     handlePhoneClick();
                     setIsMobileMenuOpen(false);
                   }}
