@@ -18,6 +18,7 @@ const Header = () => {
   });
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [fieldFocused, setFieldFocused] = useState<string | null>(null);
 
   // Отладка: логируем состояние при загрузке компонента
@@ -319,7 +320,7 @@ useEffect(() => {
     sendMetrikaEvent('form_field_focus', { field: fieldName });
   };
 
-  const handleBlur = (fieldName: string) => {
+  const handleBlur = () => {
     setFieldFocused(null);
   };
 
@@ -516,7 +517,7 @@ useEffect(() => {
                   value={formData.name}
                   onChange={handleChange}
                   onFocus={() => handleFocus('name')}
-                  onBlur={() => handleBlur('name')}
+                  onBlur={handleBlur}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="Иван Иванов"
@@ -533,7 +534,7 @@ useEffect(() => {
                   value={formData.phone}
                   onChange={handleChange}
                   onFocus={() => handleFocus('phone')}
-                  onBlur={() => handleBlur('phone')}
+                  onBlur={handleBlur}
                   required
                   className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                   placeholder="+7 (___) ___-__-__"
