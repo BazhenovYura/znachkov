@@ -61,15 +61,6 @@ const CTA = () => {
     }
   }, [isModalOpen]);
 
-  const scrollToContact = () => {
-    const element = document.querySelector('#contact');
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-    }
-    // Отправляем событие в Метрику - клик по ссылке контакты
-    sendMetrikaEvent('navigation', { to: 'contact', from: 'cta_button' });
-  };
-
   const getEkaterinburgTime = () => {
     return new Date().toLocaleString('ru-RU', { 
       timeZone: 'Asia/Yekaterinburg',
