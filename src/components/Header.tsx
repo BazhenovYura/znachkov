@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Phone, X, Menu } from 'lucide-react';
+import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константа с URL вашей Яндекс Функции
 const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
@@ -128,6 +129,9 @@ useEffect(() => {
     const sectionId = href.substring(1);
     console.log('🔗 Навигация к секции:', sectionId);
     
+    // Отправляем событие в Метрику
+    sendMetrikaEvent('navigation', { to: sectionId });
+    
     if (location.pathname === '/') {
       const element = document.getElementById(sectionId);
       if (element) {
@@ -202,6 +206,9 @@ useEffect(() => {
     
     try {
       await sendToTelegram(formData);
+      
+      // Отправляем цель в Метрику - успешная отправка формы
+      sendMetrikaGoal('callback_form_submit');
       
       setIsModalOpen(false);
       
@@ -281,6 +288,8 @@ useEffect(() => {
 
   const openModal = () => {
     console.log('📱 Открытие модального окна');
+    // Отправляем цель в Метрику - открытие модалки обратного звонка
+    sendMetrikaGoal('open_callback_modal');
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
