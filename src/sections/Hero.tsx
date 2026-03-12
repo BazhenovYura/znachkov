@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Calendar, Clock, Shield, Truck, X, Upload } from 'lucide-react';
+import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
@@ -65,6 +66,8 @@ const Hero = () => {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
+    // Отправляем событие в Метрику
+    sendMetrikaEvent('navigation', { to: 'portfolio', from: 'hero_button' });
   };
 
   const getEkaterinburgTime = () => {
@@ -156,8 +159,12 @@ const Hero = () => {
     try {
       if (uploadedFile) {
         await sendFileToTelegram(formData, uploadedFile);
+        // Отправляем цель в Метрику - отправка формы с файлом
+        sendMetrikaGoal('hero_form_submit_with_file');
       } else {
         await sendTextToTelegram(formData);
+        // Отправляем цель в Метрику - отправка формы без файла
+        sendMetrikaGoal('hero_form_submit');
       }
       
       setIsModalOpen(false);
@@ -216,6 +223,8 @@ const Hero = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
+    // Отправляем цель в Метрику - открытие модалки
+    sendMetrikaGoal('open_hero_modal');
   };
 
   const benefits = [
