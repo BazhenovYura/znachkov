@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { sendMetrikaHit } from './utils/metrika';
 import Header from './components/Header';
 import Hero from './sections/Hero';
 import Portfolio from './sections/Portfolio';
@@ -20,7 +21,11 @@ const AppRoutes = () => {
   useEffect(() => {
     // При каждом изменении маршрута прокручиваем наверх
     window.scrollTo(0, 0);
-  }, [location.pathname]);
+    
+    // Отправляем просмотр страницы в Яндекс.Метрику
+    const fullUrl = location.pathname + location.search + location.hash;
+    sendMetrikaHit(fullUrl);
+  }, [location]); // Используем location целиком, чтобы реагировать на все изменения URL
 
   return (
     <>
