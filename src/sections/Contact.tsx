@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle, Upload, X } from 'lucide-react';
+import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
@@ -47,17 +48,29 @@ const Contact = () => {
   }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value,
+      [name]: value,
     });
     setSubmitError('');
+    
+    // Отправляем событие о начале заполнения поля (только первый раз)
+    if (!formData[name as keyof typeof formData] && value) {
+      sendMetrikaEvent('form_field_filled', { field: name, form: 'contact' });
+    }
+  };
+
+  const handleFocus = (fieldName: string) => {
+    // Отправляем событие о фокусе на поле
+    sendMetrikaEvent('form_field_focus', { field: fieldName, form: 'contact' });
   };
 
   const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setIsAgreed(e.target.checked);
     if (e.target.checked) {
       setConsentError('');
+      sendMetrikaEvent('privacy_agreed', { form: 'contact' });
     }
   };
 
@@ -65,6 +78,14 @@ const Contact = () => {
     const file = e.target.files?.[0];
     if (file) {
       setUploadedFile(file);
+      
+      // Отправляем событие о загрузке файла
+      sendMetrikaEvent('file_uploaded', { 
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        form: 'contact'
+      });
       
       // Если это изображение, создаем превью
       if (file.type.startsWith('image/')) {
@@ -82,6 +103,8 @@ const Contact = () => {
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
+    // Отправляем событие об удалении файла
+    sendMetrikaEvent('file_removed', { form: 'contact' });
   };
 
   // Функция отправки текста (без файла)
@@ -175,10 +198,25 @@ const Contact = () => {
     
     if (!isAgreed) {
       setConsentError('Необходимо согласиться с политикой конфиденциальности');
+      // Отправляем событие о неудачной попытке
+      sendMetrikaEvent('form_validation_error', { 
+        reason: 'privacy_not_agreed', 
+        form: 'contact' 
+      });
       const checkboxElement = document.getElementById('privacy-checkbox');
       if (checkboxElement) {
         checkboxElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
+      return;
+    }
+    
+    // Валидация полей
+    if (!formData.name.trim() || !formData.phone.trim()) {
+      sendMetrikaEvent('form_validation_error', { 
+        reason: 'empty_fields', 
+        form: 'contact' 
+      });
+      alert('Пожалуйста, заполните все обязательные поля');
       return;
     }
     
@@ -188,8 +226,20 @@ const Contact = () => {
     try {
       if (uploadedFile) {
         await sendFileToTelegram(formData, uploadedFile);
+        // Отправляем цель в Метрику - отправка формы с файлом
+        sendMetrikaGoal('contact_form_submit_with_file', {
+          hasComment: !!formData.comment,
+          hasCompany: !!formData.company,
+          hasEmail: !!formData.email
+        });
       } else {
         await sendTextToTelegram(formData);
+        // Отправляем цель в Метрику - отправка формы без файла
+        sendMetrikaGoal('contact_form_submit', {
+          hasComment: !!formData.comment,
+          hasCompany: !!formData.company,
+          hasEmail: !!formData.email
+        });
       }
       
       setIsSubmitted(true);
@@ -210,6 +260,11 @@ const Contact = () => {
       setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
       console.error('Ошибка отправки:', error);
+      // Отправляем событие об ошибке
+      sendMetrikaEvent('form_submit_error', { 
+        form: 'contact', 
+        error: String(error) 
+      });
       setSubmitError(
         <span>
           ❌ Ошибка отправки. Попробуйте позже или свяжитесь напрямую:{' '}
@@ -241,18 +296,21 @@ const Contact = () => {
       label: 'Телефон',
       value: '+7 (922) 74-74-4-74',
       href: 'tel:+79227474474',
+      onClick: () => sendMetrikaGoal('phone_click')
     },
     {
       icon: Mail,
       label: 'Email',
       value: 'znachkoff@gmail.com',
       href: 'mailto:znachkoff@gmail.com',
+      onClick: () => sendMetrikaEvent('email_click')
     },
     {
       icon: MapPin,
       label: 'Адрес',
       value: 'Челябинская область, г.Озерск, пр.Победы, 55',
       href: 'https://yandex.ru/maps/org/uralskiy_yuvelir/1119071637/',
+      onClick: () => sendMetrikaEvent('address_click')
     },
     {
       icon: Clock,
@@ -297,6 +355,7 @@ const Contact = () => {
                 <a
                   key={index}
                   href={item.href}
+                  onClick={item.onClick}
                   className="flex items-start gap-4 group"
                   target={item.href !== '#' ? '_blank' : undefined}
                   rel={item.href !== '#' ? 'noopener noreferrer' : undefined}
@@ -340,6 +399,7 @@ const Contact = () => {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
+                    onFocus={() => handleFocus('name')}
                     required
                     className="w-full px-4 py-3 bg-dark-light border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                     placeholder="Иван Иванов"
@@ -354,6 +414,7 @@ const Contact = () => {
                     name="company"
                     value={formData.company}
                     onChange={handleChange}
+                    onFocus={() => handleFocus('company')}
                     className="w-full px-4 py-3 bg-dark-light border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                     placeholder="Название компании"
                   />
@@ -370,6 +431,7 @@ const Contact = () => {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
+                    onFocus={() => handleFocus('phone')}
                     required
                     className="w-full px-4 py-3 bg-dark-light border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                     placeholder="+7 (___) ___-__-__"
@@ -384,6 +446,7 @@ const Contact = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    onFocus={() => handleFocus('email')}
                     className="w-full px-4 py-3 bg-dark-light border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
                     placeholder="email@company.ru"
                   />
@@ -398,6 +461,7 @@ const Contact = () => {
                   name="comment"
                   value={formData.comment}
                   onChange={handleChange}
+                  onFocus={() => handleFocus('comment')}
                   rows={4}
                   className="w-full px-4 py-3 bg-dark-light border border-gray-800 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors resize-none"
                   placeholder="Опишите ваши пожелания: количество, размер, материал..."
