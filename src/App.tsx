@@ -13,6 +13,7 @@ import Contact from './sections/Contact';
 import Footer from './sections/Footer';
 import Thanks from './sections/Thanks';
 import NotFound from './sections/NotFound';
+import ExitPopup from './components/ExitPopup';
 
 // Создаем отдельный компонент для маршрутизации
 const AppRoutes = () => {
@@ -48,6 +49,7 @@ const AppRoutes = () => {
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Footer />
+      <ExitPopup />
     </>
   );
 };
