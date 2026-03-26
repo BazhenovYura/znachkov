@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Upload, Send, AlertCircle } from 'lucide-react';
+import { X, Upload, Send, AlertCircle, Gift } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
@@ -12,6 +12,7 @@ const ExitPopup = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
+  const [hasBeenShown, setHasBeenShown] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -22,20 +23,38 @@ const ExitPopup = () => {
   const [consentError, setConsentError] = useState('');
   const [submitError, setSubmitError] = useState('');
 
+  // Проверяем при загрузке, был ли уже показан попап в этой сессии
+  useEffect(() => {
+    const wasShown = sessionStorage.getItem('exit_popup_shown');
+    if (wasShown === 'true') {
+      setHasBeenShown(true);
+    }
+  }, []);
+
   useEffect(() => {
     const handleMouseLeave = (e: MouseEvent) => {
+      // Если попап уже был показан - не показываем повторно
+      if (hasBeenShown) return;
+      
       // Если курсор уходит за пределы окна вверх (к закрытию)
       if (e.clientY <= 0 && !isVisible) {
         setIsVisible(true);
+        setHasBeenShown(true);
+        sessionStorage.setItem('exit_popup_shown', 'true');
         sendMetrikaGoal('exit_popup_shown');
       }
     };
 
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Если попап уже был показан - не показываем повторно
+      if (hasBeenShown) return;
+      
       // Показываем модалку при попытке закрыть вкладку
       if (!isVisible) {
         e.preventDefault();
         setIsVisible(true);
+        setHasBeenShown(true);
+        sessionStorage.setItem('exit_popup_shown', 'true');
         sendMetrikaGoal('exit_popup_shown');
         return '';
       }
@@ -48,7 +67,7 @@ const ExitPopup = () => {
       document.removeEventListener('mouseleave', handleMouseLeave);
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
-  }, [isVisible]);
+  }, [isVisible, hasBeenShown]);
 
   // Блокировка скролла при открытом попапе
   useEffect(() => {
@@ -270,11 +289,20 @@ const ExitPopup = () => {
           <X className="w-4 h-4" />
         </button>
 
-        {/* Header with gold gradient */}
+        {/* Header with gold gradient and styled icon */}
         <div className="relative bg-gradient-to-r from-gold/20 to-gold/5 px-6 py-8 text-center">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-gold/0 via-gold to-gold/0" />
+          
+          {/* Стилизованная иконка подарка */}
+          <div className="relative inline-block mb-4">
+            <div className="absolute inset-0 bg-gold/30 rounded-full blur-xl animate-pulse" />
+            <div className="relative w-20 h-20 rounded-full bg-gold/20 flex items-center justify-center border-2 border-gold/50 shadow-gold">
+              <Gift className="w-10 h-10 text-gold" />
+            </div>
+          </div>
+          
           <h3 className="font-serif text-2xl md:text-3xl text-white mb-2">
-            🎁 <span className="text-gold-gradient">Ограниченное предложение!</span>
+            <span className="text-gold-gradient">Ограниченное предложение!</span>
           </h3>
           <p className="text-gold/80 text-sm uppercase tracking-wider">
             Только для тех, кто собирается уйти
