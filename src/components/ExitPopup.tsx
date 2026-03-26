@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X, Upload, Send } from 'lucide-react';
+import { X, Upload, Send, AlertCircle } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
@@ -15,7 +15,7 @@ const ExitPopup = () => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
-    comment: 'Рассчитайте, пожалуйста, партию для получения скидки на первый заказ: в <span style="color:#D4AF37">золоте/серебре</span>, количество <span style="color:#D4AF37">Х штук</span>, размер габаритов <span style="color:#D4AF37">10х10мм</span>'
+    comment: 'Рассчитайте, пожалуйста, партию для получения скидки на первый заказ: в золоте/серебре, количество Х штук, размер габаритов 10х10мм'
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
@@ -231,7 +231,7 @@ const ExitPopup = () => {
       setFormData({
         name: '',
         phone: '',
-        comment: 'Рассчитайте, пожалуйста, партию для получения скидки на первый заказ: в <span style="color:#D4AF37">золоте/серебре</span>, количество <span style="color:#D4AF37">Х штук</span>, размер габаритов <span style="color:#D4AF37">10х10мм</span>'
+        comment: 'Рассчитайте, пожалуйста, партию для получения скидки на первый заказ: в золоте/серебре, количество Х штук, размер габаритов 10х10мм'
       });
       setUploadedFile(null);
       setFilePreview(null);
@@ -337,10 +337,10 @@ const ExitPopup = () => {
                 onFocus={() => handleFocus('comment')}
                 rows={4}
                 className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors resize-none text-sm"
-                dangerouslySetInnerHTML={{ __html: formData.comment }}
+                placeholder="Рассчитайте, пожалуйста, партию для получения скидки на первый заказ..."
               />
               <p className="text-gray-500 text-xs mt-1">
-                <span className="text-gold">✦</span> Измените выделенные параметры под свой запрос
+                <span className="text-gold">✦</span> Укажите желаемый металл (золото/серебро), количество и размер
               </p>
             </div>
 
