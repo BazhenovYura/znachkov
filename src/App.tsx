@@ -14,6 +14,7 @@ import Footer from './sections/Footer';
 import Thanks from './sections/Thanks';
 import NotFound from './sections/NotFound';
 import ExitPopup from './components/ExitPopup';
+import PriceCalculator from './sections/PriceCalculator';
 
 // Создаем отдельный компонент для маршрутизации
 const AppRoutes = () => {
@@ -26,7 +27,7 @@ const AppRoutes = () => {
     // Отправляем просмотр страницы в Яндекс.Метрику
     const fullUrl = location.pathname + location.search + location.hash;
     sendMetrikaHit(fullUrl);
-  }, [location]); // Используем location целиком, чтобы реагировать на все изменения URL
+  }, [location]);
 
   return (
     <>
@@ -45,6 +46,7 @@ const AppRoutes = () => {
           </main>
         } />
         <Route path="/thanks" element={<Thanks />} />
+        <Route path="/price-calculator" element={<PriceCalculator />} />
         {/* Маршрут для 404 - должен быть последним */}
         <Route path="*" element={<NotFound />} />
       </Routes>
