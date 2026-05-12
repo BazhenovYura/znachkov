@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate }react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Send, Upload, X, Calculator, Gift, TrendingUp, Shield, Phone, Mail, User, ArrowRight } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
