@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Upload, X, Calculator, Gift, TrendingUp, Shield, Phone, Mail, User, ArrowRight } from 'lucide-react';
+import { Send, Upload, X, Calculator, Gift, TrendingUp, Shield } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
@@ -114,23 +114,6 @@ const PriceCalculator = () => {
     });
   };
 
-  // Формируем комментарий с параметрами заказа
-  const getOrderComment = () => {
-    const typeName = types[calculatorData.type as keyof typeof types]?.name || calculatorData.type;
-    const materialName = materials[calculatorData.material as keyof typeof materials]?.name || calculatorData.material;
-    const sizeName = sizes[calculatorData.size as keyof typeof sizes]?.name || calculatorData.size;
-    
-    return `📊 РАСЧЕТ СТОИМОСТИ ЗНАЧКОВ
-
-🔹 Тип: ${typeName}
-🔹 Материал: ${materialName}
-🔹 Количество: ${calculatorData.quantity} шт.
-🔹 Размер: ${sizeName}
-🔹 Предварительная цена: ${estimatedPrice.toLocaleString()} ₽
-
-${formData.comment ? `💬 Дополнительная информация: ${formData.comment}` : ''}`;
-  };
-
   const sendTextToTelegram = async () => {
     const message = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
@@ -192,13 +175,13 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caption', caption);
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('caption', caption);
     
     const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
       method: 'POST',
-      body: formData,
+      body: fd,
     });
 
     const responseData = await response.json();
