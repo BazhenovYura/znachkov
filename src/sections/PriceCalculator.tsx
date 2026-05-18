@@ -151,7 +151,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
   const sendFileToTelegram = async (file: File) => {
     const caption = `
-💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
+💰 <b>ЗАПРОС ТОЧНОГО РASCHETA СТОИМОСТИ С ЭСКИЗОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
 <b>📍 Откуда:</b> Страница калькулятора
