@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { sendMetrikaHit } from './utils/metrika';
 import Header from './components/Header';
 import Hero from './sections/Hero';
@@ -19,6 +19,16 @@ import PriceCalculator from './sections/PriceCalculator';
 // Создаем отдельный компонент для маршрутизации
 const AppRoutes = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Обработка редиректа с 404.html
+  useEffect(() => {
+    const redirectPath = sessionStorage.getItem('redirect');
+    if (redirectPath && redirectPath !== location.pathname) {
+      sessionStorage.removeItem('redirect');
+      navigate(redirectPath, { replace: true });
+    }
+  }, [location.pathname, navigate]);
 
   useEffect(() => {
     // При каждом изменении маршрута прокручиваем наверх
