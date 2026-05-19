@@ -5,9 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ЗНАЧКОВ.РФ</title>
     <script>
-        // Сохраняем путь, с которого пришли
-        sessionStorage.setItem('redirect', window.location.pathname);
-        // Загружаем главную страницу
+        // Сохраняем путь и переходим на главную
+        const path = window.location.pathname;
+        if (path !== '/' && path !== '/index.html') {
+            sessionStorage.setItem('redirect', path);
+        }
         window.location.href = '/';
     </script>
 </head>
