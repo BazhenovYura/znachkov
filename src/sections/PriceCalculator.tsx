@@ -1,6 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Send, Upload, X, Calculator, Gift, TrendingUp, Shield } from 'lucide-react';
+import { 
+  Send, Upload, X, Calculator, Gift, TrendingUp, Shield, 
+  Copy, Check, Star, Phone, Mail, User, FileText,
+  Zap, Clock, Award, Users, Package, Sparkles, Share2
+} from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
@@ -9,6 +13,7 @@ const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abd
 
 const PriceCalculator = () => {
   const navigate = useNavigate();
+  const [copied, setCopied] = useState(false);
   
   // Состояния для калькулятора
   const [calculatorData, setCalculatorData] = useState({
@@ -32,27 +37,50 @@ const PriceCalculator = () => {
   const [consentError, setConsentError] = useState('');
   const [submitError, setSubmitError] = useState('');
   const [estimatedPrice, setEstimatedPrice] = useState(0);
+  const [pricePerUnit, setPricePerUnit] = useState(0);
   const [showForm, setShowForm] = useState(false);
+  const [priceHighlight, setPriceHighlight] = useState(false);
 
   // Данные для калькулятора
   const types = {
-    maxi: { name: 'MAXI', size: '25-35 мм', multiplier: 2.0 },
-    midi: { name: 'MIDI', size: '20-25 мм', multiplier: 1.5 },
-    mini: { name: 'MINI', size: '15-20 мм', multiplier: 1.0 },
-    micro: { name: 'MICRO', size: '10-15 мм', multiplier: 0.7 },
+    maxi: { name: 'MAXI', size: '25-35 мм', multiplier: 2.0, icon: '👑', description: 'Премиум класс' },
+    midi: { name: 'MIDI', size: '20-25 мм', multiplier: 1.5, icon: '⭐', description: 'Оптимальный' },
+    mini: { name: 'MINI', size: '15-20 мм', multiplier: 1.0, icon: '●', description: 'Компактный' },
+    micro: { name: 'MICRO', size: '10-15 мм', multiplier: 0.7, icon: '•', description: 'Минимальный' },
   };
 
   const materials = {
-    gold: { name: 'Золото 585', price: 500, multiplier: 3.0 },
-    silver: { name: 'Серебро 925', price: 100, multiplier: 1.0 },
+    gold: { name: 'Золото 585', price: 500, multiplier: 3.0, color: 'from-yellow-600/20 to-yellow-800/20', textColor: 'text-yellow-500' },
+    silver: { name: 'Серебро 925', price: 100, multiplier: 1.0, color: 'from-gray-400/20 to-gray-600/20', textColor: 'text-gray-400' },
   };
 
   const sizes = {
-    '10-15': { name: '10-15 мм', multiplier: 0.5 },
-    '15-20': { name: '15-20 мм', multiplier: 0.8 },
-    '20-25': { name: '20-25 мм', multiplier: 1.0 },
-    '25-35': { name: '25-35 мм', multiplier: 1.3 },
+    '10-15': { name: '10-15 мм', multiplier: 0.5, icon: '🔹' },
+    '15-20': { name: '15-20 мм', multiplier: 0.8, icon: '🔸' },
+    '20-25': { name: '20-25 мм', multiplier: 1.0, icon: '🔶' },
+    '25-35': { name: '25-35 мм', multiplier: 1.3, icon: '🔷' },
   };
+
+  // Быстрые пресеты количества
+  const quantityPresets = [100, 500, 1000, 5000];
+
+  // Сохранение расчёта в localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('calculator_last_data');
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        if (data.type && data.material && data.quantity && data.size) {
+          setCalculatorData(data);
+          setShowForm(true);
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem('calculator_last_data', JSON.stringify(calculatorData));
+  }, [calculatorData]);
 
   // Расчет примерной цены
   useEffect(() => {
@@ -61,32 +89,56 @@ const PriceCalculator = () => {
     const sizeMult = sizes[calculatorData.size as keyof typeof sizes]?.multiplier || 1;
     const basePrice = materials[calculatorData.material as keyof typeof materials]?.price || 100;
     
-    const calculated = basePrice * calculatorData.quantity * typeMult * materialMult * sizeMult;
-    setEstimatedPrice(Math.round(calculated));
-  }, [calculatorData]);
+    const total = basePrice * calculatorData.quantity * typeMult * materialMult * sizeMult;
+    const newPrice = Math.round(total);
+    
+    // Анимация при изменении цены
+    if (newPrice !== estimatedPrice) {
+      setPriceHighlight(true);
+      setTimeout(() => setPriceHighlight(false), 500);
+    }
+    
+    setEstimatedPrice(newPrice);
+    setPricePerUnit(Math.round(newPrice / calculatorData.quantity));
+  }, [calculatorData, estimatedPrice]);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    
-    // Отправляем просмотр страницы в Метрику
     sendMetrikaEvent('calculator_page_view');
   }, []);
 
   const handleCalculatorChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
     const { name, value } = e.target;
-    setCalculatorData(prev => ({
-      ...prev,
-      [name]: value,
-    }));
-    
-    // Отслеживаем изменения в калькуляторе
+    setCalculatorData(prev => ({ ...prev, [name]: value }));
     sendMetrikaEvent('calculator_param_change', { param: name, value });
-    
-    // Показываем форму после первого изменения параметров
     if (!showForm) {
       setShowForm(true);
       sendMetrikaEvent('calculator_form_shown');
     }
+  };
+
+  const handleTypeSelect = (typeId: string) => {
+    setCalculatorData(prev => ({ ...prev, type: typeId }));
+    sendMetrikaEvent('calculator_param_change', { param: 'type', value: typeId });
+    if (!showForm) {
+      setShowForm(true);
+      sendMetrikaEvent('calculator_form_shown');
+    }
+  };
+
+  const handleMaterialSelect = (materialId: string) => {
+    setCalculatorData(prev => ({ ...prev, material: materialId }));
+    sendMetrikaEvent('calculator_param_change', { param: 'material', value: materialId });
+  };
+
+  const handleSizeSelect = (sizeId: string) => {
+    setCalculatorData(prev => ({ ...prev, size: sizeId }));
+    sendMetrikaEvent('calculator_param_change', { param: 'size', value: sizeId });
+  };
+
+  const handleQuantityPreset = (quantity: number) => {
+    setCalculatorData(prev => ({ ...prev, quantity }));
+    sendMetrikaEvent('calculator_quantity_change', { quantity });
   };
 
   const handleQuantityChange = (delta: number) => {
@@ -101,6 +153,20 @@ const PriceCalculator = () => {
     value = Math.max(10, Math.min(10000, value));
     setCalculatorData(prev => ({ ...prev, quantity: value }));
     sendMetrikaEvent('calculator_quantity_manual', { quantity: value });
+  };
+
+  const copyShareLink = () => {
+    const params = new URLSearchParams();
+    params.set('type', calculatorData.type);
+    params.set('material', calculatorData.material);
+    params.set('quantity', String(calculatorData.quantity));
+    params.set('size', calculatorData.size);
+    
+    const shareUrl = `${window.location.origin}/#/price-calculator?${params.toString()}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    sendMetrikaEvent('calculator_share_link');
   };
 
   const getEkaterinburgTime = () => {
@@ -127,6 +193,7 @@ const PriceCalculator = () => {
 • Количество: ${calculatorData.quantity} шт.
 • Размер: ${sizes[calculatorData.size as keyof typeof sizes]?.name}
 • Предварительная цена: ${estimatedPrice.toLocaleString()} ₽
+• Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 <b>👤 Клиент:</b>
@@ -151,7 +218,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
   const sendFileToTelegram = async (file: File) => {
     const caption = `
-💰 <b>ЗАПРОС ТОЧНОГО РASCHETA СТОИМОСТИ С ЭСКИЗОМ</b>
+💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
 <b>📍 Откуда:</b> Страница калькулятора
@@ -162,6 +229,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 • Количество: ${calculatorData.quantity} шт.
 • Размер: ${sizes[calculatorData.size as keyof typeof sizes]?.name}
 • Предварительная цена: ${estimatedPrice.toLocaleString()} ₽
+• Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 <b>👤 Клиент:</b>
@@ -217,7 +285,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         sendMetrikaGoal('calculator_form_submit');
       }
       
-      // Отправляем цель в Метрику
       sendMetrikaGoal('calculator_lead_generated', {
         orderType: types[calculatorData.type as keyof typeof types]?.name,
         quantity: calculatorData.quantity,
@@ -251,7 +318,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     setSubmitError('');
-    
     if (!formData[name as keyof typeof formData] && value) {
       sendMetrikaEvent('form_field_filled', { field: name, form: 'calculator' });
     }
@@ -266,7 +332,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     if (file) {
       setUploadedFile(file);
       sendMetrikaEvent('file_uploaded', { fileName: file.name, fileSize: file.size, fileType: file.type, form: 'calculator' });
-      
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => setFilePreview(reader.result as string);
@@ -283,13 +348,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     sendMetrikaEvent('file_removed', { form: 'calculator' });
   };
 
-  // Автоматическое обновление комментария при изменении параметров
   useEffect(() => {
     if (showForm) {
       const typeName = types[calculatorData.type as keyof typeof types]?.name;
       const materialName = materials[calculatorData.material as keyof typeof materials]?.name;
       const sizeName = sizes[calculatorData.size as keyof typeof sizes]?.name;
-      
       setFormData(prev => ({
         ...prev,
         comment: `Хочу заказать ${typeName} (${sizeName}) из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
@@ -299,7 +362,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
-      {/* Декоративные элементы */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-1/3 h-1/3 bg-gold/5 rounded-full blur-3xl" />
         <div className="absolute bottom-0 left-0 w-1/3 h-1/3 bg-gold/5 rounded-full blur-3xl" />
@@ -321,7 +383,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             Заполните параметры заказа, прикрепите логотип и получите точный расчет 
             со специальной скидкой за обращение через этот раздел
           </p>
-          <div className="flex flex-wrap items-center justify-center gap-4 text-sm">
+          <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
               <span className="text-gray-400">Расчет за 2 минуты</span>
@@ -334,10 +396,37 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               <TrendingUp className="w-4 h-4 text-gold" />
               <span className="text-gray-400">Предложение действительно 24 часа</span>
             </div>
+            <div className="flex items-center gap-2">
+              <Users className="w-4 h-4 text-gold" />
+              <span className="text-gray-400">500+ клиентов</span>
+            </div>
           </div>
         </div>
 
-        {/* Калькулятор и форма */}
+        {/* Статистика */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12 animate-fade-in-up">
+          <div className="text-center p-4 bg-dark-light/30 rounded-xl border border-gray-800">
+            <Award className="w-6 h-6 text-gold mx-auto mb-2" />
+            <div className="text-white font-bold text-xl">1972</div>
+            <div className="text-gray-500 text-xs">год основания</div>
+          </div>
+          <div className="text-center p-4 bg-dark-light/30 rounded-xl border border-gray-800">
+            <Package className="w-6 h-6 text-gold mx-auto mb-2" />
+            <div className="text-white font-bold text-xl">10 000+</div>
+            <div className="text-gray-500 text-xs">изготовлено значков</div>
+          </div>
+          <div className="text-center p-4 bg-dark-light/30 rounded-xl border border-gray-800">
+            <Users className="w-6 h-6 text-gold mx-auto mb-2" />
+            <div className="text-white font-bold text-xl">500+</div>
+            <div className="text-gray-500 text-xs">довольных клиентов</div>
+          </div>
+          <div className="text-center p-4 bg-dark-light/30 rounded-xl border border-gray-800">
+            <Clock className="w-6 h-6 text-gold mx-auto mb-2" />
+            <div className="text-white font-bold text-xl">14 дней</div>
+            <div className="text-gray-500 text-xs">средний срок</div>
+          </div>
+        </div>
+
         <div className="max-w-4xl mx-auto">
           {/* Блок калькулятора */}
           <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 mb-8 animate-fade-in-up animation-delay-100 backdrop-blur-sm">
@@ -345,134 +434,175 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               Шаг 1. Выберите параметры заказа
             </h2>
             
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              {/* Тип значка */}
-              <div>
-                <label className="block text-gray-400 text-sm mb-2">Тип значка *</label>
-                <select
-                  name="type"
-                  value={calculatorData.type}
-                  onChange={handleCalculatorChange}
-                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white focus:border-gold focus:outline-none transition-colors cursor-pointer"
-                >
-                  <option value="maxi">MAXI — 25-35 мм (полный логотип, драгкамни)</option>
-                  <option value="midi">MIDI — 20-25 мм (основной символ, эмаль)</option>
-                  <option value="mini">MINI — 15-20 мм (компактный, экономичный)</option>
-                  <option value="micro">MICRO — 10-15 мм (массовый, минимальная цена)</option>
-                </select>
-              </div>
-
-              {/* Материал */}
-              <div>
-                <label className="block text-gray-400 text-sm mb-2">Материал *</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="material"
-                      value="gold"
-                      checked={calculatorData.material === 'gold'}
-                      onChange={handleCalculatorChange}
-                      className="w-4 h-4 text-gold focus:ring-gold"
-                    />
-                    <span className="text-white">Золото 585</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="material"
-                      value="silver"
-                      checked={calculatorData.material === 'silver'}
-                      onChange={handleCalculatorChange}
-                      className="w-4 h-4 text-gold focus:ring-gold"
-                    />
-                    <span className="text-white">Серебро 925</span>
-                  </label>
-                </div>
-              </div>
-
-              {/* Количество */}
-              <div>
-                <label className="block text-gray-400 text-sm mb-2">Количество (шт.) *</label>
-                <div className="flex items-center gap-3">
+            {/* Тип значка — карточками */}
+            <div className="mb-6">
+              <label className="block text-gray-400 text-sm mb-3">Тип значка *</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Object.entries(types).map(([id, data]) => (
                   <button
+                    key={id}
                     type="button"
-                    onClick={() => handleQuantityChange(-100)}
-                    className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                    onClick={() => handleTypeSelect(id)}
+                    className={`p-4 rounded-xl border transition-all duration-300 text-center ${
+                      calculatorData.type === id
+                        ? 'bg-gold/20 border-gold shadow-gold'
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
                   >
-                    −100
+                    <div className="text-2xl mb-1">{data.icon}</div>
+                    <div className="font-bold text-white">{data.name}</div>
+                    <div className="text-xs text-gray-500">{data.size}</div>
+                    <div className="text-xs text-gold mt-1">{data.description}</div>
                   </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuantityChange(-10)}
-                    className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
-                  >
-                    −10
-                  </button>
-                  <input
-                    type="number"
-                    name="quantity"
-                    value={calculatorData.quantity}
-                    onChange={handleQuantityInput}
-                    min="10"
-                    max="10000"
-                    step="10"
-                    className="flex-1 px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white text-center focus:border-gold focus:outline-none transition-colors"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleQuantityChange(10)}
-                    className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
-                  >
-                    +10
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleQuantityChange(100)}
-                    className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
-                  >
-                    +100
-                  </button>
-                </div>
-                <p className="text-gray-500 text-xs mt-2">От 10 до 10 000 штук</p>
-              </div>
-
-              {/* Размер */}
-              <div>
-                <label className="block text-gray-400 text-sm mb-2">Размер</label>
-                <select
-                  name="size"
-                  value={calculatorData.size}
-                  onChange={handleCalculatorChange}
-                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white focus:border-gold focus:outline-none transition-colors cursor-pointer"
-                >
-                  <option value="10-15">10-15 мм — Микро</option>
-                  <option value="15-20">15-20 мм — Мини</option>
-                  <option value="20-25">20-25 мм — Средний</option>
-                  <option value="25-35">25-35 мм — Макси</option>
-                </select>
+                ))}
               </div>
             </div>
 
-            {/* Результат расчета */}
+            {/* Материал — карточками */}
+            <div className="mb-6">
+              <label className="block text-gray-400 text-sm mb-3">Материал *</label>
+              <div className="flex gap-4">
+                {Object.entries(materials).map(([id, data]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handleMaterialSelect(id)}
+                    className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+                      calculatorData.material === id
+                        ? `bg-gradient-to-r ${data.color} border-gold shadow-gold`
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <div className={`font-bold ${data.textColor}`}>{data.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Количество */}
+            <div className="mb-6">
+              <label className="block text-gray-400 text-sm mb-3">Количество (шт.) *</label>
+              
+              {/* Быстрые пресеты */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                {quantityPresets.map(preset => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleQuantityPreset(preset)}
+                    className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
+                      calculatorData.quantity === preset
+                        ? 'bg-gold text-dark font-medium'
+                        : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                    }`}
+                  >
+                    {preset.toLocaleString()} шт.
+                  </button>
+                ))}
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleQuantityChange(-100)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                >
+                  −100
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuantityChange(-10)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                >
+                  −10
+                </button>
+                <input
+                  type="number"
+                  name="quantity"
+                  value={calculatorData.quantity}
+                  onChange={handleQuantityInput}
+                  min="10"
+                  max="10000"
+                  step="10"
+                  className="flex-1 px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white text-center focus:border-gold focus:outline-none transition-colors"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleQuantityChange(10)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                >
+                  +10
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuantityChange(100)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                >
+                  +100
+                </button>
+              </div>
+              <p className="text-gray-500 text-xs mt-2">От 10 до 10 000 штук</p>
+            </div>
+
+            {/* Размер — карточками */}
+            <div className="mb-8">
+              <label className="block text-gray-400 text-sm mb-3">Размер</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {Object.entries(sizes).map(([id, data]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => handleSizeSelect(id)}
+                    className={`p-3 rounded-xl border transition-all duration-300 text-center ${
+                      calculatorData.size === id
+                        ? 'bg-gold/20 border-gold'
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <div className="text-xl">{data.icon}</div>
+                    <div className="text-sm text-white">{data.name}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Результат расчета с анимацией */}
             <div className="bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 rounded-xl p-6 text-center">
-              <p className="text-gray-400 text-sm mb-2">Предварительная стоимость</p>
-              <p className="font-serif text-3xl md:text-4xl font-bold text-gold-gradient">
+              <div className="flex justify-between items-center mb-4">
+                <p className="text-gray-400 text-sm">Предварительная стоимость</p>
+                <button
+                  onClick={copyShareLink}
+                  className="flex items-center gap-2 text-gray-500 hover:text-gold transition-colors text-sm"
+                >
+                  {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+                  {copied ? 'Скопировано!' : 'Поделиться расчётом'}
+                </button>
+              </div>
+              <p className={`font-serif text-3xl md:text-4xl font-bold text-gold-gradient transition-all duration-300 ${priceHighlight ? 'scale-110' : 'scale-100'}`}>
                 {estimatedPrice.toLocaleString()} ₽
               </p>
-              <p className="text-gray-500 text-xs mt-2">*Для точного расчета оставьте заявку ниже</p>
+              <p className="text-gray-500 text-sm mt-1">
+                ~ {pricePerUnit.toLocaleString()} ₽ за штуку
+              </p>
+              <p className="text-gray-500 text-xs mt-3">*Для точного расчета оставьте заявку ниже</p>
             </div>
           </div>
 
           {/* Форма для точного расчета */}
           {showForm && (
             <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 animate-fade-in-up backdrop-blur-sm">
-              <h2 className="font-serif text-2xl md:text-3xl text-white mb-2 text-center">
-                Шаг 2. Получите точный расчет
-              </h2>
-              <p className="text-gray-400 text-sm text-center mb-6">
-                Заполните форму и получите персональное предложение со скидкой
-              </p>
+              <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+                <div>
+                  <h2 className="font-serif text-2xl md:text-3xl text-white">
+                    Шаг 2. Получите точный расчет
+                  </h2>
+                  <p className="text-gray-400 text-sm mt-1">Заполните форму и получите персональное предложение со скидкой</p>
+                </div>
+                <div className="flex items-center gap-2 bg-gold/10 px-4 py-2 rounded-full">
+                  <Zap className="w-4 h-4 text-gold" />
+                  <span className="text-gold text-sm">Скидка до 15%</span>
+                </div>
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-5">
                 <div className="grid md:grid-cols-2 gap-5">
@@ -545,10 +675,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       />
                       <label
                         htmlFor="calculator-file-upload"
-                        className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
+                        className="flex flex-col items-center justify-center gap-2 w-full py-8 px-4 bg-dark border-2 border-dashed border-gray-700 rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
                       >
-                        <Upload className="w-5 h-5" />
-                        <span>Выберите файл</span>
+                        <Upload className="w-8 h-8" />
+                        <span>Перетащите файл или нажмите для выбора</span>
+                        <span className="text-xs">PNG, JPG, PDF, DOC до 10MB</span>
                       </label>
                     </div>
                   ) : (
@@ -602,7 +733,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-70"
+                  className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-70 py-4 text-lg"
                 >
                   {isSubmitting ? (
                     <>
@@ -623,31 +754,4 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
         {/* Блок преимуществ */}
         <div className="grid sm:grid-cols-3 gap-6 mt-12 animate-fade-in-up animation-delay-200">
-          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
-            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
-              <Calculator className="w-6 h-6 text-gold" />
-            </div>
-            <h3 className="text-white font-medium mb-1">Быстрый расчет</h3>
-            <p className="text-gray-500 text-sm">Оцените стоимость за 2 минуты</p>
-          </div>
-          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
-            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
-              <Gift className="w-6 h-6 text-gold" />
-            </div>
-            <h3 className="text-white font-medium mb-1">Скидка на первый заказ</h3>
-            <p className="text-gray-500 text-sm">Специальное предложение</p>
-          </div>
-          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
-            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
-              <Shield className="w-6 h-6 text-gold" />
-            </div>
-            <h3 className="text-white font-medium mb-1">Точный расчет за 24 часа</h3>
-            <p className="text-gray-500 text-sm">С персональным предложением</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default PriceCalculator;
+          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-
