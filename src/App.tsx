@@ -21,7 +21,7 @@ const AppRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Обработка редиректа с 404.html
+  // Обработка редиректа из 404.html
   useEffect(() => {
     const redirectPath = sessionStorage.getItem('redirect');
     if (redirectPath && redirectPath !== location.pathname) {
