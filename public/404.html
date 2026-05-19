@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Перенаправление...</title>
+    <script>
+        // Сохраняем путь, куда хотел попасть пользователь
+        sessionStorage.setItem('redirect', window.location.pathname);
+        window.location.href = '/';
+    </script>
+</head>
+<body>
+    <p>Перенаправление...</p>
+</body>
+</html>
