@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { sendMetrikaHit } from './utils/metrika';
 import Header from './components/Header';
 import Hero from './sections/Hero';
@@ -21,7 +21,7 @@ const AppRoutes = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Обработка редиректа из 404.html
+  // Обработка редиректа из 404.html (опционально, можно удалить)
   useEffect(() => {
     const redirectPath = sessionStorage.getItem('redirect');
     if (redirectPath && redirectPath !== location.pathname) {
@@ -68,11 +68,11 @@ const AppRoutes = () => {
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <div className="min-h-screen" style={{ backgroundColor: '#0A0A0A' }}>
         <AppRoutes />
       </div>
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
