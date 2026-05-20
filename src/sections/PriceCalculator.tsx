@@ -2,8 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, Shield, 
-  Copy, Check, Star, Phone, Mail, User, FileText,
-  Zap, Clock, Award, Users, Package, Sparkles, Share2
+  Copy, Check, Zap, Clock, Award, Users, Package, Share2
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -92,7 +91,6 @@ const PriceCalculator = () => {
     const total = basePrice * calculatorData.quantity * typeMult * materialMult * sizeMult;
     const newPrice = Math.round(total);
     
-    // Анимация при изменении цены
     if (newPrice !== estimatedPrice) {
       setPriceHighlight(true);
       setTimeout(() => setPriceHighlight(false), 500);
@@ -434,7 +432,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               Шаг 1. Выберите параметры заказа
             </h2>
             
-            {/* Тип значка — карточками */}
+            {/* Тип значка */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Тип значка *</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -458,7 +456,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               </div>
             </div>
 
-            {/* Материал — карточками */}
+            {/* Материал */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Материал *</label>
               <div className="flex gap-4">
@@ -482,8 +480,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             {/* Количество */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Количество (шт.) *</label>
-              
-              {/* Быстрые пресеты */}
               <div className="flex flex-wrap gap-2 mb-3">
                 {quantityPresets.map(preset => (
                   <button
@@ -500,7 +496,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   </button>
                 ))}
               </div>
-              
               <div className="flex items-center gap-3">
                 <button
                   type="button"
@@ -544,7 +539,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               <p className="text-gray-500 text-xs mt-2">От 10 до 10 000 штук</p>
             </div>
 
-            {/* Размер — карточками */}
+            {/* Размер */}
             <div className="mb-8">
               <label className="block text-gray-400 text-sm mb-3">Размер</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -566,7 +561,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               </div>
             </div>
 
-            {/* Результат расчета с анимацией */}
+            {/* Результат расчета */}
             <div className="bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 rounded-xl p-6 text-center">
               <div className="flex justify-between items-center mb-4">
                 <p className="text-gray-400 text-sm">Предварительная стоимость</p>
@@ -756,4 +751,29 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         <div className="grid sm:grid-cols-3 gap-6 mt-12 animate-fade-in-up animation-delay-200">
           <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
             <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
-             
+              <Calculator className="w-6 h-6 text-gold" />
+            </div>
+            <h3 className="text-white font-medium mb-1">Быстрый расчет</h3>
+            <p className="text-gray-500 text-sm">Оцените стоимость за 2 минуты</p>
+          </div>
+          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
+            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
+              <Gift className="w-6 h-6 text-gold" />
+            </div>
+            <h3 className="text-white font-medium mb-1">Скидка на первый заказ</h3>
+            <p className="text-gray-500 text-sm">Специальное предложение</p>
+          </div>
+          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
+            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
+              <Shield className="w-6 h-6 text-gold" />
+            </div>
+            <h3 className="text-white font-medium mb-1">Точный расчет за 24 часа</h3>
+            <p className="text-gray-500 text-sm">С персональным предложением</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PriceCalculator;
