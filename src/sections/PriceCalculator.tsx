@@ -754,4 +754,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
         {/* Блок преимуществ */}
         <div className="grid sm:grid-cols-3 gap-6 mt-12 animate-fade-in-up animation-delay-200">
-          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-
+          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
+            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
+             
