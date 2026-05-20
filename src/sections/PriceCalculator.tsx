@@ -76,20 +76,16 @@ const PriceCalculator = () => {
   const fetchMetalPrices = async () => {
     setIsLoadingPrice(true);
     try {
-      // Используем API Центробанка РФ (бесплатно, без ключа)
       const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
       const data = await response.json();
       
       if (data && data.Valute) {
-        // Цена золота (XAU) в рублях за грамм
-        // В API Центробанка цена указана за тройскую унцию (31.1035 г)
         const goldPricePerOunce = data.Valute.XAU?.Value;
         if (goldPricePerOunce) {
           const goldPricePerGram = goldPricePerOunce / 31.1035;
           setMetalPrices(prev => ({ ...prev, gold: Math.round(goldPricePerGram) }));
         }
         
-        // Цена серебра (XAG) в рублях за грамм
         const silverPricePerOunce = data.Valute.XAG?.Value;
         if (silverPricePerOunce) {
           const silverPricePerGram = silverPricePerOunce / 31.1035;
@@ -115,36 +111,26 @@ const PriceCalculator = () => {
     const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
     const isGold = calculatorData.material === 'gold';
     
-    // Выбираем параметры в зависимости от материала
     const metalPrice = isGold ? metalPrices.gold : metalPrices.silver;
     const purityFactor = isGold ? GOLD_PURITY_FACTOR : SILVER_PURITY_FACTOR;
     const laborCost = isGold ? GOLD_LABOR_COST : SILVER_LABOR_COST;
     const density = isGold ? GOLD_DENSITY : SILVER_DENSITY;
     
-    // Шаг 1: Стоимость металла с учетом пробы, потерь и НДС при закупке
     const metalCostWithVAT = metalPrice * purityFactor * LOSS_FACTOR * VAT_BUY_FACTOR;
-    
-    // Шаг 2: Добавляем стоимость работы
     const totalCostPerGram = metalCostWithVAT + laborCost;
     
-    // Шаг 3: Вес значка (объем × плотность)
-    const volume = dimensions.length * dimensions.width * 1; // толщина 1 мм
+    const volume = dimensions.length * dimensions.width * 1;
     const weight = volume * density;
     
-    // Шаг 4: Стоимость одного значка без НДС продажи
     const pricePerItemBeforeVAT = totalCostPerGram * weight * dimensions.complexity;
-    
-    // Шаг 5: Добавляем НДС продажи
     const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
-    
-    // Шаг 6: Стоимость всей партии
     const totalPrice = pricePerItem * calculatorData.quantity;
     
     return {
       totalPrice: Math.round(totalPrice),
       pricePerUnit: Math.round(pricePerItem),
       weight: weight.toFixed(2),
-      metalPricePerGram: Math.round(metalCostWithVAT),
+      metalCostPerGram: Math.round(metalCostWithVAT),
       totalCostPerGram: Math.round(totalCostPerGram),
     };
   };
@@ -231,13 +217,13 @@ const PriceCalculator = () => {
     });
   };
 
-  const { totalPricePerGram, metalPricePerGram, weight } = calculatePrice();
+  const { weight, metalCostPerGram, totalCostPerGram } = calculatePrice();
+  const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
+  const isGold = calculatorData.material === 'gold';
+  const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
+  const quantityPresets = [100, 500, 1000, 5000];
 
   const sendTextToTelegram = async () => {
-    const isGold = calculatorData.material === 'gold';
-    const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
-    const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
-    
     const message = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -249,6 +235,8 @@ const PriceCalculator = () => {
 • Формат: ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм)
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice.toLocaleString()} ₽/г
+• Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
+• Итого себестоимость с работой: ${totalCostPerGram.toLocaleString()} ₽/г
 • Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
 
@@ -274,10 +262,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
   };
 
   const sendFileToTelegram = async (file: File) => {
-    const isGold = calculatorData.material === 'gold';
-    const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
-    const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
-    
     const caption = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -412,7 +396,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
   useEffect(() => {
     if (showForm) {
-      const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
       const materialName = calculatorData.material === 'gold' ? 'золоте 585' : 'серебре 925';
       setFormData(prev => ({
         ...prev,
@@ -420,11 +403,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       }));
     }
   }, [calculatorData, showForm]);
-
-  const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
-  const isGold = calculatorData.material === 'gold';
-  const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
-  const quantityPresets = [100, 500, 1000, 5000];
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
@@ -643,7 +621,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               <p className="text-gray-500 text-xs mt-2">От 10 до 10 000 штук</p>
             </div>
 
-            {/* Результат расчета с анимацией */}
+            {/* Результат расчета */}
             <div className="bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 rounded-xl p-6 text-center">
               <div className="flex justify-between items-center mb-4">
                 <p className="text-gray-400 text-sm">Предварительная стоимость</p>
@@ -663,7 +641,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               </p>
               <p className="text-gray-500 text-xs mt-3">
                 Вес значка: ~{weight} г | 
-                Себестоимость материала: ~{Math.round(isGold ? metalPricePerGram : metalPricePerGram)} ₽/г
+                Стоимость материала: {metalCostPerGram.toLocaleString()} ₽/г
               </p>
               <p className="text-gray-500 text-xs mt-1">*Для точного расчета оставьте заявку ниже</p>
             </div>
