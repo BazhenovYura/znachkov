@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, Shield, 
-  Check, Zap, Clock, Award, Users, Package, Share2
+  Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -10,16 +10,47 @@ import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
+// Актуальные цены на металлы (обновляются при загрузке)
+// Золото 999 пробы: ~10 464 ₽/г
+// Серебро 999 пробы: ~85 ₽/г
+const DEFAULT_GOLD_PRICE = 10464;
+const DEFAULT_SILVER_PRICE = 85;
+
+// Коэффициенты расчета
+const GOLD_PURITY_FACTOR = 0.585;      // перевод 999 → 585 проба
+const SILVER_PURITY_FACTOR = 0.926;    // перевод 999 → 925 проба
+const LOSS_FACTOR = 1.1;               // потери 10%
+const VAT_BUY_FACTOR = 1.22;           // НДС при закупке металла
+const VAT_SELL_FACTOR = 1.22;          // НДС при продаже
+const GOLD_LABOR_COST = 3500;          // стоимость работы за грамм (золото)
+const SILVER_LABOR_COST = 2000;        // стоимость работы за грамм (серебро)
+const GOLD_DENSITY = 0.0134;           // плотность золота 585 / 1000
+const SILVER_DENSITY = 0.0105;         // плотность серебра 925 / 1000
+
+// Габариты значков по типам (Д × Ш, мм)
+const typeDimensions = {
+  maxi: { length: 35, width: 30, complexity: 1.4 },
+  midi: { length: 25, width: 22, complexity: 1.3 },
+  mini: { length: 20, width: 17, complexity: 1.2 },
+  micro: { length: 15, width: 12, complexity: 1.1 },
+};
+
 const PriceCalculator = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
+  const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   
   // Состояния для калькулятора
   const [calculatorData, setCalculatorData] = useState({
     type: 'maxi',
     material: 'gold',
     quantity: 500,
-    size: '25-35',
+  });
+  
+  // Цены на металлы (обновляются с биржи)
+  const [metalPrices, setMetalPrices] = useState({
+    gold: DEFAULT_GOLD_PRICE,
+    silver: DEFAULT_SILVER_PRICE,
   });
   
   // Состояния для формы
@@ -39,68 +70,101 @@ const PriceCalculator = () => {
   const [pricePerUnit, setPricePerUnit] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [priceHighlight, setPriceHighlight] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Данные для калькулятора
-  const types = {
-    maxi: { name: 'MAXI', size: '25-35 мм', multiplier: 2.0, icon: '👑', description: 'Премиум класс' },
-    midi: { name: 'MIDI', size: '20-25 мм', multiplier: 1.5, icon: '⭐', description: 'Оптимальный' },
-    mini: { name: 'MINI', size: '15-20 мм', multiplier: 1.0, icon: '●', description: 'Компактный' },
-    micro: { name: 'MICRO', size: '10-15 мм', multiplier: 0.7, icon: '•', description: 'Минимальный' },
-  };
-
-  const materials = {
-    gold: { name: 'Золото 585', price: 500, multiplier: 3.0, color: 'from-yellow-600/20 to-yellow-800/20', textColor: 'text-yellow-500' },
-    silver: { name: 'Серебро 925', price: 100, multiplier: 1.0, color: 'from-gray-400/20 to-gray-600/20', textColor: 'text-gray-400' },
-  };
-
-  const sizes = {
-    '10-15': { name: '10-15 мм', multiplier: 0.5, icon: '🔹' },
-    '15-20': { name: '15-20 мм', multiplier: 0.8, icon: '🔸' },
-    '20-25': { name: '20-25 мм', multiplier: 1.0, icon: '🔶' },
-    '25-35': { name: '25-35 мм', multiplier: 1.3, icon: '🔷' },
-  };
-
-  // Быстрые пресеты количества
-  const quantityPresets = [100, 500, 1000, 5000];
-
-  // Сохранение расчёта в localStorage
-  useEffect(() => {
-    const saved = localStorage.getItem('calculator_last_data');
-    if (saved) {
-      try {
-        const data = JSON.parse(saved);
-        if (data.type && data.material && data.quantity && data.size) {
-          setCalculatorData(data);
-          setShowForm(true);
+  // Загрузка актуальных цен с биржи
+  const fetchMetalPrices = async () => {
+    setIsLoadingPrice(true);
+    try {
+      // Используем API Центробанка РФ (бесплатно, без ключа)
+      const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
+      const data = await response.json();
+      
+      if (data && data.Valute) {
+        // Цена золота (XAU) в рублях за грамм
+        // В API Центробанка цена указана за тройскую унцию (31.1035 г)
+        const goldPricePerOunce = data.Valute.XAU?.Value;
+        if (goldPricePerOunce) {
+          const goldPricePerGram = goldPricePerOunce / 31.1035;
+          setMetalPrices(prev => ({ ...prev, gold: Math.round(goldPricePerGram) }));
         }
-      } catch (e) {}
+        
+        // Цена серебра (XAG) в рублях за грамм
+        const silverPricePerOunce = data.Valute.XAG?.Value;
+        if (silverPricePerOunce) {
+          const silverPricePerGram = silverPricePerOunce / 31.1035;
+          setMetalPrices(prev => ({ ...prev, silver: Math.round(silverPricePerGram) }));
+        }
+        
+        setLastUpdated(new Date());
+        sendMetrikaEvent('metal_prices_updated', { 
+          gold: metalPrices.gold, 
+          silver: metalPrices.silver 
+        });
+      }
+    } catch (error) {
+      console.error('Ошибка загрузки цен на металлы:', error);
+      sendMetrikaEvent('metal_prices_error', { error: String(error) });
+    } finally {
+      setIsLoadingPrice(false);
     }
-  }, []);
+  };
 
-  useEffect(() => {
-    localStorage.setItem('calculator_last_data', JSON.stringify(calculatorData));
-  }, [calculatorData]);
+  // Формула расчета стоимости
+  const calculatePrice = () => {
+    const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
+    const isGold = calculatorData.material === 'gold';
+    
+    // Выбираем параметры в зависимости от материала
+    const metalPrice = isGold ? metalPrices.gold : metalPrices.silver;
+    const purityFactor = isGold ? GOLD_PURITY_FACTOR : SILVER_PURITY_FACTOR;
+    const laborCost = isGold ? GOLD_LABOR_COST : SILVER_LABOR_COST;
+    const density = isGold ? GOLD_DENSITY : SILVER_DENSITY;
+    
+    // Шаг 1: Стоимость металла с учетом пробы, потерь и НДС при закупке
+    const metalCostWithVAT = metalPrice * purityFactor * LOSS_FACTOR * VAT_BUY_FACTOR;
+    
+    // Шаг 2: Добавляем стоимость работы
+    const totalCostPerGram = metalCostWithVAT + laborCost;
+    
+    // Шаг 3: Вес значка (объем × плотность)
+    const volume = dimensions.length * dimensions.width * 1; // толщина 1 мм
+    const weight = volume * density;
+    
+    // Шаг 4: Стоимость одного значка без НДС продажи
+    const pricePerItemBeforeVAT = totalCostPerGram * weight * dimensions.complexity;
+    
+    // Шаг 5: Добавляем НДС продажи
+    const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
+    
+    // Шаг 6: Стоимость всей партии
+    const totalPrice = pricePerItem * calculatorData.quantity;
+    
+    return {
+      totalPrice: Math.round(totalPrice),
+      pricePerUnit: Math.round(pricePerItem),
+      weight: weight.toFixed(2),
+      metalPricePerGram: Math.round(metalCostWithVAT),
+      totalCostPerGram: Math.round(totalCostPerGram),
+    };
+  };
 
-  // Расчет примерной цены
+  // Пересчет цены при изменении параметров
   useEffect(() => {
-    const typeMult = types[calculatorData.type as keyof typeof types]?.multiplier || 1;
-    const materialMult = materials[calculatorData.material as keyof typeof materials]?.multiplier || 1;
-    const sizeMult = sizes[calculatorData.size as keyof typeof sizes]?.multiplier || 1;
-    const basePrice = materials[calculatorData.material as keyof typeof materials]?.price || 100;
+    const { totalPrice, pricePerUnit } = calculatePrice();
     
-    const total = basePrice * calculatorData.quantity * typeMult * materialMult * sizeMult;
-    const newPrice = Math.round(total);
-    
-    if (newPrice !== estimatedPrice) {
+    if (totalPrice !== estimatedPrice) {
       setPriceHighlight(true);
       setTimeout(() => setPriceHighlight(false), 500);
     }
     
-    setEstimatedPrice(newPrice);
-    setPricePerUnit(Math.round(newPrice / calculatorData.quantity));
-  }, [calculatorData, estimatedPrice]);
+    setEstimatedPrice(totalPrice);
+    setPricePerUnit(pricePerUnit);
+  }, [calculatorData, metalPrices]);
 
+  // Загрузка цен при старте
   useEffect(() => {
+    fetchMetalPrices();
     window.scrollTo(0, 0);
     sendMetrikaEvent('calculator_page_view');
   }, []);
@@ -117,11 +181,6 @@ const PriceCalculator = () => {
   const handleMaterialSelect = (materialId: string) => {
     setCalculatorData(prev => ({ ...prev, material: materialId }));
     sendMetrikaEvent('calculator_param_change', { param: 'material', value: materialId });
-  };
-
-  const handleSizeSelect = (sizeId: string) => {
-    setCalculatorData(prev => ({ ...prev, size: sizeId }));
-    sendMetrikaEvent('calculator_param_change', { param: 'size', value: sizeId });
   };
 
   const handleQuantityPreset = (quantity: number) => {
@@ -143,12 +202,16 @@ const PriceCalculator = () => {
     sendMetrikaEvent('calculator_quantity_manual', { quantity: value });
   };
 
+  const refreshPrices = () => {
+    fetchMetalPrices();
+    sendMetrikaEvent('calculator_refresh_prices');
+  };
+
   const copyShareLink = () => {
     const params = new URLSearchParams();
     params.set('type', calculatorData.type);
     params.set('material', calculatorData.material);
     params.set('quantity', String(calculatorData.quantity));
-    params.set('size', calculatorData.size);
     
     const shareUrl = `${window.location.origin}/#/price-calculator?${params.toString()}`;
     navigator.clipboard.writeText(shareUrl);
@@ -168,7 +231,13 @@ const PriceCalculator = () => {
     });
   };
 
+  const { totalPricePerGram, metalPricePerGram, weight } = calculatePrice();
+
   const sendTextToTelegram = async () => {
+    const isGold = calculatorData.material === 'gold';
+    const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
+    const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
+    
     const message = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -176,11 +245,11 @@ const PriceCalculator = () => {
 <b>📍 Откуда:</b> Страница калькулятора
 
 <b>📊 Параметры заказа:</b>
-• Тип: ${types[calculatorData.type as keyof typeof types]?.name}
-• Материал: ${materials[calculatorData.material as keyof typeof materials]?.name}
+• Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
+• Формат: ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм)
 • Количество: ${calculatorData.quantity} шт.
-• Размер: ${sizes[calculatorData.size as keyof typeof sizes]?.name}
-• Предварительная цена: ${estimatedPrice.toLocaleString()} ₽
+• Актуальная цена металла: ${currentMetalPrice.toLocaleString()} ₽/г
+• Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
 
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -205,6 +274,10 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
   };
 
   const sendFileToTelegram = async (file: File) => {
+    const isGold = calculatorData.material === 'gold';
+    const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
+    const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
+    
     const caption = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -212,11 +285,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 <b>📍 Откуда:</b> Страница калькулятора
 
 <b>📊 Параметры заказа:</b>
-• Тип: ${types[calculatorData.type as keyof typeof types]?.name}
-• Материал: ${materials[calculatorData.material as keyof typeof materials]?.name}
+• Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
+• Формат: ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм)
 • Количество: ${calculatorData.quantity} шт.
-• Размер: ${sizes[calculatorData.size as keyof typeof sizes]?.name}
-• Предварительная цена: ${estimatedPrice.toLocaleString()} ₽
+• Актуальная цена металла: ${currentMetalPrice.toLocaleString()} ₽/г
+• Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
 
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -274,7 +347,8 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       }
       
       sendMetrikaGoal('calculator_lead_generated', {
-        orderType: types[calculatorData.type as keyof typeof types]?.name,
+        orderType: calculatorData.type,
+        material: calculatorData.material,
         quantity: calculatorData.quantity,
         estimatedPrice: estimatedPrice
       });
@@ -338,15 +412,19 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
   useEffect(() => {
     if (showForm) {
-      const typeName = types[calculatorData.type as keyof typeof types]?.name;
-      const materialName = materials[calculatorData.material as keyof typeof materials]?.name;
-      const sizeName = sizes[calculatorData.size as keyof typeof sizes]?.name;
+      const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
+      const materialName = calculatorData.material === 'gold' ? 'золоте 585' : 'серебре 925';
       setFormData(prev => ({
         ...prev,
-        comment: `Хочу заказать ${typeName} (${sizeName}) из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
+        comment: `Хочу заказать значки в формате ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм) из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
       }));
     }
   }, [calculatorData, showForm]);
+
+  const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
+  const isGold = calculatorData.material === 'gold';
+  const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
+  const quantityPresets = [100, 500, 1000, 5000];
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
@@ -362,14 +440,21 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/30 rounded-full mb-6">
             <Calculator className="w-4 h-4 text-gold" />
             <span className="text-gold text-sm">Калькулятор стоимости</span>
+            <button
+              onClick={refreshPrices}
+              disabled={isLoadingPrice}
+              className="ml-2 p-1 hover:bg-gold/20 rounded-full transition-colors"
+              title="Обновить цены на металлы"
+            >
+              <RefreshCw className={`w-3 h-3 text-gold ${isLoadingPrice ? 'animate-spin' : ''}`} />
+            </button>
           </div>
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
             Рассчитайте стоимость{' '}
             <span className="text-gold-gradient">партии значков</span>
           </h1>
           <p className="text-gray-400 text-lg md:text-xl max-w-2xl mx-auto mb-6">
-            Заполните параметры заказа, прикрепите логотип и получите точный расчет 
-            со специальной скидкой за обращение через этот раздел
+            Актуальные цены на золото и серебро с биржи. Заполните параметры заказа и получите точный расчет.
           </p>
           <div className="flex flex-wrap items-center justify-center gap-6 text-sm">
             <div className="flex items-center gap-2">
@@ -415,6 +500,25 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           </div>
         </div>
 
+        {/* Текущие цены на металлы */}
+        <div className="flex justify-center gap-6 mb-8 animate-fade-in-up">
+          <div className="flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full">
+            <div className="w-2 h-2 rounded-full bg-yellow-500" />
+            <span className="text-gray-300 text-sm">Золото 585:</span>
+            <span className="text-gold font-medium">{Math.round(metalPrices.gold * GOLD_PURITY_FACTOR * LOSS_FACTOR * VAT_BUY_FACTOR).toLocaleString()} ₽/г</span>
+          </div>
+          <div className="flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full">
+            <div className="w-2 h-2 rounded-full bg-gray-400" />
+            <span className="text-gray-300 text-sm">Серебро 925:</span>
+            <span className="text-gold font-medium">{Math.round(metalPrices.silver * SILVER_PURITY_FACTOR * LOSS_FACTOR * VAT_BUY_FACTOR).toLocaleString()} ₽/г</span>
+          </div>
+          {lastUpdated && (
+            <div className="text-gray-500 text-xs self-center">
+              Цены обновлены: {lastUpdated.toLocaleTimeString()}
+            </div>
+          )}
+        </div>
+
         <div className="max-w-4xl mx-auto">
           {/* Блок калькулятора */}
           <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 mb-8 animate-fade-in-up animation-delay-100 backdrop-blur-sm">
@@ -422,11 +526,42 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               Шаг 1. Выберите параметры заказа
             </h2>
             
-            {/* Тип значка */}
+            {/* Материал — карточками */}
+            <div className="mb-6">
+              <label className="block text-gray-400 text-sm mb-3">Материал *</label>
+              <div className="flex gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleMaterialSelect('gold')}
+                  className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+                    calculatorData.material === 'gold'
+                      ? 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-gold shadow-gold'
+                      : 'bg-dark border-gray-700 hover:border-gold/50'
+                  }`}
+                >
+                  <div className="font-bold text-yellow-500">Золото 585</div>
+                  <div className="text-xs text-gray-500 mt-1">{Math.round(metalPrices.gold).toLocaleString()} ₽/г (биржа)</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMaterialSelect('silver')}
+                  className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+                    calculatorData.material === 'silver'
+                      ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/20 border-gold shadow-gold'
+                      : 'bg-dark border-gray-700 hover:border-gold/50'
+                  }`}
+                >
+                  <div className="font-bold text-gray-400">Серебро 925</div>
+                  <div className="text-xs text-gray-500 mt-1">{Math.round(metalPrices.silver).toLocaleString()} ₽/г (биржа)</div>
+                </button>
+              </div>
+            </div>
+
+            {/* Тип значка — карточками */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Тип значка *</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Object.entries(types).map(([id, data]) => (
+                {Object.entries(typeDimensions).map(([id, data]) => (
                   <button
                     key={id}
                     type="button"
@@ -437,31 +572,10 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                         : 'bg-dark border-gray-700 hover:border-gold/50'
                     }`}
                   >
-                    <div className="text-2xl mb-1">{data.icon}</div>
-                    <div className="font-bold text-white">{data.name}</div>
-                    <div className="text-xs text-gray-500">{data.size}</div>
-                    <div className="text-xs text-gold mt-1">{data.description}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Материал */}
-            <div className="mb-6">
-              <label className="block text-gray-400 text-sm mb-3">Материал *</label>
-              <div className="flex gap-4">
-                {Object.entries(materials).map(([id, data]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => handleMaterialSelect(id)}
-                    className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
-                      calculatorData.material === id
-                        ? `bg-gradient-to-r ${data.color} border-gold shadow-gold`
-                        : 'bg-dark border-gray-700 hover:border-gold/50'
-                    }`}
-                  >
-                    <div className={`font-bold ${data.textColor}`}>{data.name}</div>
+                    <div className="text-2xl mb-1">{id === 'maxi' ? '👑' : id === 'midi' ? '⭐' : id === 'mini' ? '●' : '•'}</div>
+                    <div className="font-bold text-white">{id.toUpperCase()}</div>
+                    <div className="text-xs text-gray-500">{data.length}×{data.width} мм</div>
+                    <div className="text-xs text-gold mt-1">сложность {data.complexity}×</div>
                   </button>
                 ))}
               </div>
@@ -529,29 +643,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               <p className="text-gray-500 text-xs mt-2">От 10 до 10 000 штук</p>
             </div>
 
-            {/* Размер */}
-            <div className="mb-8">
-              <label className="block text-gray-400 text-sm mb-3">Размер</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Object.entries(sizes).map(([id, data]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => handleSizeSelect(id)}
-                    className={`p-3 rounded-xl border transition-all duration-300 text-center ${
-                      calculatorData.size === id
-                        ? 'bg-gold/20 border-gold'
-                        : 'bg-dark border-gray-700 hover:border-gold/50'
-                    }`}
-                  >
-                    <div className="text-xl">{data.icon}</div>
-                    <div className="text-sm text-white">{data.name}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Результат расчета */}
+            {/* Результат расчета с анимацией */}
             <div className="bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 rounded-xl p-6 text-center">
               <div className="flex justify-between items-center mb-4">
                 <p className="text-gray-400 text-sm">Предварительная стоимость</p>
@@ -569,7 +661,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               <p className="text-gray-500 text-sm mt-1">
                 ~ {pricePerUnit.toLocaleString()} ₽ за штуку
               </p>
-              <p className="text-gray-500 text-xs mt-3">*Для точного расчета оставьте заявку ниже</p>
+              <p className="text-gray-500 text-xs mt-3">
+                Вес значка: ~{weight} г | 
+                Себестоимость материала: ~{Math.round(isGold ? metalPricePerGram : metalPricePerGram)} ₽/г
+              </p>
+              <p className="text-gray-500 text-xs mt-1">*Для точного расчета оставьте заявку ниже</p>
             </div>
           </div>
 
