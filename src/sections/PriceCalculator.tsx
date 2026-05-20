@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, Shield, 
-  Copy, Check, Zap, Clock, Award, Users, Package, Share2
+  Check, Zap, Clock, Award, Users, Package, Share2
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -104,16 +104,6 @@ const PriceCalculator = () => {
     window.scrollTo(0, 0);
     sendMetrikaEvent('calculator_page_view');
   }, []);
-
-  const handleCalculatorChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setCalculatorData(prev => ({ ...prev, [name]: value }));
-    sendMetrikaEvent('calculator_param_change', { param: name, value });
-    if (!showForm) {
-      setShowForm(true);
-      sendMetrikaEvent('calculator_form_shown');
-    }
-  };
 
   const handleTypeSelect = (typeId: string) => {
     setCalculatorData(prev => ({ ...prev, type: typeId }));
