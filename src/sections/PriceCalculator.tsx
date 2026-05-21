@@ -146,8 +146,7 @@ const PriceCalculator = () => {
     const purityFactor = isGold ? GOLD_PURITY_FACTOR : SILVER_PURITY_FACTOR;
     const laborCost = isGold ? GOLD_LABOR_COST : SILVER_LABOR_COST;
     const density = isGold ? GOLD_DENSITY : SILVER_DENSITY;
-    const complexity = getCurrentComplexity();
-    
+        
     const metalCostWithVAT = metalPrice * purityFactor * LOSS_FACTOR * VAT_BUY_FACTOR;
     const totalCostPerGram = metalCostWithVAT + laborCost;
     
