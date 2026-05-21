@@ -63,6 +63,8 @@ const PriceCalculator = () => {
   const [showForm, setShowForm] = useState(false);
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [visualScale, setVisualScale] = useState(100); // масштаб в процентах, 100 = 100%
+
 
   // Предустановленные размеры
   const presets = {
@@ -339,10 +341,11 @@ const PriceCalculator = () => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-  // Компонент визуализации значка (реальный размер в мм)
+ // Компонент визуализации значка (с регулируемым масштабом)
 const ShapeVisualization = () => {
   const displayWidth = calculatorData.width;
   const displayHeight = calculatorData.height;
+  const scale = visualScale / 100; // 1.0 = 100%, 1.1 = 110% и т.д.
   
   const getShapeStyle = () => {
     if (calculatorData.shape === 'circle') {
@@ -352,11 +355,11 @@ const ShapeVisualization = () => {
     }
     if (calculatorData.shape === 'rounded') {
       return {
-        borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
+        borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2 * scale}px`,
       };
     }
     return {
-      borderRadius: '0mm',
+      borderRadius: '0px',
     };
   };
   
@@ -370,21 +373,41 @@ const ShapeVisualization = () => {
   return (
     <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
       <div className="text-center mb-2">
-        <span className="text-gray-400 text-xs">Визуализация значка (реальный размер)</span>
-        <span className="text-gold text-xs ml-2">1 мм = 1 мм</span>
+        <span className="text-gray-400 text-xs">Визуализация значка</span>
+        <span className="text-gold text-xs ml-2">масштаб: {visualScale}%</span>
       </div>
-      <div className="flex justify-center items-center min-h-[150px] bg-dark/50 rounded-lg p-4">
+      
+      {/* Ползунок масштаба */}
+      <div className="mb-3 px-2">
+        <div className="flex justify-between text-xs text-gray-500 mb-1">
+          <span>50%</span>
+          <span>100%</span>
+          <span>150%</span>
+          <span>200%</span>
+        </div>
+        <input
+          type="range"
+          min="50"
+          max="200"
+          step="10"
+          value={visualScale}
+          onChange={(e) => setVisualScale(parseInt(e.target.value))}
+          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+        />
+      </div>
+      
+      <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
         <div className="flex justify-center items-center">
           <div
-            className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
+            className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow transition-all duration-200"
             style={{
-              width: `${displayWidth}mm`,
-              height: `${displayHeight}mm`,
+              width: `${displayWidth * scale}px`,
+              height: `${displayHeight * scale}px`,
               ...getShapeStyle(),
             }}
           >
             <div className="w-full h-full flex items-center justify-center">
-              <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
+              <span className="text-gold text-[10px] opacity-70 whitespace-nowrap">
                 {getShapeLabel()}
               </span>
             </div>
@@ -393,6 +416,9 @@ const ShapeVisualization = () => {
       </div>
       <div className="text-center mt-2 text-gray-500 text-xs">
         Сложность: {complexity}× | Вес: ~{weight} г
+      </div>
+      <div className="text-center text-gray-600 text-[10px] mt-1">
+        Реальный размер: {calculatorData.width}×{calculatorData.height} мм
       </div>
     </div>
   );
