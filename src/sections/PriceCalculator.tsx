@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, 
   Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw,
-  Square, Circle
+  Square, Circle, Rounded
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -33,10 +33,10 @@ const PriceCalculator = () => {
   const [priceLoadError, setPriceLoadError] = useState(false);
   
   const [calculatorData, setCalculatorData] = useState({
-    type: 'custom', // 'custom' для пользовательских размеров, иначе 'maxi', 'midi', 'mini', 'micro'
+    type: 'custom',
     material: 'gold',
     quantity: 500,
-    shape: 'rectangle', // 'rectangle' или 'circle'
+    shape: 'rectangle', // 'rectangle', 'rounded', 'circle'
     width: 30,
     height: 30,
   });
@@ -70,9 +70,11 @@ const PriceCalculator = () => {
     midi: { width: 25, height: 22, shape: 'rectangle' as const, label: 'MIDI', complexity: 1.3 },
     mini: { width: 20, height: 17, shape: 'rectangle' as const, label: 'MINI', complexity: 1.2 },
     micro: { width: 15, height: 12, shape: 'rectangle' as const, label: 'MICRO', complexity: 1.1 },
-    round_small: { width: 20, height: 20, shape: 'circle' as const, label: 'Круглый малый', complexity: 1.15 },
-    round_medium: { width: 30, height: 30, shape: 'circle' as const, label: 'Круглый средний', complexity: 1.25 },
-    round_large: { width: 40, height: 40, shape: 'circle' as const, label: 'Круглый большой', complexity: 1.35 },
+    rounded_small: { width: 20, height: 20, shape: 'rounded' as const, label: 'Скругленный S', complexity: 1.15 },
+    rounded_medium: { width: 30, height: 30, shape: 'rounded' as const, label: 'Скругленный M', complexity: 1.25 },
+    circle_small: { width: 20, height: 20, shape: 'circle' as const, label: 'Круглый S', complexity: 1.15 },
+    circle_medium: { width: 30, height: 30, shape: 'circle' as const, label: 'Круглый M', complexity: 1.25 },
+    circle_large: { width: 35, height: 35, shape: 'circle' as const, label: 'Круглый L', complexity: 1.35 },
   };
 
   // Загрузка цен через прокси-функцию
@@ -228,7 +230,7 @@ const PriceCalculator = () => {
     sendMetrikaEvent('calculator_param_change', { param: 'mode', value: 'custom' });
   };
 
-  const handleShapeSelect = (shape: 'rectangle' | 'circle') => {
+  const handleShapeSelect = (shape: 'rectangle' | 'rounded' | 'circle') => {
     setCalculatorData(prev => ({
       ...prev,
       type: 'custom',
@@ -238,23 +240,33 @@ const PriceCalculator = () => {
   };
 
   const handleWidthChange = (value: number) => {
-    const newWidth = Math.max(10, Math.min(100, value));
-    setCalculatorData(prev => ({
-      ...prev,
-      type: 'custom',
-      width: newWidth,
-    }));
-    sendMetrikaEvent('calculator_param_change', { param: 'width', value: newWidth });
+    let newValue = Math.max(8, Math.min(35, value));
+    if (calculatorData.shape === 'circle') {
+      // Для круга ширина = диаметр, высота тоже = диаметр
+      setCalculatorData(prev => ({
+        ...prev,
+        type: 'custom',
+        width: newValue,
+        height: newValue,
+      }));
+    } else {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: 'custom',
+        width: newValue,
+      }));
+    }
+    sendMetrikaEvent('calculator_param_change', { param: 'width', value: newValue });
   };
 
   const handleHeightChange = (value: number) => {
-    const newHeight = Math.max(10, Math.min(100, value));
+    const newValue = Math.max(8, Math.min(35, value));
     setCalculatorData(prev => ({
       ...prev,
       type: 'custom',
-      height: newHeight,
+      height: newValue,
     }));
-    sendMetrikaEvent('calculator_param_change', { param: 'height', value: newHeight });
+    sendMetrikaEvent('calculator_param_change', { param: 'height', value: newValue });
   };
 
   const handleMaterialSelect = (materialId: string) => {
@@ -327,49 +339,57 @@ const PriceCalculator = () => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-  // Компонент визуализации значка
+  // Компонент визуализации значка (реальный размер 1px = 1мм)
   const ShapeVisualization = () => {
-    const maxSize = 120;
-    const scale = Math.min(maxSize / Math.max(calculatorData.width, calculatorData.height), 1);
-    const displayWidth = calculatorData.width * scale;
-    const displayHeight = calculatorData.height * scale;
+    const displayWidth = calculatorData.width;
+    const displayHeight = calculatorData.height;
+    
+    const getShapeStyle = () => {
+      if (calculatorData.shape === 'circle') {
+        return {
+          borderRadius: '50%',
+        };
+      }
+      if (calculatorData.shape === 'rounded') {
+        return {
+          borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}px`,
+        };
+      }
+      return {
+        borderRadius: '0px',
+      };
+    };
+    
+    const getShapeLabel = () => {
+      if (calculatorData.shape === 'circle') {
+        return `⌀${calculatorData.width} мм`;
+      }
+      return `${calculatorData.width}×${calculatorData.height} мм`;
+    };
     
     return (
       <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
         <div className="text-center mb-2">
-          <span className="text-gray-400 text-xs">Визуализация значка</span>
-          <span className="text-gold text-xs ml-2">масштаб: ~{Math.round(scale * 10)}x</span>
+          <span className="text-gray-400 text-xs">Визуализация значка (реальный размер)</span>
+          <span className="text-gold text-xs ml-2">1 мм = 1 px</span>
         </div>
-        <div className="flex justify-center items-center min-h-[160px] bg-dark/50 rounded-lg">
-          {calculatorData.shape === 'circle' ? (
-            <div
-              className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold rounded-full shadow-glow"
-              style={{
-                width: `${displayWidth}px`,
-                height: `${displayHeight}px`,
-              }}
-            >
-              <div className="w-full h-full flex items-center justify-center">
-                <span className="text-gold text-xs opacity-70">
-                  {calculatorData.width}×{calculatorData.width} мм
-                </span>
-              </div>
-            </div>
-          ) : (
+        <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
+          <div className="flex justify-center items-center">
             <div
               className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
               style={{
                 width: `${displayWidth}px`,
                 height: `${displayHeight}px`,
+                ...getShapeStyle(),
               }}
             >
               <div className="w-full h-full flex items-center justify-center">
-                <span className="text-gold text-xs opacity-70">
-                  {calculatorData.width}×{calculatorData.height} мм
+                <span className="text-gold text-[10px] opacity-70">
+                  {getShapeLabel()}
                 </span>
               </div>
             </div>
-          )}
+          </div>
         </div>
         <div className="text-center mt-2 text-gray-500 text-xs">
           Сложность: {complexity}× | Вес: ~{weight} г
@@ -379,6 +399,7 @@ const PriceCalculator = () => {
   };
 
   const sendTextToTelegram = async () => {
+    const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
     const message = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -387,7 +408,7 @@ const PriceCalculator = () => {
 
 <b>📊 Параметры заказа:</b>
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
-• Форма: ${calculatorData.shape === 'circle' ? 'Круглая' : 'Прямоугольная'}
+• Форма: ${shapeName}
 • Размер: ${calculatorData.width}×${calculatorData.height} мм
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
@@ -419,6 +440,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
   };
 
   const sendFileToTelegram = async (file: File) => {
+    const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
     const caption = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -427,7 +449,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
 <b>📊 Параметры заказа:</b>
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
-• Форма: ${calculatorData.shape === 'circle' ? 'Круглая' : 'Прямоугольная'}
+• Форма: ${shapeName}
 • Размер: ${calculatorData.width}×${calculatorData.height} мм
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
@@ -556,7 +578,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
   useEffect(() => {
     if (showForm) {
       const materialName = calculatorData.material === 'gold' ? 'золоте 585' : 'серебре 925';
-      const shapeName = calculatorData.shape === 'circle' ? 'круглой' : 'прямоугольной';
+      const shapeName = calculatorData.shape === 'circle' ? 'круглой' : (calculatorData.shape === 'rounded' ? 'со скругленными углами' : 'с прямыми углами');
       setFormData(prev => ({
         ...prev,
         comment: `Хочу заказать значки ${shapeName} формы размером ${calculatorData.width}×${calculatorData.height} мм из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
@@ -712,7 +734,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             {/* Предустановленные размеры */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Готовые форматы</label>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
                 <button
                   type="button"
                   onClick={() => handlePresetSelect('maxi')}
@@ -759,9 +781,31 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 </button>
                 <button
                   type="button"
-                  onClick={() => handlePresetSelect('round_small')}
+                  onClick={() => handlePresetSelect('rounded_small')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
-                    calculatorData.type === 'round_small'
+                    calculatorData.type === 'rounded_small'
+                      ? 'bg-gold text-dark font-medium'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  Скругл. S<br/><span className="text-xs">20×20 мм</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect('rounded_medium')}
+                  className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
+                    calculatorData.type === 'rounded_medium'
+                      ? 'bg-gold text-dark font-medium'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  Скругл. M<br/><span className="text-xs">30×30 мм</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect('circle_small')}
+                  className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
+                    calculatorData.type === 'circle_small'
                       ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
@@ -770,9 +814,9 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 </button>
                 <button
                   type="button"
-                  onClick={() => handlePresetSelect('round_medium')}
+                  onClick={() => handlePresetSelect('circle_medium')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
-                    calculatorData.type === 'round_medium'
+                    calculatorData.type === 'circle_medium'
                       ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
@@ -802,57 +846,71 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               {calculatorData.type === 'custom' && (
                 <div className="space-y-4">
                   {/* Выбор формы */}
-                  <div className="flex gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => handleShapeSelect('rectangle')}
-                      className={`flex-1 p-3 rounded-xl border transition-all duration-300 text-center flex items-center justify-center gap-2 ${
+                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
                         calculatorData.shape === 'rectangle'
                           ? 'bg-gold/20 border-gold'
                           : 'bg-dark border-gray-700 hover:border-gold/50'
                       }`}
                     >
                       <Square className="w-5 h-5" />
-                      <span>Прямоугольник</span>
+                      <span className="text-xs">Прямые углы</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleShapeSelect('rounded')}
+                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+                        calculatorData.shape === 'rounded'
+                          ? 'bg-gold/20 border-gold'
+                          : 'bg-dark border-gray-700 hover:border-gold/50'
+                      }`}
+                    >
+                      <Rounded className="w-5 h-5" />
+                      <span className="text-xs">Скругленные углы</span>
                     </button>
                     <button
                       type="button"
                       onClick={() => handleShapeSelect('circle')}
-                      className={`flex-1 p-3 rounded-xl border transition-all duration-300 text-center flex items-center justify-center gap-2 ${
+                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
                         calculatorData.shape === 'circle'
                           ? 'bg-gold/20 border-gold'
                           : 'bg-dark border-gray-700 hover:border-gold/50'
                       }`}
                     >
                       <Circle className="w-5 h-5" />
-                      <span>Круг</span>
+                      <span className="text-xs">Круг</span>
                     </button>
                   </div>
 
-                  {/* Ширина */}
+                  {/* Ширина / Диаметр */}
                   <div>
                     <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-400">Ширина, мм</span>
+                      <span className="text-gray-400">
+                        {calculatorData.shape === 'circle' ? 'Диаметр, мм' : 'Ширина, мм'}
+                      </span>
                       <span className="text-gold">{calculatorData.width} мм</span>
                     </div>
                     <input
                       type="range"
-                      min="10"
-                      max="100"
+                      min="8"
+                      max="35"
                       step="1"
                       value={calculatorData.width}
                       onChange={(e) => handleWidthChange(parseInt(e.target.value))}
                       className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
                     />
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>10</span>
-                      <span>50</span>
-                      <span>100</span>
+                      <span>8</span>
+                      <span>20</span>
+                      <span>35</span>
                     </div>
                   </div>
 
-                  {/* Высота (только для прямоугольника) */}
-                  {calculatorData.shape === 'rectangle' && (
+                  {/* Высота (только для прямоугольника и скругленных углов) */}
+                  {calculatorData.shape !== 'circle' && (
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-400">Высота, мм</span>
@@ -860,17 +918,17 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       </div>
                       <input
                         type="range"
-                        min="10"
-                        max="100"
+                        min="8"
+                        max="35"
                         step="1"
                         value={calculatorData.height}
                         onChange={(e) => handleHeightChange(parseInt(e.target.value))}
                         className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
                       />
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>10</span>
-                        <span>50</span>
-                        <span>100</span>
+                        <span>8</span>
+                        <span>20</span>
+                        <span>35</span>
                       </div>
                     </div>
                   )}
