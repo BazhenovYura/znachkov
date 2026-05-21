@@ -10,13 +10,7 @@ import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
-// Актуальные цены на металлы (обновляются при загрузке)
-// Золото 999 пробы: ~10 464 ₽/г
-// Серебро 999 пробы: ~85 ₽/г
-const DEFAULT_GOLD_PRICE = 10464;
-const DEFAULT_SILVER_PRICE = 85;
-
-// Коэффициенты расчета
+// Коэффициенты расчета (константы, не зависящие от цен)
 const GOLD_PURITY_FACTOR = 0.585;      // перевод 999 → 585 проба
 const SILVER_PURITY_FACTOR = 0.926;    // перевод 999 → 925 проба
 const LOSS_FACTOR = 1.1;               // потери 10%
@@ -39,6 +33,7 @@ const PriceCalculator = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
+  const [priceLoadError, setPriceLoadError] = useState(false);
   
   // Состояния для калькулятора
   const [calculatorData, setCalculatorData] = useState({
@@ -47,10 +42,10 @@ const PriceCalculator = () => {
     quantity: 500,
   });
   
-  // Цены на металлы (обновляются с биржи)
-  const [metalPrices, setMetalPrices] = useState({
-    gold: DEFAULT_GOLD_PRICE,
-    silver: DEFAULT_SILVER_PRICE,
+  // Цены на металлы (изначально null, пока не загрузились)
+  const [metalPrices, setMetalPrices] = useState<{ gold: number | null; silver: number | null }>({
+    gold: null,
+    silver: null,
   });
   
   // Состояния для формы
@@ -72,81 +67,60 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-   // Загрузка актуальных цен с официальной HTML-страницы ЦБ РФ
+  // Загрузка актуальных цен с официальной HTML-страницы ЦБ РФ
   const fetchMetalPrices = async () => {
     setIsLoadingPrice(true);
-    // URL страницы с учетными ценами
+    setPriceLoadError(false);
+    
     const url = 'https://cbr.ru/hd_base/metall/metall_base_new/';
 
     try {
       const response = await fetch(url);
       const htmlText = await response.text();
 
-      // Создаем DOM-элемент для парсинга HTML
       const parser = new DOMParser();
       const doc = parser.parseFromString(htmlText, 'text/html');
-
-      // Ищем таблицу с данными. На странице она может быть не единственной,
-      // но нам нужна первая большая таблица, которая содержит цены.
       const dataTable = doc.querySelector('.data-table') || doc.querySelector('table');
 
       if (!dataTable) {
-        console.error('Таблица с данными на странице ЦБ не найдена.');
-        return;
+        throw new Error('Таблица с данными на странице ЦБ не найдена');
       }
 
-      // Находим все строки таблицы
       const rows = dataTable.querySelectorAll('tr');
       let goldPrice = 0;
       let silverPrice = 0;
 
-      // Перебираем строки, чтобы найти актуальные цены за сегодня
-      // Первая строка с данными (после заголовка) обычно за сегодняшний день
       for (let i = 1; i < rows.length; i++) {
         const columns = rows[i].querySelectorAll('td');
         if (columns.length >= 5) {
-          // Предполагаем, что столбцы: Дата, Золото, Серебро, Платина, Палладий
-          const dateText = columns[0]?.textContent?.trim() || '';
-          
-          // Извлекаем цену золота (заменяем запятую на точку и парсим)
           const goldText = columns[1]?.textContent?.replace(',', '.') || '0';
-          const parsedGold = parseFloat(goldText);
-          
-          // Извлекаем цену серебра
           const silverText = columns[2]?.textContent?.replace(',', '.') || '0';
+          const parsedGold = parseFloat(goldText);
           const parsedSilver = parseFloat(silverText);
           
-          // Если нашли строку с валидными ценами, используем их (самую первую)
           if (parsedGold > 0 && parsedSilver > 0) {
             goldPrice = parsedGold;
             silverPrice = parsedSilver;
-            console.log(`Цены загружены из строки с датой: ${dateText}`);
             break;
           }
         }
       }
 
-      if (goldPrice > 0) {
-        // Цена на сайте уже в рублях за грамм
-        setMetalPrices(prev => ({ ...prev, gold: Math.round(goldPrice) }));
-        console.log(`✅ Золото загружено с сайта ЦБ: ${Math.round(goldPrice)} ₽/г`);
-      } else {
-        console.warn('⚠️ Цена на золото не получена с сайта ЦБ, использую значение по умолчанию');
-      }
-      
-      if (silverPrice > 0) {
-        setMetalPrices(prev => ({ ...prev, silver: Math.round(silverPrice) }));
-        console.log(`✅ Серебро загружено с сайта ЦБ: ${Math.round(silverPrice)} ₽/г`);
-      } else {
-        console.warn('⚠️ Цена на серебро не получена с сайта ЦБ, использую значение по умолчанию');
-      }
-      
-      if (goldPrice > 0 || silverPrice > 0) {
+      if (goldPrice > 0 && silverPrice > 0) {
+        setMetalPrices({
+          gold: Math.round(goldPrice),
+          silver: Math.round(silverPrice)
+        });
         setLastUpdated(new Date());
+        sendMetrikaEvent('metal_prices_updated', { gold: goldPrice, silver: silverPrice });
+        console.log(`✅ Цены загружены: Золото ${goldPrice} ₽/г, Серебро ${silverPrice} ₽/г`);
+      } else {
+        throw new Error('Не удалось извлечь цены из таблицы');
       }
 
     } catch (error) {
       console.error('Ошибка загрузки цен с сайта ЦБ:', error);
+      setPriceLoadError(true);
       sendMetrikaEvent('metal_prices_error', { error: String(error) });
     } finally {
       setIsLoadingPrice(false);
@@ -159,6 +133,18 @@ const PriceCalculator = () => {
     const isGold = calculatorData.material === 'gold';
     
     const metalPrice = isGold ? metalPrices.gold : metalPrices.silver;
+    
+    // Если цены не загружены, возвращаем 0
+    if (!metalPrice) {
+      return {
+        totalPrice: 0,
+        pricePerUnit: 0,
+        weight: '0',
+        metalCostPerGram: 0,
+        totalCostPerGram: 0,
+      };
+    }
+    
     const purityFactor = isGold ? GOLD_PURITY_FACTOR : SILVER_PURITY_FACTOR;
     const laborCost = isGold ? GOLD_LABOR_COST : SILVER_LABOR_COST;
     const density = isGold ? GOLD_DENSITY : SILVER_DENSITY;
@@ -184,6 +170,8 @@ const PriceCalculator = () => {
 
   // Пересчет цены при изменении параметров
   useEffect(() => {
+    if (!metalPrices.gold || !metalPrices.silver) return;
+    
     const { totalPrice, pricePerUnit } = calculatePrice();
     
     if (totalPrice !== estimatedPrice) {
@@ -269,6 +257,9 @@ const PriceCalculator = () => {
   const isGold = calculatorData.material === 'gold';
   const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
   const quantityPresets = [100, 500, 1000, 5000];
+  
+  // Проверка, загружены ли цены
+  const isPriceLoaded = metalPrices.gold !== null && metalPrices.silver !== null;
 
   const sendTextToTelegram = async () => {
     const message = `
@@ -281,7 +272,7 @@ const PriceCalculator = () => {
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
 • Формат: ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм)
 • Количество: ${calculatorData.quantity} шт.
-• Актуальная цена металла: ${currentMetalPrice.toLocaleString()} ₽/г
+• Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
 • Итого себестоимость с работой: ${totalCostPerGram.toLocaleString()} ₽/г
 • Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
@@ -319,7 +310,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
 • Формат: ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм)
 • Количество: ${calculatorData.quantity} шт.
-• Актуальная цена металла: ${currentMetalPrice.toLocaleString()} ₽/г
+• Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
 
@@ -451,6 +442,14 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     }
   }, [calculatorData, showForm]);
 
+  // Отображение цен в карточках материалов
+  const getMaterialPriceDisplay = (material: 'gold' | 'silver') => {
+    const price = material === 'gold' ? metalPrices.gold : metalPrices.silver;
+    if (priceLoadError) return 'ошибка загрузки';
+    if (!price) return 'загрузка...';
+    return `${price.toLocaleString()} ₽/г`;
+  };
+
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -529,20 +528,37 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         <div className="flex justify-center gap-6 mb-8 animate-fade-in-up">
           <div className="flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full">
             <div className="w-2 h-2 rounded-full bg-yellow-500" />
-            <span className="text-gray-300 text-sm">Золото 585:</span>
-            <span className="text-gold font-medium">{Math.round(metalPrices.gold * GOLD_PURITY_FACTOR * LOSS_FACTOR * VAT_BUY_FACTOR).toLocaleString()} ₽/г</span>
+            <span className="text-gray-300 text-sm">Золото 999:</span>
+            <span className="text-gold font-medium">{getMaterialPriceDisplay('gold')}</span>
           </div>
           <div className="flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full">
             <div className="w-2 h-2 rounded-full bg-gray-400" />
-            <span className="text-gray-300 text-sm">Серебро 925:</span>
-            <span className="text-gold font-medium">{Math.round(metalPrices.silver * SILVER_PURITY_FACTOR * LOSS_FACTOR * VAT_BUY_FACTOR).toLocaleString()} ₽/г</span>
+            <span className="text-gray-300 text-sm">Серебро 999:</span>
+            <span className="text-gold font-medium">{getMaterialPriceDisplay('silver')}</span>
           </div>
-          {lastUpdated && (
+          {priceLoadError && (
+            <div className="text-red-500 text-xs self-center">
+              ⚠️ Не удалось загрузить актуальные цены
+            </div>
+          )}
+          {lastUpdated && !priceLoadError && (
             <div className="text-gray-500 text-xs self-center">
               Цены обновлены: {lastUpdated.toLocaleTimeString()}
             </div>
           )}
         </div>
+
+        {/* Сообщение об ошибке загрузки цен */}
+        {priceLoadError && (
+          <div className="max-w-4xl mx-auto mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
+            <p className="text-red-400 text-sm">
+              ⚠️ Не удалось загрузить актуальные цены на металлы с сайта ЦБ РФ.
+              Пожалуйста, попробуйте обновить страницу позже или 
+              <button onClick={refreshPrices} className="text-gold hover:underline ml-1">нажмите здесь</button>, 
+              чтобы повторить попытку.
+            </p>
+          </div>
+        )}
 
         <div className="max-w-4xl mx-auto">
           {/* Блок калькулятора */}
@@ -565,7 +581,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   }`}
                 >
                   <div className="font-bold text-yellow-500">Золото 585</div>
-                  <div className="text-xs text-gray-500 mt-1">{Math.round(metalPrices.gold).toLocaleString()} ₽/г (биржа)</div>
+                  <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('gold')} (биржа)</div>
                 </button>
                 <button
                   type="button"
@@ -577,7 +593,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   }`}
                 >
                   <div className="font-bold text-gray-400">Серебро 925</div>
-                  <div className="text-xs text-gray-500 mt-1">{Math.round(metalPrices.silver).toLocaleString()} ₽/г (биржа)</div>
+                  <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('silver')} (биржа)</div>
                 </button>
               </div>
             </div>
@@ -680,16 +696,24 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   {copied ? 'Скопировано!' : 'Поделиться расчётом'}
                 </button>
               </div>
-              <p className={`font-serif text-3xl md:text-4xl font-bold text-gold-gradient transition-all duration-300 ${priceHighlight ? 'scale-110' : 'scale-100'}`}>
-                {estimatedPrice.toLocaleString()} ₽
-              </p>
-              <p className="text-gray-500 text-sm mt-1">
-                ~ {pricePerUnit.toLocaleString()} ₽ за штуку
-              </p>
-              <p className="text-gray-500 text-xs mt-3">
-                Вес значка: ~{weight} г | 
-                Стоимость материала: {metalCostPerGram.toLocaleString()} ₽/г
-              </p>
+              {!isPriceLoaded && !priceLoadError ? (
+                <p className="text-gray-400 text-lg">Загрузка цен...</p>
+              ) : priceLoadError ? (
+                <p className="text-red-400 text-lg">Цены не загружены</p>
+              ) : (
+                <>
+                  <p className={`font-serif text-3xl md:text-4xl font-bold text-gold-gradient transition-all duration-300 ${priceHighlight ? 'scale-110' : 'scale-100'}`}>
+                    {estimatedPrice.toLocaleString()} ₽
+                  </p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    ~ {pricePerUnit.toLocaleString()} ₽ за штуку
+                  </p>
+                  <p className="text-gray-500 text-xs mt-3">
+                    Вес значка: ~{weight} г | 
+                    Стоимость материала: {metalCostPerGram.toLocaleString()} ₽/г
+                  </p>
+                </>
+              )}
               <p className="text-gray-500 text-xs mt-1">*Для точного расчета оставьте заявку ниже</p>
             </div>
           </div>
