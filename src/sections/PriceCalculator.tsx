@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Send, Upload, X, Calculator, Gift, TrendingUp, Shield, 
+  Send, Upload, X, Calculator, Gift, TrendingUp, 
   Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
@@ -10,7 +10,7 @@ import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
-// URL вашей прокси-функции для получения цен металлов (ОБНОВЛЕННЫЙ)
+// URL вашей прокси-функции для получения цен металлов
 const METAL_PRICES_PROXY_URL = 'https://functions.yandexcloud.net/d4eubr12aftt733bpe1e';
 
 // Коэффициенты расчета
