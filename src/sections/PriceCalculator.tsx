@@ -72,32 +72,72 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Загрузка актуальных цен с биржи
+    // Загрузка актуальных цен с официального API ЦБ РФ
   const fetchMetalPrices = async () => {
     setIsLoadingPrice(true);
+    // Форматируем текущую дату для запроса (ДД.ММ.ГГГГ)
+    const today = new Date();
+    const day = today.getDate().toString().padStart(2, '0');
+    const month = (today.getMonth() + 1).toString().padStart(2, '0');
+    const year = today.getFullYear();
+    const formattedDate = `${day}.${month}.${year}`;
+    
+    // URL официального сервиса ЦБ РФ для получения учетных цен
+    // Параметр date_req1= задает дату, на которую нужны цены
+    const url = `https://www.cbr.ru/scripts/xml_metall.asp?date_req1=${formattedDate}`;
+
     try {
-      const response = await fetch('https://www.cbr-xml-daily.ru/daily_json.js');
-      const data = await response.json();
+      const response = await fetch(url);
+      const xmlText = await response.text(); // Получаем ответ в формате XML
+
+      // Парсим XML в DOM
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
       
-      if (data && data.Valute) {
-        const goldPricePerOunce = data.Valute.XAU?.Value;
-        if (goldPricePerOunce) {
-          const goldPricePerGram = goldPricePerOunce / 31.1035;
-          setMetalPrices(prev => ({ ...prev, gold: Math.round(goldPricePerGram) }));
+      // Ищем записи о металлах (Gold и Silver)
+      // В XML структура: <Record Code="1">...<Buy>цена</Buy>...</Record>
+      const records = xmlDoc.querySelectorAll("Record");
+      
+      let goldPrice = 0;
+      let silverPrice = 0;
+      
+      records.forEach(record => {
+        const code = record.getAttribute("Code");
+        // Code="1" — это Золото
+        if (code === "1") {
+          const buyElement = record.querySelector("Buy");
+          if (buyElement) {
+            // Цена в XML может быть с запятой как разделителем, заменяем на точку
+            goldPrice = parseFloat(buyElement.textContent?.replace(",", ".") || "0");
+          }
         }
-        
-        const silverPricePerOunce = data.Valute.XAG?.Value;
-        if (silverPricePerOunce) {
-          const silverPricePerGram = silverPricePerOunce / 31.1035;
-          setMetalPrices(prev => ({ ...prev, silver: Math.round(silverPricePerGram) }));
+        // Code="2" — это Серебро
+        if (code === "2") {
+          const buyElement = record.querySelector("Buy");
+          if (buyElement) {
+            silverPrice = parseFloat(buyElement.textContent?.replace(",", ".") || "0");
+          }
         }
-        
-        setLastUpdated(new Date());
-        sendMetrikaEvent('metal_prices_updated', { 
-          gold: metalPrices.gold, 
-          silver: metalPrices.silver 
-        });
+      });
+
+      if (goldPrice > 0) {
+        setMetalPrices(prev => ({ ...prev, gold: Math.round(goldPrice) }));
+        console.log(`✅ Золото загружено: ${Math.round(goldPrice)} ₽/г`);
+      } else {
+        console.warn('⚠️ Цена на золото не получена, использую значение по умолчанию');
       }
+      
+      if (silverPrice > 0) {
+        setMetalPrices(prev => ({ ...prev, silver: Math.round(silverPrice) }));
+        console.log(`✅ Серебро загружено: ${Math.round(silverPrice)} ₽/г`);
+      } else {
+        console.warn('⚠️ Цена на серебро не получена, использую значение по умолчанию');
+      }
+      
+      if (goldPrice > 0 || silverPrice > 0) {
+        setLastUpdated(new Date());
+      }
+
     } catch (error) {
       console.error('Ошибка загрузки цен на металлы:', error);
       sendMetrikaEvent('metal_prices_error', { error: String(error) });
