@@ -67,65 +67,50 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Загрузка актуальных цен с официальной HTML-страницы ЦБ РФ
-  const fetchMetalPrices = async () => {
-    setIsLoadingPrice(true);
-    setPriceLoadError(false);
+  // Загрузка актуальных цен через прокси-функцию в Яндекс Облаке
+const fetchMetalPrices = async () => {
+  setIsLoadingPrice(true);
+  setPriceLoadError(false);
+  
+  // !!! ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL ФУНКЦИИ !!!
+  const PROXY_FUNCTION_URL = 'https://functions.yandexcloud.net/d4eXXXXXXXXXXXXXXX';
+  
+  try {
+    console.log('Загрузка цен через прокси-функцию...');
+    const response = await fetch(PROXY_FUNCTION_URL);
+    const data = await response.json();
     
-    const url = 'https://cbr.ru/hd_base/metall/metall_base_new/';
-
-    try {
-      const response = await fetch(url);
-      const htmlText = await response.text();
-
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlText, 'text/html');
-      const dataTable = doc.querySelector('.data-table') || doc.querySelector('table');
-
-      if (!dataTable) {
-        throw new Error('Таблица с данными на странице ЦБ не найдена');
-      }
-
-      const rows = dataTable.querySelectorAll('tr');
-      let goldPrice = 0;
-      let silverPrice = 0;
-
-      for (let i = 1; i < rows.length; i++) {
-        const columns = rows[i].querySelectorAll('td');
-        if (columns.length >= 5) {
-          const goldText = columns[1]?.textContent?.replace(',', '.') || '0';
-          const silverText = columns[2]?.textContent?.replace(',', '.') || '0';
-          const parsedGold = parseFloat(goldText);
-          const parsedSilver = parseFloat(silverText);
-          
-          if (parsedGold > 0 && parsedSilver > 0) {
-            goldPrice = parsedGold;
-            silverPrice = parsedSilver;
-            break;
-          }
-        }
-      }
-
-      if (goldPrice > 0 && silverPrice > 0) {
-        setMetalPrices({
-          gold: Math.round(goldPrice),
-          silver: Math.round(silverPrice)
-        });
-        setLastUpdated(new Date());
-        sendMetrikaEvent('metal_prices_updated', { gold: goldPrice, silver: silverPrice });
-        console.log(`✅ Цены загружены: Золото ${goldPrice} ₽/г, Серебро ${silverPrice} ₽/г`);
-      } else {
-        throw new Error('Не удалось извлечь цены из таблицы');
-      }
-
-    } catch (error) {
-      console.error('Ошибка загрузки цен с сайта ЦБ:', error);
-      setPriceLoadError(true);
-      sendMetrikaEvent('metal_prices_error', { error: String(error) });
-    } finally {
-      setIsLoadingPrice(false);
+    if (data.error) {
+      throw new Error(data.error);
     }
-  };
+    
+    if (data.gold && data.silver) {
+      setMetalPrices({
+        gold: data.gold,
+        silver: data.silver
+      });
+      setLastUpdated(new Date());
+      sendMetrikaEvent('metal_prices_updated', { 
+        gold: data.gold, 
+        silver: data.silver,
+        date: data.date 
+      });
+      console.log(`✅ Цены загружены: Золото ${data.gold} ₽/г, Серебро ${data.silver} ₽/г`);
+      if (data.date) {
+        console.log(`📅 Дата цен: ${data.date}`);
+      }
+    } else {
+      throw new Error('Не удалось получить цены');
+    }
+    
+  } catch (error) {
+    console.error('Ошибка загрузки цен:', error);
+    setPriceLoadError(true);
+    sendMetrikaEvent('metal_prices_error', { error: String(error) });
+  } finally {
+    setIsLoadingPrice(false);
+  }
+};
 
   // Формула расчета стоимости
   const calculatePrice = () => {
