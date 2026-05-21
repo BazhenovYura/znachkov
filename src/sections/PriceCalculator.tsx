@@ -23,6 +23,7 @@ const GOLD_LABOR_COST = 3500;
 const SILVER_LABOR_COST = 2000;
 const GOLD_DENSITY = 0.0134;
 const SILVER_DENSITY = 0.0105;
+const MODEL_3D_COST = 10000; // стоимость 3D-модели
 
 // Габариты значков по типам
 const typeDimensions = {
@@ -116,6 +117,7 @@ const PriceCalculator = () => {
         weight: '0',
         metalCostPerGram: 0,
         totalCostPerGram: 0,
+        model3DCostWithVAT: 0,
       };
     }
     
@@ -131,7 +133,13 @@ const PriceCalculator = () => {
     
     const pricePerItemBeforeVAT = totalCostPerGram * weight * dimensions.complexity;
     const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
-    const totalPrice = pricePerItem * calculatorData.quantity;
+    const totalItemsPrice = pricePerItem * calculatorData.quantity;
+    
+    // Стоимость 3D-модели с НДС
+    const model3DCostWithVAT = MODEL_3D_COST * VAT_SELL_FACTOR;
+    
+    // Итоговая цена: стоимость всех значков + стоимость 3D-модели
+    const totalPrice = totalItemsPrice + model3DCostWithVAT;
     
     return {
       totalPrice: Math.round(totalPrice),
@@ -139,6 +147,7 @@ const PriceCalculator = () => {
       weight: weight.toFixed(2),
       metalCostPerGram: Math.round(metalCostWithVAT),
       totalCostPerGram: Math.round(totalCostPerGram),
+      model3DCostWithVAT: Math.round(model3DCostWithVAT),
     };
   };
 
@@ -226,7 +235,7 @@ const PriceCalculator = () => {
     });
   };
 
-  const { weight, metalCostPerGram, totalCostPerGram } = calculatePrice();
+  const { weight, metalCostPerGram, totalCostPerGram, model3DCostWithVAT } = calculatePrice();
   const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
   const isGold = calculatorData.material === 'gold';
   const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
@@ -254,6 +263,7 @@ const PriceCalculator = () => {
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
 • Итого себестоимость с работой: ${totalCostPerGram.toLocaleString()} ₽/г
+• Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
 • Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
 
@@ -290,6 +300,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 • Формат: ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм)
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
+• Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
 • Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
 
@@ -676,6 +687,9 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   <p className="text-gray-500 text-xs mt-3">
                     Вес значка: ~{weight} г | 
                     Стоимость материала: {metalCostPerGram.toLocaleString()} ₽/г
+                  </p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    3D-модель (единоразово): {model3DCostWithVAT.toLocaleString()} ₽
                   </p>
                 </>
               )}
