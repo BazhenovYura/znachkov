@@ -390,9 +390,9 @@ const ShapeVisualization = () => {
         </div>
       </div>
       <div className="text-center mt-2 text-gray-500 text-xs">
-        Расчетный размер: {calculatorData.width}×{calculatorData.height} мм
-        <span className="text-gold text-xs ml-2">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</span>
-      </div>
+  <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
+  <div className="text-gold text-xs mt-1">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
+</div>
     </div>
   );
 };
