@@ -10,7 +10,7 @@ import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
-// URL вашей прокси-функции для получения цен металлов
+// URL вашей прокси-функции для получения цен металлов (ОБНОВЛЕННЫЙ)
 const METAL_PRICES_PROXY_URL = 'https://functions.yandexcloud.net/d4eubr12aftt733bpe1e';
 
 // Коэффициенты расчета
@@ -744,4 +744,88 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
                 <div>
                   <label className="block text-gray-400 text-sm mb-2">Комментарий</label>
-                  <
+                  <textarea
+                    name="comment"
+                    value={formData.comment}
+                    onChange={handleChange}
+                    onFocus={() => handleFocus('comment')}
+                    rows={3}
+                    className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                    placeholder="Ваши пожелания..."
+                  />
+                </div>
+
+                {/* Загрузка файла */}
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">Прикрепить эскиз (необязательно)</label>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <label className="cursor-pointer px-4 py-2 bg-dark border border-gray-700 rounded-lg text-gray-300 hover:border-gold transition-colors flex items-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      Выбрать файл
+                      <input type="file" onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
+                    </label>
+                    {uploadedFile && (
+                      <div className="flex items-center gap-2 bg-dark-light px-3 py-2 rounded-lg">
+                        <span className="text-sm text-gray-300">{uploadedFile.name}</span>
+                        <button type="button" onClick={removeFile} className="text-gray-500 hover:text-red-400">
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  {filePreview && (
+                    <div className="mt-3">
+                      <img src={filePreview} alt="Preview" className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-700" />
+                    </div>
+                  )}
+                </div>
+
+                {/* Согласие */}
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="privacy"
+                    checked={isAgreed}
+                    onChange={(e) => setIsAgreed(e.target.checked)}
+                    className="mt-1 w-4 h-4 accent-gold"
+                  />
+                  <label htmlFor="privacy" className="text-gray-400 text-sm">
+                    Я согласен(на) на обработку персональных данных в соответствии с{' '}
+                    <a href="/privacy-policy" target="_blank" className="text-gold hover:underline">
+                      политикой конфиденциальности
+                    </a>
+                    {' '}*
+                  </label>
+                </div>
+                {consentError && <p className="text-red-500 text-sm">{consentError}</p>}
+
+                {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
+
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-gradient-to-r from-gold to-yellow-600 text-dark font-bold rounded-xl hover:shadow-gold transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? (
+                    <>Отправка...</>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" />
+                      Получить точный расчет
+                    </>
+                  )}
+                </button>
+
+                <p className="text-center text-gray-500 text-xs">
+                  Нажимая на кнопку, вы соглашаетесь с условиями обработки данных
+                </p>
+              </form>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default PriceCalculator;
