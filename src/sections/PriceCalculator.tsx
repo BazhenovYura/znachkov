@@ -369,7 +369,7 @@ const ShapeVisualization = () => {
     <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
       <div className="text-center mb-2">
         <span className="text-gray-400 text-xs">Визуализация значка</span>
-        <span className="text-gold text-xs ml-2">увеличено на 10% для наглядности</span>
+        <span className="text-gold text-xs ml-2">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</span>
       </div>
       
       <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
