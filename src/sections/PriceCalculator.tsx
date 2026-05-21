@@ -368,8 +368,7 @@ const ShapeVisualization = () => {
   return (
     <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
       <div className="text-center mb-2">
-        <span className="text-gray-400 text-xs">Визуализация значка</span>
-        <span className="text-gold text-xs ml-2">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</span>
+        <span className="text-gray-400 text-xs">Визуализация значка</span>        
       </div>
       
       <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
@@ -391,7 +390,8 @@ const ShapeVisualization = () => {
         </div>
       </div>
       <div className="text-center mt-2 text-gray-500 text-xs">
-        Реальный размер: {calculatorData.width}×{calculatorData.height} мм
+        Расчетный размер: {calculatorData.width}×{calculatorData.height} мм
+        <span className="text-gold text-xs ml-2">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</span>
       </div>
     </div>
   );
