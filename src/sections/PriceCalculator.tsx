@@ -72,66 +72,89 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-    // Загрузка актуальных цен с официального API ЦБ РФ
+      // Загрузка актуальных цен с официальной HTML-страницы ЦБ РФ
   const fetchMetalPrices = async () => {
     setIsLoadingPrice(true);
-    // Форматируем текущую дату для запроса (ДД.ММ.ГГГГ)
-    const today = new Date();
-    const day = today.getDate().toString().padStart(2, '0');
-    const month = (today.getMonth() + 1).toString().padStart(2, '0');
-    const year = today.getFullYear();
-    const formattedDate = `${day}.${month}.${year}`;
-    
-    // URL официального сервиса ЦБ РФ для получения учетных цен
-    // Параметр date_req1= задает дату, на которую нужны цены
-    const url = `https://www.cbr.ru/scripts/xml_metall.asp?date_req1=${formattedDate}`;
+    // URL страницы с учетными ценами
+    const url = 'https://cbr.ru/hd_base/metall/metall_base_new/';
 
     try {
       const response = await fetch(url);
-      const xmlText = await response.text(); // Получаем ответ в формате XML
+      const htmlText = await response.text();
 
-      // Парсим XML в DOM
+      // Создаем DOM-элемент для парсинга HTML
       const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, "text/xml");
-      
-      // Ищем записи о металлах (Gold и Silver)
-      // В XML структура: <Record Code="1">...<Buy>цена</Buy>...</Record>
-      const records = xmlDoc.querySelectorAll("Record");
-      
+      const doc = parser.parseFromString(htmlText, 'text/html');
+
+      // Ищем таблицу с данными. На странице она может быть не единственной,
+      // но нам нужна первая большая таблица, которая содержит цены.
+      // Используем селектор для поиска таблицы по классу или структуре.
+      // Из анализа страницы: таблица с учетными ценами находится внутри <div class="table-wrapper">
+      const dataTable = doc.querySelector('.data-table') || doc.querySelector('table');
+
+      if (!dataTable) {
+        console.error('Таблица с данными на странице ЦБ не найдена.');
+        return;
+      }
+
+      // Находим все строки таблицы
+      const rows = dataTable.querySelectorAll('tr');
       let goldPrice = 0;
       let silverPrice = 0;
-      
-      records.forEach(record => {
-        const code = record.getAttribute("Code");
-        // Code="1" — это Золото
-        if (code === "1") {
-          const buyElement = record.querySelector("Buy");
-          if (buyElement) {
-            // Цена в XML может быть с запятой как разделителем, заменяем на точку
-            goldPrice = parseFloat(buyElement.textContent?.replace(",", ".") || "0");
+
+      // Перебираем строки, чтобы найти актуальные цены за сегодня
+      // Первая строка с данными (после заголовка) обычно за сегодняшний день
+      for (let i = 1; i < rows.length; i++) {
+        const columns = rows[i].querySelectorAll('td');
+        if (columns.length >= 5) {
+          // Предполагаем, что столбцы: Дата, Золото, Серебро, Платина, Палладий
+          const dateText = columns[0]?.textContent?.trim() || '';
+          // Проверяем, что дата в строке — сегодняшняя
+          const today = new Date();
+          const day = today.getDate().toString().padStart(2, '0');
+          const month = (today.getMonth() + 1).toString().padStart(2, '0');
+          const year = today.getFullYear();
+          const todayStr = `${day}.${month}.${year}`;
+
+          if (dateText === todayStr) {
+            // Извлекаем цену золота (заменяем запятую на точку и парсим)
+            const goldText = columns[1]?.textContent?.replace(',', '.') || '0';
+            goldPrice = parseFloat(goldText);
+            
+            // Извлекаем цену серебра
+            const silverText = columns[2]?.textContent?.replace(',', '.') || '0';
+            silverPrice = parseFloat(silverText);
+            break; // Нашли нужную строку, выходим из цикла
           }
         }
-        // Code="2" — это Серебро
-        if (code === "2") {
-          const buyElement = record.querySelector("Buy");
-          if (buyElement) {
-            silverPrice = parseFloat(buyElement.textContent?.replace(",", ".") || "0");
-          }
+      }
+
+      // Если по какой-то причине не удалось найти данные за сегодня,
+      // берем цены из первой строки с данными (самые свежие)
+      if (goldPrice === 0 && silverPrice === 0 && rows.length > 1) {
+        const firstDataRow = rows[1];
+        const columns = firstDataRow.querySelectorAll('td');
+        if (columns.length >= 5) {
+          const goldText = columns[1]?.textContent?.replace(',', '.') || '0';
+          goldPrice = parseFloat(goldText);
+          const silverText = columns[2]?.textContent?.replace(',', '.') || '0';
+          silverPrice = parseFloat(silverText);
         }
-      });
+      }
 
       if (goldPrice > 0) {
+        // Цена на сайте уже в рублях за грамм
         setMetalPrices(prev => ({ ...prev, gold: Math.round(goldPrice) }));
-        console.log(`✅ Золото загружено: ${Math.round(goldPrice)} ₽/г`);
+        console.log(`✅ Золото загружено с сайта ЦБ: ${Math.round(goldPrice)} ₽/г`);
       } else {
-        console.warn('⚠️ Цена на золото не получена, использую значение по умолчанию');
+        console.warn('⚠️ Цена на золото не получена с сайта ЦБ, использую значение по умолчанию');
       }
       
       if (silverPrice > 0) {
         setMetalPrices(prev => ({ ...prev, silver: Math.round(silverPrice) }));
-        console.log(`✅ Серебро загружено: ${Math.round(silverPrice)} ₽/г`);
+        console.log(`✅ Серебро загружено с сайта ЦБ: ${Math.round(silverPrice)} ₽/г`);
       } else {
-        console.warn('⚠️ Цена на серебро не получена, использую значение по умолчанию');
+        console.warn('⚠️ Цена на серебро не получена с сайта ЦБ, использую значение по умолчанию');
       }
       
       if (goldPrice > 0 || silverPrice > 0) {
@@ -139,7 +162,7 @@ const PriceCalculator = () => {
       }
 
     } catch (error) {
-      console.error('Ошибка загрузки цен на металлы:', error);
+      console.error('Ошибка загрузки цен с сайта ЦБ:', error);
       sendMetrikaEvent('metal_prices_error', { error: String(error) });
     } finally {
       setIsLoadingPrice(false);
