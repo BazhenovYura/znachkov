@@ -72,7 +72,7 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-      // Загрузка актуальных цен с официальной HTML-страницы ЦБ РФ
+   // Загрузка актуальных цен с официальной HTML-страницы ЦБ РФ
   const fetchMetalPrices = async () => {
     setIsLoadingPrice(true);
     // URL страницы с учетными ценами
@@ -88,8 +88,6 @@ const PriceCalculator = () => {
 
       // Ищем таблицу с данными. На странице она может быть не единственной,
       // но нам нужна первая большая таблица, которая содержит цены.
-      // Используем селектор для поиска таблицы по классу или структуре.
-      // Из анализа страницы: таблица с учетными ценами находится внутри <div class="table-wrapper">
       const dataTable = doc.querySelector('.data-table') || doc.querySelector('table');
 
       if (!dataTable) {
@@ -109,36 +107,22 @@ const PriceCalculator = () => {
         if (columns.length >= 5) {
           // Предполагаем, что столбцы: Дата, Золото, Серебро, Платина, Палладий
           const dateText = columns[0]?.textContent?.trim() || '';
-          // Проверяем, что дата в строке — сегодняшняя
-          const today = new Date();
-          const day = today.getDate().toString().padStart(2, '0');
-          const month = (today.getMonth() + 1).toString().padStart(2, '0');
-          const year = today.getFullYear();
-          const todayStr = `${day}.${month}.${year}`;
-
-          if (dateText === todayStr) {
-            // Извлекаем цену золота (заменяем запятую на точку и парсим)
-            const goldText = columns[1]?.textContent?.replace(',', '.') || '0';
-            goldPrice = parseFloat(goldText);
-            
-            // Извлекаем цену серебра
-            const silverText = columns[2]?.textContent?.replace(',', '.') || '0';
-            silverPrice = parseFloat(silverText);
-            break; // Нашли нужную строку, выходим из цикла
-          }
-        }
-      }
-
-      // Если по какой-то причине не удалось найти данные за сегодня,
-      // берем цены из первой строки с данными (самые свежие)
-      if (goldPrice === 0 && silverPrice === 0 && rows.length > 1) {
-        const firstDataRow = rows[1];
-        const columns = firstDataRow.querySelectorAll('td');
-        if (columns.length >= 5) {
+          
+          // Извлекаем цену золота (заменяем запятую на точку и парсим)
           const goldText = columns[1]?.textContent?.replace(',', '.') || '0';
-          goldPrice = parseFloat(goldText);
+          const parsedGold = parseFloat(goldText);
+          
+          // Извлекаем цену серебра
           const silverText = columns[2]?.textContent?.replace(',', '.') || '0';
-          silverPrice = parseFloat(silverText);
+          const parsedSilver = parseFloat(silverText);
+          
+          // Если нашли строку с валидными ценами, используем их (самую первую)
+          if (parsedGold > 0 && parsedSilver > 0) {
+            goldPrice = parsedGold;
+            silverPrice = parsedSilver;
+            console.log(`Цены загружены из строки с датой: ${dateText}`);
+            break;
+          }
         }
       }
 
