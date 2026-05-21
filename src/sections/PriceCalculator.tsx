@@ -347,11 +347,6 @@ const ShapeVisualization = () => {
   const displayHeight = calculatorData.height;
   const scale = visualScale / 100; // 1.0 = 100%, 1.1 = 110% и т.д.
   
-  // Калибровочная линейка: 35 мм в реальности = сколько px на вашем мониторе?
-  // По умолчанию считаем, что 35mm = 35px (стандарт CSS), но вы можете подстроить
-  const CALIBRATION_FACTOR = 1; // если 30px = 15mm, то нужно поставить 0.5
-  // ИЛИ просто показываем линейку в мм, а пользователь прикладывает реальную линейку к экрану
-  
   const getShapeStyle = () => {
     if (calculatorData.shape === 'circle') {
       return {
