@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, 
   Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw,
-  Square, Circle, Rounded
+  Square, Circle
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -846,44 +846,46 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               {calculatorData.type === 'custom' && (
                 <div className="space-y-4">
                   {/* Выбор формы */}
-                  <div className="grid grid-cols-3 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleShapeSelect('rectangle')}
-                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
-                        calculatorData.shape === 'rectangle'
-                          ? 'bg-gold/20 border-gold'
-                          : 'bg-dark border-gray-700 hover:border-gold/50'
-                      }`}
-                    >
-                      <Square className="w-5 h-5" />
-                      <span className="text-xs">Прямые углы</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleShapeSelect('rounded')}
-                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
-                        calculatorData.shape === 'rounded'
-                          ? 'bg-gold/20 border-gold'
-                          : 'bg-dark border-gray-700 hover:border-gold/50'
-                      }`}
-                    >
-                      <Rounded className="w-5 h-5" />
-                      <span className="text-xs">Скругленные углы</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleShapeSelect('circle')}
-                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
-                        calculatorData.shape === 'circle'
-                          ? 'bg-gold/20 border-gold'
-                          : 'bg-dark border-gray-700 hover:border-gold/50'
-                      }`}
-                    >
-                      <Circle className="w-5 h-5" />
-                      <span className="text-xs">Круг</span>
-                    </button>
-                  </div>
+<div className="grid grid-cols-3 gap-3">
+  <button
+    type="button"
+    onClick={() => handleShapeSelect('rectangle')}
+    className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+      calculatorData.shape === 'rectangle'
+        ? 'bg-gold/20 border-gold'
+        : 'bg-dark border-gray-700 hover:border-gold/50'
+    }`}
+  >
+    <Square className="w-5 h-5" />
+    <span className="text-xs">Прямые углы</span>
+  </button>
+  <button
+    type="button"
+    onClick={() => handleShapeSelect('rounded')}
+    className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+      calculatorData.shape === 'rounded'
+        ? 'bg-gold/20 border-gold'
+        : 'bg-dark border-gray-700 hover:border-gold/50'
+    }`}
+  >
+    <div className="w-5 h-5 relative">
+      <Square className="w-5 h-5 absolute" style={{ borderRadius: '4px' }} />
+    </div>
+    <span className="text-xs">Скругленные углы</span>
+  </button>
+  <button
+    type="button"
+    onClick={() => handleShapeSelect('circle')}
+    className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+      calculatorData.shape === 'circle'
+        ? 'bg-gold/20 border-gold'
+        : 'bg-dark border-gray-700 hover:border-gold/50'
+    }`}
+  >
+    <Circle className="w-5 h-5" />
+    <span className="text-xs">Круг</span>
+  </button>
+</div>
 
                   {/* Ширина / Диаметр */}
                   <div>
