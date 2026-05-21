@@ -10,18 +10,21 @@ import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
 
-// Коэффициенты расчета (константы, не зависящие от цен)
-const GOLD_PURITY_FACTOR = 0.585;      // перевод 999 → 585 проба
-const SILVER_PURITY_FACTOR = 0.926;    // перевод 999 → 925 проба
-const LOSS_FACTOR = 1.1;               // потери 10%
-const VAT_BUY_FACTOR = 1.22;           // НДС при закупке металла
-const VAT_SELL_FACTOR = 1.22;          // НДС при продаже
-const GOLD_LABOR_COST = 3500;          // стоимость работы за грамм (золото)
-const SILVER_LABOR_COST = 2000;        // стоимость работы за грамм (серебро)
-const GOLD_DENSITY = 0.0134;           // плотность золота 585 / 1000
-const SILVER_DENSITY = 0.0105;         // плотность серебра 925 / 1000
+// URL вашей прокси-функции для получения цен металлов
+const METAL_PRICES_PROXY_URL = 'https://functions.yandexcloud.net/d4eubr12aftt733bpe1e';
 
-// Габариты значков по типам (Д × Ш, мм)
+// Коэффициенты расчета
+const GOLD_PURITY_FACTOR = 0.585;
+const SILVER_PURITY_FACTOR = 0.926;
+const LOSS_FACTOR = 1.1;
+const VAT_BUY_FACTOR = 1.22;
+const VAT_SELL_FACTOR = 1.22;
+const GOLD_LABOR_COST = 3500;
+const SILVER_LABOR_COST = 2000;
+const GOLD_DENSITY = 0.0134;
+const SILVER_DENSITY = 0.0105;
+
+// Габариты значков по типам
 const typeDimensions = {
   maxi: { length: 35, width: 30, complexity: 1.4 },
   midi: { length: 25, width: 22, complexity: 1.3 },
@@ -35,20 +38,17 @@ const PriceCalculator = () => {
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [priceLoadError, setPriceLoadError] = useState(false);
   
-  // Состояния для калькулятора
   const [calculatorData, setCalculatorData] = useState({
     type: 'maxi',
     material: 'gold',
     quantity: 500,
   });
   
-  // Цены на металлы (изначально null, пока не загрузились)
   const [metalPrices, setMetalPrices] = useState<{ gold: number | null; silver: number | null }>({
     gold: null,
     silver: null,
   });
   
-  // Состояния для формы
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -67,49 +67,82 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-// Загрузка актуальных цен через прокси-функцию в Яндекс Облаке
-const fetchMetalPrices = async () => {
-  setIsLoadingPrice(true);
-  setPriceLoadError(false);
-  
-  // ВАШ URL ФУНКЦИИ
-  const PROXY_FUNCTION_URL = 'https://functions.yandexcloud.net/d4eubr12aftt733bpe1e';
-  
-  try {
-    console.log('Загрузка цен через прокси-функцию...');
-    const response = await fetch(PROXY_FUNCTION_URL);
-    const data = await response.json();
+  // Загрузка цен через прокси-функцию
+  const fetchMetalPrices = async () => {
+    setIsLoadingPrice(true);
+    setPriceLoadError(false);
     
-    if (data.error) {
-      throw new Error(data.error);
+    try {
+      console.log('Загрузка цен через прокси-функцию...');
+      const response = await fetch(METAL_PRICES_PROXY_URL);
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+      
+      if (data.gold && data.silver) {
+        setMetalPrices({
+          gold: data.gold,
+          silver: data.silver
+        });
+        setLastUpdated(new Date());
+        sendMetrikaEvent('metal_prices_updated', { gold: data.gold, silver: data.silver });
+        console.log(`✅ Цены загружены: Золото ${data.gold} ₽/г, Серебро ${data.silver} ₽/г`);
+      } else {
+        throw new Error('Не удалось получить цены');
+      }
+      
+    } catch (error) {
+      console.error('Ошибка загрузки цен:', error);
+      setPriceLoadError(true);
+      sendMetrikaEvent('metal_prices_error', { error: String(error) });
+    } finally {
+      setIsLoadingPrice(false);
     }
-    
-    if (data.gold && data.silver) {
-      setMetalPrices({
-        gold: data.gold,
-        silver: data.silver
-      });
-      setLastUpdated(new Date());
-      sendMetrikaEvent('metal_prices_updated', { 
-        gold: data.gold, 
-        silver: data.silver,
-        date: data.date 
-      });
-      console.log(`✅ Цены загружены: Золото ${data.gold} ₽/г, Серебро ${data.silver} ₽/г`);
-    } else {
-      throw new Error('Не удалось получить цены');
-    }
-    
-  } catch (error) {
-    console.error('Ошибка загрузки цен:', error);
-    setPriceLoadError(true);
-    sendMetrikaEvent('metal_prices_error', { error: String(error) });
-  } finally {
-    setIsLoadingPrice(false);
-  }
-};
+  };
 
-  // Пересчет цены при изменении параметров
+  // Функция расчета цены
+  const calculatePrice = () => {
+    const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
+    const isGold = calculatorData.material === 'gold';
+    
+    const metalPrice = isGold ? metalPrices.gold : metalPrices.silver;
+    
+    if (!metalPrice) {
+      return {
+        totalPrice: 0,
+        pricePerUnit: 0,
+        weight: '0',
+        metalCostPerGram: 0,
+        totalCostPerGram: 0,
+      };
+    }
+    
+    const purityFactor = isGold ? GOLD_PURITY_FACTOR : SILVER_PURITY_FACTOR;
+    const laborCost = isGold ? GOLD_LABOR_COST : SILVER_LABOR_COST;
+    const density = isGold ? GOLD_DENSITY : SILVER_DENSITY;
+    
+    const metalCostWithVAT = metalPrice * purityFactor * LOSS_FACTOR * VAT_BUY_FACTOR;
+    const totalCostPerGram = metalCostWithVAT + laborCost;
+    
+    const volume = dimensions.length * dimensions.width * 1;
+    const weight = volume * density;
+    
+    const pricePerItemBeforeVAT = totalCostPerGram * weight * dimensions.complexity;
+    const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
+    const totalPrice = pricePerItem * calculatorData.quantity;
+    
+    return {
+      totalPrice: Math.round(totalPrice),
+      pricePerUnit: Math.round(pricePerItem),
+      weight: weight.toFixed(2),
+      metalCostPerGram: Math.round(metalCostWithVAT),
+      totalCostPerGram: Math.round(totalCostPerGram),
+    };
+  };
+
+  // Пересчет цены
   useEffect(() => {
     if (!metalPrices.gold || !metalPrices.silver) return;
     
@@ -198,9 +231,14 @@ const fetchMetalPrices = async () => {
   const isGold = calculatorData.material === 'gold';
   const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
   const quantityPresets = [100, 500, 1000, 5000];
-  
-  // Проверка, загружены ли цены
   const isPriceLoaded = metalPrices.gold !== null && metalPrices.silver !== null;
+
+  const getMaterialPriceDisplay = (material: 'gold' | 'silver') => {
+    const price = material === 'gold' ? metalPrices.gold : metalPrices.silver;
+    if (priceLoadError) return 'ошибка загрузки';
+    if (!price) return 'загрузка...';
+    return `${price.toLocaleString()} ₽/г`;
+  };
 
   const sendTextToTelegram = async () => {
     const message = `
@@ -383,14 +421,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     }
   }, [calculatorData, showForm]);
 
-  // Отображение цен в карточках материалов
-  const getMaterialPriceDisplay = (material: 'gold' | 'silver') => {
-    const price = material === 'gold' ? metalPrices.gold : metalPrices.silver;
-    if (priceLoadError) return 'ошибка загрузки';
-    if (!price) return 'загрузка...';
-    return `${price.toLocaleString()} ₽/г`;
-  };
-
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -465,7 +495,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           </div>
         </div>
 
-        {/* Текущие цены на металлы */}
+        {/* Текущие цены */}
         <div className="flex justify-center gap-6 mb-8 animate-fade-in-up">
           <div className="flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full">
             <div className="w-2 h-2 rounded-full bg-yellow-500" />
@@ -489,14 +519,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           )}
         </div>
 
-        {/* Сообщение об ошибке загрузки цен */}
         {priceLoadError && (
           <div className="max-w-4xl mx-auto mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
             <p className="text-red-400 text-sm">
-              ⚠️ Не удалось загрузить актуальные цены на металлы с сайта ЦБ РФ.
-              Пожалуйста, попробуйте обновить страницу позже или 
-              <button onClick={refreshPrices} className="text-gold hover:underline ml-1">нажмите здесь</button>, 
-              чтобы повторить попытку.
+              ⚠️ Не удалось загрузить актуальные цены на металлы. Пожалуйста, попробуйте обновить страницу позже или 
+              <button onClick={refreshPrices} className="text-gold hover:underline ml-1">нажмите здесь</button>, чтобы повторить попытку.
             </p>
           </div>
         )}
@@ -508,7 +535,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               Шаг 1. Выберите параметры заказа
             </h2>
             
-            {/* Материал — карточками */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Материал *</label>
               <div className="flex gap-4">
@@ -539,7 +565,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               </div>
             </div>
 
-            {/* Тип значка — карточками */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Тип значка *</label>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -563,7 +588,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               </div>
             </div>
 
-            {/* Количество */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Количество (шт.) *</label>
               <div className="flex flex-wrap gap-2 mb-3">
@@ -720,136 +744,4 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
                 <div>
                   <label className="block text-gray-400 text-sm mb-2">Комментарий</label>
-                  <textarea
-                    name="comment"
-                    value={formData.comment}
-                    onChange={handleChange}
-                    onFocus={() => handleFocus('comment')}
-                    rows={4}
-                    className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">
-                    Загрузить логотип / эскиз <span className="text-gray-600">(необязательно)</span>
-                  </label>
-                  
-                  {!uploadedFile ? (
-                    <div className="relative">
-                      <input
-                        type="file"
-                        accept="image/*,.pdf,.doc,.docx"
-                        onChange={handleFileChange}
-                        className="hidden"
-                        id="calculator-file-upload"
-                      />
-                      <label
-                        htmlFor="calculator-file-upload"
-                        className="flex flex-col items-center justify-center gap-2 w-full py-8 px-4 bg-dark border-2 border-dashed border-gray-700 rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
-                      >
-                        <Upload className="w-8 h-8" />
-                        <span>Перетащите файл или нажмите для выбора</span>
-                        <span className="text-xs">PNG, JPG, PDF, DOC до 10MB</span>
-                      </label>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
-                      {filePreview ? (
-                        <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded-lg" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center">
-                          <Upload className="w-6 h-6 text-gold" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm truncate">{uploadedFile.name}</p>
-                        <p className="text-gray-500 text-xs">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
-                      </div>
-                      <button type="button" onClick={removeFile} className="text-gray-500 hover:text-red-500">
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox"
-                      id="privacy-calculator"
-                      checked={isAgreed}
-                      onChange={(e) => {
-                        setIsAgreed(e.target.checked);
-                        if (e.target.checked) {
-                          setConsentError('');
-                          sendMetrikaEvent('privacy_agreed', { form: 'calculator' });
-                        }
-                      }}
-                      className="w-5 h-5 bg-dark border border-gray-700 rounded focus:ring-gold focus:ring-2 text-gold cursor-pointer"
-                    />
-                    <label htmlFor="privacy-calculator" className="text-sm text-gray-400 cursor-pointer">
-                      Я соглашаюсь с{' '}
-                      <a href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q" target="_blank" rel="noopener noreferrer" className="text-gold hover:text-gold-light underline">
-                        политикой конфиденциальности
-                      </a>
-                      {' '}и даю согласие на обработку персональных данных *
-                    </label>
-                  </div>
-                  {consentError && <p className="text-red-500 text-sm">{consentError}</p>}
-                </div>
-
-                {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
-
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full btn-primary flex items-center justify-center gap-2 disabled:opacity-70 py-4 text-lg"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <div className="w-5 h-5 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
-                      <span>Отправка...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>ПОЛУЧИТЬ ТОЧНЫЙ РАСЧЕТ И СКИДКУ</span>
-                      <Send className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
-              </form>
-            </div>
-          )}
-        </div>
-
-        {/* Блок преимуществ */}
-        <div className="grid sm:grid-cols-3 gap-6 mt-12 animate-fade-in-up animation-delay-200">
-          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
-            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
-              <Calculator className="w-6 h-6 text-gold" />
-            </div>
-            <h3 className="text-white font-medium mb-1">Быстрый расчет</h3>
-            <p className="text-gray-500 text-sm">Оцените стоимость за 2 минуты</p>
-          </div>
-          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
-            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
-              <Gift className="w-6 h-6 text-gold" />
-            </div>
-            <h3 className="text-white font-medium mb-1">Скидка на первый заказ</h3>
-            <p className="text-gray-500 text-sm">Специальное предложение</p>
-          </div>
-          <div className="text-center p-6 bg-dark-light/30 rounded-xl border border-gray-800">
-            <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center mx-auto mb-3">
-              <Shield className="w-6 h-6 text-gold" />
-            </div>
-            <h3 className="text-white font-medium mb-1">Точный расчет за 24 часа</h3>
-            <p className="text-gray-500 text-sm">С персональным предложением</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-export default PriceCalculator;
+                  <
