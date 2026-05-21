@@ -67,13 +67,13 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  // Загрузка актуальных цен через прокси-функцию в Яндекс Облаке
+// Загрузка актуальных цен через прокси-функцию в Яндекс Облаке
 const fetchMetalPrices = async () => {
   setIsLoadingPrice(true);
   setPriceLoadError(false);
   
-  // !!! ЗАМЕНИТЕ НА ВАШ РЕАЛЬНЫЙ URL ФУНКЦИИ !!!
-  const PROXY_FUNCTION_URL = 'https://functions.yandexcloud.net/d4eXXXXXXXXXXXXXXX';
+  // ВАШ URL ФУНКЦИИ
+  const PROXY_FUNCTION_URL = 'https://functions.yandexcloud.net/d4eubr12aftt733bpe1e';
   
   try {
     console.log('Загрузка цен через прокси-функцию...');
@@ -96,9 +96,6 @@ const fetchMetalPrices = async () => {
         date: data.date 
       });
       console.log(`✅ Цены загружены: Золото ${data.gold} ₽/г, Серебро ${data.silver} ₽/г`);
-      if (data.date) {
-        console.log(`📅 Дата цен: ${data.date}`);
-      }
     } else {
       throw new Error('Не удалось получить цены');
     }
@@ -111,47 +108,6 @@ const fetchMetalPrices = async () => {
     setIsLoadingPrice(false);
   }
 };
-
-  // Формула расчета стоимости
-  const calculatePrice = () => {
-    const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
-    const isGold = calculatorData.material === 'gold';
-    
-    const metalPrice = isGold ? metalPrices.gold : metalPrices.silver;
-    
-    // Если цены не загружены, возвращаем 0
-    if (!metalPrice) {
-      return {
-        totalPrice: 0,
-        pricePerUnit: 0,
-        weight: '0',
-        metalCostPerGram: 0,
-        totalCostPerGram: 0,
-      };
-    }
-    
-    const purityFactor = isGold ? GOLD_PURITY_FACTOR : SILVER_PURITY_FACTOR;
-    const laborCost = isGold ? GOLD_LABOR_COST : SILVER_LABOR_COST;
-    const density = isGold ? GOLD_DENSITY : SILVER_DENSITY;
-    
-    const metalCostWithVAT = metalPrice * purityFactor * LOSS_FACTOR * VAT_BUY_FACTOR;
-    const totalCostPerGram = metalCostWithVAT + laborCost;
-    
-    const volume = dimensions.length * dimensions.width * 1;
-    const weight = volume * density;
-    
-    const pricePerItemBeforeVAT = totalCostPerGram * weight * dimensions.complexity;
-    const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
-    const totalPrice = pricePerItem * calculatorData.quantity;
-    
-    return {
-      totalPrice: Math.round(totalPrice),
-      pricePerUnit: Math.round(pricePerItem),
-      weight: weight.toFixed(2),
-      metalCostPerGram: Math.round(metalCostWithVAT),
-      totalCostPerGram: Math.round(totalCostPerGram),
-    };
-  };
 
   // Пересчет цены при изменении параметров
   useEffect(() => {
