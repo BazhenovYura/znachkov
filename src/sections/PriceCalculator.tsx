@@ -63,8 +63,7 @@ const PriceCalculator = () => {
   const [showForm, setShowForm] = useState(false);
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-  const [visualScale, setVisualScale] = useState(100); // масштаб в процентах, 100 = 100%
-
+  
   // Предустановленные размеры
   const presets = {
     maxi: { width: 35, height: 30, shape: 'rectangle' as const, label: 'MAXI', complexity: 1.4 },
@@ -337,96 +336,66 @@ const PriceCalculator = () => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-  // Компонент визуализации значка (с регулируемым масштабом и линейкой)
-  const ShapeVisualization = () => {
-    const displayWidth = calculatorData.width;
-    const displayHeight = calculatorData.height;
-    const scale = visualScale / 100;
-    
-    const getShapeStyle = () => {
-      if (calculatorData.shape === 'circle') {
-        return { borderRadius: '50%' };
-      }
-      if (calculatorData.shape === 'rounded') {
-        return { borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2 * scale}px` };
-      }
-      return { borderRadius: '0px' };
+  // Компонент визуализации значка (увеличение на 10% для наглядности)
+const ShapeVisualization = () => {
+  const displayWidth = calculatorData.width;
+  const displayHeight = calculatorData.height;
+  const ENLARGE_FACTOR = 1.1; // Увеличение на 10% для лучшей видимости
+  
+  const getShapeStyle = () => {
+    if (calculatorData.shape === 'circle') {
+      return {
+        borderRadius: '50%',
+      };
+    }
+    if (calculatorData.shape === 'rounded') {
+      return {
+        borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
+      };
+    }
+    return {
+      borderRadius: '0mm',
     };
-    
-    const getShapeLabel = () => {
-      if (calculatorData.shape === 'circle') {
-        return `⌀${calculatorData.width} мм`;
-      }
-      return `${calculatorData.width}×${calculatorData.height} мм`;
-    };
-    
-    return (
-      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
-        <div className="text-center mb-2">
-          <span className="text-gray-400 text-xs">Визуализация значка</span>
-          <span className="text-gold text-xs ml-2">масштаб: {visualScale}%</span>
-        </div>
-        
-        <div className="mb-3 px-2">
-          <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>50%</span>
-            <span>100%</span>
-            <span>150%</span>
-            <span>200%</span>
-          </div>
-          <input
-            type="range"
-            min="50"
-            max="200"
-            step="10"
-            value={visualScale}
-            onChange={(e) => setVisualScale(parseInt(e.target.value))}
-            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
-          />
-        </div>
-        
-        <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
-          <div className="flex justify-center items-center">
-            <div
-              className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow transition-all duration-200"
-              style={{
-                width: `${displayWidth * scale}px`,
-                height: `${displayHeight * scale}px`,
-                ...getShapeStyle(),
-              }}
-            >
-              <div className="w-full h-full flex items-center justify-center">
-                <span className="text-gold text-[10px] opacity-70 whitespace-nowrap">
-                  {getShapeLabel()}
-                </span>
-              </div>
+  };
+  
+  const getShapeLabel = () => {
+    if (calculatorData.shape === 'circle') {
+      return `⌀${calculatorData.width} мм`;
+    }
+    return `${calculatorData.width}×${calculatorData.height} мм`;
+  };
+  
+  return (
+    <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+      <div className="text-center mb-2">
+        <span className="text-gray-400 text-xs">Визуализация значка</span>
+        <span className="text-gold text-xs ml-2">увеличено на 10% для наглядности</span>
+      </div>
+      
+      <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
+        <div className="flex justify-center items-center">
+          <div
+            className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
+            style={{
+              width: `${displayWidth * ENLARGE_FACTOR}mm`,
+              height: `${displayHeight * ENLARGE_FACTOR}mm`,
+              ...getShapeStyle(),
+            }}
+          >
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
+                {getShapeLabel()}
+              </span>
             </div>
-          </div>
-        </div>
-        
-        <div className="mt-3 pt-3 border-t border-gray-800">
-          <div className="text-center text-gray-500 text-xs mb-2">
-            Реальный размер: приложите линейку к экрану
-          </div>
-          <div className="flex justify-center">
-            <div className="relative">
-              <div 
-                className="h-[2px] bg-gold/50 mb-1"
-                style={{ width: `35mm` }}
-              ></div>
-              <div className="flex justify-between text-gold text-[9px] w-full" style={{ width: `35mm` }}>
-                <span>0</span>
-                <span>35 мм</span>
-              </div>
-            </div>
-          </div>
-          <div className="text-center text-gray-600 text-[10px] mt-2">
-            {calculatorData.width}×{calculatorData.height} мм = реальный размер значка
           </div>
         </div>
       </div>
-    );
-  };
+      <div className="text-center mt-2 text-gray-500 text-xs">
+        Реальный размер: {calculatorData.width}×{calculatorData.height} мм
+      </div>
+    </div>
+  );
+};
 
   const sendTextToTelegram = async () => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
