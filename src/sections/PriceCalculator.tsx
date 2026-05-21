@@ -339,8 +339,7 @@ const PriceCalculator = () => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-  // Компонент визуализации значка (реальный размер 1px = 1мм)
-  const // Компонент визуализации значка (реальный размер в мм)
+  // Компонент визуализации значка (реальный размер в мм)
 const ShapeVisualization = () => {
   const displayWidth = calculatorData.width;
   const displayHeight = calculatorData.height;
@@ -372,7 +371,7 @@ const ShapeVisualization = () => {
     <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
       <div className="text-center mb-2">
         <span className="text-gray-400 text-xs">Визуализация значка (реальный размер)</span>
-        <span className="text-gold text-xs ml-2">1 мм в CSS = 1 мм в реальности</span>
+        <span className="text-gold text-xs ml-2">1 мм = 1 мм</span>
       </div>
       <div className="flex justify-center items-center min-h-[150px] bg-dark/50 rounded-lg p-4">
         <div className="flex justify-center items-center">
