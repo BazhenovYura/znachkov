@@ -341,11 +341,16 @@ const PriceCalculator = () => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
- // Компонент визуализации значка (с регулируемым масштабом)
+// Компонент визуализации значка (с регулируемым масштабом и линейкой)
 const ShapeVisualization = () => {
   const displayWidth = calculatorData.width;
   const displayHeight = calculatorData.height;
   const scale = visualScale / 100; // 1.0 = 100%, 1.1 = 110% и т.д.
+  
+  // Калибровочная линейка: 35 мм в реальности = сколько px на вашем мониторе?
+  // По умолчанию считаем, что 35mm = 35px (стандарт CSS), но вы можете подстроить
+  const CALIBRATION_FACTOR = 1; // если 30px = 15mm, то нужно поставить 0.5
+  // ИЛИ просто показываем линейку в мм, а пользователь прикладывает реальную линейку к экрану
   
   const getShapeStyle = () => {
     if (calculatorData.shape === 'circle') {
@@ -414,11 +419,27 @@ const ShapeVisualization = () => {
           </div>
         </div>
       </div>
-      <div className="text-center mt-2 text-gray-500 text-xs">
-        Сложность: {complexity}× | Вес: ~{weight} г
-      </div>
-      <div className="text-center text-gray-600 text-[10px] mt-1">
-        Реальный размер: {calculatorData.width}×{calculatorData.height} мм
+      
+      {/* Калибровочная линейка */}
+      <div className="mt-3 pt-3 border-t border-gray-800">
+        <div className="text-center text-gray-500 text-xs mb-2">
+          Реальный размер: приложите линейку к экрану
+        </div>
+        <div className="flex justify-center">
+          <div className="relative">
+            <div 
+              className="h-[2px] bg-gold/50 mb-1"
+              style={{ width: `35mm` }}
+            ></div>
+            <div className="flex justify-between text-gold text-[9px] w-full" style={{ width: `35mm` }}>
+              <span>0</span>
+              <span>35 мм</span>
+            </div>
+          </div>
+        </div>
+        <div className="text-center text-gray-600 text-[10px] mt-2">
+          {calculatorData.width}×{calculatorData.height} мм = реальный размер значка
+        </div>
       </div>
     </div>
   );
