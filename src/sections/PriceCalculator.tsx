@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, 
   Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw,
-  Square, Circle, RotateCcw
+  Square, Circle
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -25,9 +25,6 @@ const SILVER_LABOR_COST = 2000;
 const GOLD_DENSITY = 0.0134;
 const SILVER_DENSITY = 0.0105;
 const MODEL_3D_COST = 10000; // стоимость 3D-модели
-
-// Базовая сложность (для пользовательских размеров)
-const BASE_COMPLEXITY = 1.2;
 
 const PriceCalculator = () => {
   const navigate = useNavigate();
@@ -354,7 +351,7 @@ const PriceCalculator = () => {
             >
               <div className="w-full h-full flex items-center justify-center">
                 <span className="text-gold text-xs opacity-70">
-                  {calculatorData.width}×{calculatorData.height} мм
+                  {calculatorData.width}×{calculatorData.width} мм
                 </span>
               </div>
             </div>
