@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, 
-  Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw
+  Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw,
+  Square, Circle, RotateCcw
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -25,13 +26,8 @@ const GOLD_DENSITY = 0.0134;
 const SILVER_DENSITY = 0.0105;
 const MODEL_3D_COST = 10000; // стоимость 3D-модели
 
-// Габариты значков по типам
-const typeDimensions = {
-  maxi: { length: 35, width: 30, complexity: 1.4 },
-  midi: { length: 25, width: 22, complexity: 1.3 },
-  mini: { length: 20, width: 17, complexity: 1.2 },
-  micro: { length: 15, width: 12, complexity: 1.1 },
-};
+// Базовая сложность (для пользовательских размеров)
+const BASE_COMPLEXITY = 1.2;
 
 const PriceCalculator = () => {
   const navigate = useNavigate();
@@ -40,9 +36,12 @@ const PriceCalculator = () => {
   const [priceLoadError, setPriceLoadError] = useState(false);
   
   const [calculatorData, setCalculatorData] = useState({
-    type: 'maxi',
+    type: 'custom', // 'custom' для пользовательских размеров, иначе 'maxi', 'midi', 'mini', 'micro'
     material: 'gold',
     quantity: 500,
+    shape: 'rectangle', // 'rectangle' или 'circle'
+    width: 30,
+    height: 30,
   });
   
   const [metalPrices, setMetalPrices] = useState<{ gold: number | null; silver: number | null }>({
@@ -67,6 +66,17 @@ const PriceCalculator = () => {
   const [showForm, setShowForm] = useState(false);
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Предустановленные размеры
+  const presets = {
+    maxi: { width: 35, height: 30, shape: 'rectangle' as const, label: 'MAXI', complexity: 1.4 },
+    midi: { width: 25, height: 22, shape: 'rectangle' as const, label: 'MIDI', complexity: 1.3 },
+    mini: { width: 20, height: 17, shape: 'rectangle' as const, label: 'MINI', complexity: 1.2 },
+    micro: { width: 15, height: 12, shape: 'rectangle' as const, label: 'MICRO', complexity: 1.1 },
+    round_small: { width: 20, height: 20, shape: 'circle' as const, label: 'Круглый малый', complexity: 1.15 },
+    round_medium: { width: 30, height: 30, shape: 'circle' as const, label: 'Круглый средний', complexity: 1.25 },
+    round_large: { width: 40, height: 40, shape: 'circle' as const, label: 'Круглый большой', complexity: 1.35 },
+  };
 
   // Загрузка цен через прокси-функцию
   const fetchMetalPrices = async () => {
@@ -103,11 +113,22 @@ const PriceCalculator = () => {
     }
   };
 
+  // Получить текущую сложность
+  const getCurrentComplexity = () => {
+    if (calculatorData.type !== 'custom' && presets[calculatorData.type as keyof typeof presets]) {
+      return presets[calculatorData.type as keyof typeof presets].complexity;
+    }
+    // Для пользовательских размеров сложность зависит от размера
+    const avgSize = (calculatorData.width + calculatorData.height) / 2;
+    if (avgSize >= 35) return 1.4;
+    if (avgSize >= 25) return 1.3;
+    if (avgSize >= 20) return 1.2;
+    return 1.1;
+  };
+
   // Функция расчета цены
   const calculatePrice = () => {
-    const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
     const isGold = calculatorData.material === 'gold';
-    
     const metalPrice = isGold ? metalPrices.gold : metalPrices.silver;
     
     if (!metalPrice) {
@@ -124,14 +145,25 @@ const PriceCalculator = () => {
     const purityFactor = isGold ? GOLD_PURITY_FACTOR : SILVER_PURITY_FACTOR;
     const laborCost = isGold ? GOLD_LABOR_COST : SILVER_LABOR_COST;
     const density = isGold ? GOLD_DENSITY : SILVER_DENSITY;
+    const complexity = getCurrentComplexity();
     
     const metalCostWithVAT = metalPrice * purityFactor * LOSS_FACTOR * VAT_BUY_FACTOR;
     const totalCostPerGram = metalCostWithVAT + laborCost;
     
-    const volume = dimensions.length * dimensions.width * 1;
+    // Площадь фигуры
+    let area: number;
+    if (calculatorData.shape === 'circle') {
+      const radius = calculatorData.width / 2;
+      area = Math.PI * radius * radius;
+    } else {
+      area = calculatorData.width * calculatorData.height;
+    }
+    
+    // Толщина значка ~1мм, объём = площадь * 1
+    const volume = area * 1;
     const weight = volume * density;
     
-    const pricePerItemBeforeVAT = totalCostPerGram * weight * dimensions.complexity;
+    const pricePerItemBeforeVAT = totalCostPerGram * weight * complexity;
     const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
     const totalItemsPrice = pricePerItem * calculatorData.quantity;
     
@@ -173,13 +205,59 @@ const PriceCalculator = () => {
     sendMetrikaEvent('calculator_page_view');
   }, []);
 
-  const handleTypeSelect = (typeId: string) => {
-    setCalculatorData(prev => ({ ...prev, type: typeId }));
-    sendMetrikaEvent('calculator_param_change', { param: 'type', value: typeId });
+  const handlePresetSelect = (presetKey: string) => {
+    const preset = presets[presetKey as keyof typeof presets];
+    if (preset) {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: presetKey,
+        shape: preset.shape,
+        width: preset.width,
+        height: preset.height,
+      }));
+      sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
+    }
     if (!showForm) {
       setShowForm(true);
       sendMetrikaEvent('calculator_form_shown');
     }
+  };
+
+  const handleCustomMode = () => {
+    setCalculatorData(prev => ({
+      ...prev,
+      type: 'custom',
+    }));
+    sendMetrikaEvent('calculator_param_change', { param: 'mode', value: 'custom' });
+  };
+
+  const handleShapeSelect = (shape: 'rectangle' | 'circle') => {
+    setCalculatorData(prev => ({
+      ...prev,
+      type: 'custom',
+      shape,
+    }));
+    sendMetrikaEvent('calculator_param_change', { param: 'shape', value: shape });
+  };
+
+  const handleWidthChange = (value: number) => {
+    const newWidth = Math.max(10, Math.min(100, value));
+    setCalculatorData(prev => ({
+      ...prev,
+      type: 'custom',
+      width: newWidth,
+    }));
+    sendMetrikaEvent('calculator_param_change', { param: 'width', value: newWidth });
+  };
+
+  const handleHeightChange = (value: number) => {
+    const newHeight = Math.max(10, Math.min(100, value));
+    setCalculatorData(prev => ({
+      ...prev,
+      type: 'custom',
+      height: newHeight,
+    }));
+    sendMetrikaEvent('calculator_param_change', { param: 'height', value: newHeight });
   };
 
   const handleMaterialSelect = (materialId: string) => {
@@ -216,6 +294,9 @@ const PriceCalculator = () => {
     params.set('type', calculatorData.type);
     params.set('material', calculatorData.material);
     params.set('quantity', String(calculatorData.quantity));
+    params.set('shape', calculatorData.shape);
+    params.set('width', String(calculatorData.width));
+    params.set('height', String(calculatorData.height));
     
     const shareUrl = `${window.location.origin}/#/price-calculator?${params.toString()}`;
     navigator.clipboard.writeText(shareUrl);
@@ -236,17 +317,68 @@ const PriceCalculator = () => {
   };
 
   const { weight, metalCostPerGram, totalCostPerGram, model3DCostWithVAT } = calculatePrice();
-  const dimensions = typeDimensions[calculatorData.type as keyof typeof typeDimensions];
   const isGold = calculatorData.material === 'gold';
   const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
   const quantityPresets = [100, 500, 1000, 5000];
   const isPriceLoaded = metalPrices.gold !== null && metalPrices.silver !== null;
+  const complexity = getCurrentComplexity();
 
   const getMaterialPriceDisplay = (material: 'gold' | 'silver') => {
     const price = material === 'gold' ? metalPrices.gold : metalPrices.silver;
     if (priceLoadError) return 'ошибка загрузки';
     if (!price) return 'загрузка...';
     return `${price.toLocaleString()} ₽/г`;
+  };
+
+  // Компонент визуализации значка
+  const ShapeVisualization = () => {
+    const maxSize = 120;
+    const scale = Math.min(maxSize / Math.max(calculatorData.width, calculatorData.height), 1);
+    const displayWidth = calculatorData.width * scale;
+    const displayHeight = calculatorData.height * scale;
+    
+    return (
+      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+        <div className="text-center mb-2">
+          <span className="text-gray-400 text-xs">Визуализация значка</span>
+          <span className="text-gold text-xs ml-2">масштаб: ~{Math.round(scale * 10)}x</span>
+        </div>
+        <div className="flex justify-center items-center min-h-[160px] bg-dark/50 rounded-lg">
+          {calculatorData.shape === 'circle' ? (
+            <div
+              className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold rounded-full shadow-glow"
+              style={{
+                width: `${displayWidth}px`,
+                height: `${displayHeight}px`,
+              }}
+            >
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="text-gold text-xs opacity-70">
+                  {calculatorData.width}×{calculatorData.height} мм
+                </span>
+              </div>
+            </div>
+          ) : (
+            <div
+              className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
+              style={{
+                width: `${displayWidth}px`,
+                height: `${displayHeight}px`,
+              }}
+            >
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="text-gold text-xs opacity-70">
+                  {calculatorData.width}×{calculatorData.height} мм
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="text-center mt-2 text-gray-500 text-xs">
+          Сложность: {complexity}× | Вес: ~{weight} г
+        </div>
+      </div>
+    );
   };
 
   const sendTextToTelegram = async () => {
@@ -258,7 +390,8 @@ const PriceCalculator = () => {
 
 <b>📊 Параметры заказа:</b>
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
-• Формат: ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм)
+• Форма: ${calculatorData.shape === 'circle' ? 'Круглая' : 'Прямоугольная'}
+• Размер: ${calculatorData.width}×${calculatorData.height} мм
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
@@ -297,7 +430,8 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
 <b>📊 Параметры заказа:</b>
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
-• Формат: ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм)
+• Форма: ${calculatorData.shape === 'circle' ? 'Круглая' : 'Прямоугольная'}
+• Размер: ${calculatorData.width}×${calculatorData.height} мм
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
@@ -425,9 +559,10 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
   useEffect(() => {
     if (showForm) {
       const materialName = calculatorData.material === 'gold' ? 'золоте 585' : 'серебре 925';
+      const shapeName = calculatorData.shape === 'circle' ? 'круглой' : 'прямоугольной';
       setFormData(prev => ({
         ...prev,
-        comment: `Хочу заказать значки в формате ${calculatorData.type.toUpperCase()} (${dimensions.length}×${dimensions.width} мм) из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
+        comment: `Хочу заказать значки ${shapeName} формы размером ${calculatorData.width}×${calculatorData.height} мм из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
       }));
     }
   }, [calculatorData, showForm]);
@@ -539,13 +674,14 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           </div>
         )}
 
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-5xl mx-auto">
           {/* Блок калькулятора */}
-          <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 mb-8 animate-fade-in-up animation-delay-100 backdrop-blur-sm">
+          <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 mb-8 animate-fade-in-up backdrop-blur-sm">
             <h2 className="font-serif text-2xl md:text-3xl text-white mb-6 text-center">
               Шаг 1. Выберите параметры заказа
             </h2>
             
+            {/* Материал */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Материал *</label>
               <div className="flex gap-4">
@@ -576,29 +712,181 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               </div>
             </div>
 
+            {/* Предустановленные размеры */}
             <div className="mb-6">
-              <label className="block text-gray-400 text-sm mb-3">Тип значка *</label>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                {Object.entries(typeDimensions).map(([id, data]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => handleTypeSelect(id)}
-                    className={`p-4 rounded-xl border transition-all duration-300 text-center ${
-                      calculatorData.type === id
-                        ? 'bg-gold/20 border-gold shadow-gold'
-                        : 'bg-dark border-gray-700 hover:border-gold/50'
-                    }`}
-                  >
-                    <div className="text-2xl mb-1">{id === 'maxi' ? '👑' : id === 'midi' ? '⭐' : id === 'mini' ? '●' : '•'}</div>
-                    <div className="font-bold text-white">{id.toUpperCase()}</div>
-                    <div className="text-xs text-gray-500">{data.length}×{data.width} мм</div>
-                    <div className="text-xs text-gold mt-1">сложность {data.complexity}×</div>
-                  </button>
-                ))}
+              <label className="block text-gray-400 text-sm mb-3">Готовые форматы</label>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect('maxi')}
+                  className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
+                    calculatorData.type === 'maxi'
+                      ? 'bg-gold text-dark font-medium'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  MAXI<br/><span className="text-xs">35×30 мм</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect('midi')}
+                  className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
+                    calculatorData.type === 'midi'
+                      ? 'bg-gold text-dark font-medium'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  MIDI<br/><span className="text-xs">25×22 мм</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect('mini')}
+                  className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
+                    calculatorData.type === 'mini'
+                      ? 'bg-gold text-dark font-medium'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  MINI<br/><span className="text-xs">20×17 мм</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect('micro')}
+                  className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
+                    calculatorData.type === 'micro'
+                      ? 'bg-gold text-dark font-medium'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  MICRO<br/><span className="text-xs">15×12 мм</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect('round_small')}
+                  className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
+                    calculatorData.type === 'round_small'
+                      ? 'bg-gold text-dark font-medium'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  Круглый S<br/><span className="text-xs">⌀20 мм</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePresetSelect('round_medium')}
+                  className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
+                    calculatorData.type === 'round_medium'
+                      ? 'bg-gold text-dark font-medium'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  Круглый M<br/><span className="text-xs">⌀30 мм</span>
+                </button>
               </div>
             </div>
 
+            {/* Свой размер */}
+            <div className="mb-6">
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-gray-400 text-sm">Свой размер</label>
+                <button
+                  type="button"
+                  onClick={handleCustomMode}
+                  className={`px-3 py-1 rounded-lg text-xs transition-all duration-300 ${
+                    calculatorData.type === 'custom'
+                      ? 'bg-gold text-dark'
+                      : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                  }`}
+                >
+                  Редактировать
+                </button>
+              </div>
+              
+              {calculatorData.type === 'custom' && (
+                <div className="space-y-4">
+                  {/* Выбор формы */}
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={() => handleShapeSelect('rectangle')}
+                      className={`flex-1 p-3 rounded-xl border transition-all duration-300 text-center flex items-center justify-center gap-2 ${
+                        calculatorData.shape === 'rectangle'
+                          ? 'bg-gold/20 border-gold'
+                          : 'bg-dark border-gray-700 hover:border-gold/50'
+                      }`}
+                    >
+                      <Square className="w-5 h-5" />
+                      <span>Прямоугольник</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleShapeSelect('circle')}
+                      className={`flex-1 p-3 rounded-xl border transition-all duration-300 text-center flex items-center justify-center gap-2 ${
+                        calculatorData.shape === 'circle'
+                          ? 'bg-gold/20 border-gold'
+                          : 'bg-dark border-gray-700 hover:border-gold/50'
+                      }`}
+                    >
+                      <Circle className="w-5 h-5" />
+                      <span>Круг</span>
+                    </button>
+                  </div>
+
+                  {/* Ширина */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-gray-400">Ширина, мм</span>
+                      <span className="text-gold">{calculatorData.width} мм</span>
+                    </div>
+                    <input
+                      type="range"
+                      min="10"
+                      max="100"
+                      step="1"
+                      value={calculatorData.width}
+                      onChange={(e) => handleWidthChange(parseInt(e.target.value))}
+                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+                    />
+                    <div className="flex justify-between text-xs text-gray-500 mt-1">
+                      <span>10</span>
+                      <span>50</span>
+                      <span>100</span>
+                    </div>
+                  </div>
+
+                  {/* Высота (только для прямоугольника) */}
+                  {calculatorData.shape === 'rectangle' && (
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-gray-400">Высота, мм</span>
+                        <span className="text-gold">{calculatorData.height} мм</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="10"
+                        max="100"
+                        step="1"
+                        value={calculatorData.height}
+                        onChange={(e) => handleHeightChange(parseInt(e.target.value))}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>10</span>
+                        <span>50</span>
+                        <span>100</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Визуализация */}
+            <div className="mb-6">
+              <ShapeVisualization />
+            </div>
+
+            {/* Количество */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Количество (шт.) *</label>
               <div className="flex flex-wrap gap-2 mb-3">
