@@ -264,8 +264,8 @@ const PriceCalculator = () => {
 • Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
 • Итого себестоимость с работой: ${totalCostPerGram.toLocaleString()} ₽/г
 • Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
-• Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
-• Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
+• Расчетная стоимость (с НДС 22%): ${estimatedPrice.toLocaleString()} ₽
+• Цена за штуку (с НДС 22%): ${pricePerUnit.toLocaleString()} ₽
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 <b>👤 Клиент:</b>
@@ -301,8 +301,8 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
-• Расчетная стоимость: ${estimatedPrice.toLocaleString()} ₽
-• Цена за штуку: ${pricePerUnit.toLocaleString()} ₽
+• Расчетная стоимость (с НДС 22%): ${estimatedPrice.toLocaleString()} ₽
+• Цена за штуку (с НДС 22%): ${pricePerUnit.toLocaleString()} ₽
 
 ━━━━━━━━━━━━━━━━━━━━━━━
 <b>👤 Клиент:</b>
@@ -663,7 +663,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             {/* Результат расчета */}
             <div className="bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 rounded-xl p-6 text-center">
               <div className="flex justify-between items-center mb-4">
-                <p className="text-gray-400 text-sm">Предварительная стоимость</p>
+                <p className="text-gray-400 text-sm">Предварительная стоимость (с НДС 22%)</p>
                 <button
                   onClick={copyShareLink}
                   className="flex items-center gap-2 text-gray-500 hover:text-gold transition-colors text-sm"
@@ -682,14 +682,14 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     {estimatedPrice.toLocaleString()} ₽
                   </p>
                   <p className="text-gray-500 text-sm mt-1">
-                    ~ {pricePerUnit.toLocaleString()} ₽ за штуку
+                    ~ {pricePerUnit.toLocaleString()} ₽ за штуку (с НДС)
                   </p>
                   <p className="text-gray-500 text-xs mt-3">
                     Вес значка: ~{weight} г | 
                     Стоимость материала: {metalCostPerGram.toLocaleString()} ₽/г
                   </p>
                   <p className="text-gray-500 text-xs mt-1">
-                    3D-модель (единоразово): {model3DCostWithVAT.toLocaleString()} ₽
+                    3D-модель (единоразово): {model3DCostWithVAT.toLocaleString()} ₽ с НДС
                   </p>
                 </>
               )}
