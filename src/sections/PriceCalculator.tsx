@@ -383,7 +383,7 @@ useEffect(() => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-  // Компонент визуализации значка (показывает загруженный файл или схему)
+// Компонент визуализации значка (показывает загруженный файл внутри габаритов значка)
 const ShapeVisualization = () => {
   const displayWidth = calculatorData.width;
   const displayHeight = calculatorData.height;
@@ -393,15 +393,18 @@ const ShapeVisualization = () => {
     if (calculatorData.shape === 'circle') {
       return {
         borderRadius: '50%',
+        overflow: 'hidden' as const,
       };
     }
     if (calculatorData.shape === 'rounded') {
       return {
         borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
+        overflow: 'hidden' as const,
       };
     }
     return {
       borderRadius: '0mm',
+      overflow: 'hidden' as const,
     };
   };
   
@@ -412,24 +415,43 @@ const ShapeVisualization = () => {
     return `${calculatorData.width}×${calculatorData.height} мм`;
   };
   
-  // Если есть загруженный файл и это изображение, показываем его
+  // Если есть загруженный файл и это изображение, показываем его внутри габаритов
   if (filePreview && uploadedFile?.type.startsWith('image/')) {
     return (
       <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
         <div className="text-center mb-2">
-          <span className="text-gray-400 text-xs">Загруженный эскиз</span>
+          <span className="text-gray-400 text-xs">Эскиз в габаритах значка</span>
           <span className="text-gold text-xs ml-2">{uploadedFile.name}</span>
         </div>
         
         <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
-          <img 
-            src={filePreview} 
-            alt="Загруженный эскиз"
-            className="max-w-full max-h-[200px] object-contain rounded-lg"
-          />
+          <div
+            className="relative bg-dark"
+            style={{
+              width: `${displayWidth * ENLARGE_FACTOR}mm`,
+              height: `${displayHeight * ENLARGE_FACTOR}mm`,
+              ...getShapeStyle(),
+            }}
+          >
+            <img 
+              src={filePreview} 
+              alt="Загруженный эскиз"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            {/* Рамка поверх изображения */}
+            <div
+              className="absolute inset-0 border-2 border-gold pointer-events-none"
+              style={{
+                borderRadius: getShapeStyle().borderRadius,
+              }}
+            />
+          </div>
         </div>
         <div className="text-center mt-2 text-gray-500 text-xs">
           Размер значка: {calculatorData.width}×{calculatorData.height} мм
+        </div>
+        <div className="text-center text-gray-600 text-[10px] mt-1">
+          Эскиз автоматически вписан в габариты значка
         </div>
       </div>
     );
@@ -454,6 +476,22 @@ const ShapeVisualization = () => {
         <div className="text-center mt-2 text-gray-500 text-xs">
           Размер значка: {calculatorData.width}×{calculatorData.height} мм
         </div>
+        <div className="flex justify-center mt-2">
+          <div
+            className="border-2 border-gold/50"
+            style={{
+              width: `${displayWidth * ENLARGE_FACTOR}mm`,
+              height: `${displayHeight * ENLARGE_FACTOR}mm`,
+              ...getShapeStyle(),
+            }}
+          >
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-gold text-[2mm] opacity-50">
+                {getShapeLabel()}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -468,18 +506,16 @@ const ShapeVisualization = () => {
       <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
         <div className="flex justify-center items-center">
           <div
-            className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
+            className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow flex items-center justify-center"
             style={{
               width: `${displayWidth * ENLARGE_FACTOR}mm`,
               height: `${displayHeight * ENLARGE_FACTOR}mm`,
               ...getShapeStyle(),
             }}
           >
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
-                {getShapeLabel()}
-              </span>
-            </div>
+            <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
+              {getShapeLabel()}
+            </span>
           </div>
         </div>
       </div>
