@@ -33,7 +33,7 @@ const PriceCalculator = () => {
   const [priceLoadError, setPriceLoadError] = useState(false);
   
   // Режим работы: 'manager' - показывает цены, 'client' - скрывает цены
-  const [mode, setMode] = useState<'manager' | 'client'>('manager');
+  const [mode, setMode] = useState<'manager' | 'client'>('client'); // по умолчанию клиентский режим
   
   const [calculatorData, setCalculatorData] = useState({
     type: 'custom',
@@ -67,16 +67,16 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  // Определяем режим из URL параметра
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const modeParam = urlParams.get('mode');
-    if (modeParam === 'client') {
-      setMode('client');
-    } else if (modeParam === 'manager') {
-      setMode('manager');
-    }
-  }, []);
+  /// Определяем режим из URL параметра
+useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const modeParam = urlParams.get('mode');
+  if (modeParam === 'manager') {
+    setMode('manager');
+  } else {
+    setMode('client'); // по умолчанию клиент
+  }
+}, []);
 
   // Для клиентского режима показываем форму сразу
   useEffect(() => {
@@ -225,22 +225,23 @@ const PriceCalculator = () => {
   }, []);
 
   const handlePresetSelect = (presetKey: string) => {
-    const preset = presets[presetKey as keyof typeof presets];
-    if (preset) {
-      setCalculatorData(prev => ({
-        ...prev,
-        type: presetKey,
-        shape: preset.shape,
-        width: preset.width,
-        height: preset.height,
-      }));
-      sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
-    }
-    if (mode === 'manager' && !showForm) {
-      setShowForm(true);
-      sendMetrikaEvent('calculator_form_shown');
-    }
-  };
+  const preset = presets[presetKey as keyof typeof presets];
+  if (preset) {
+    setCalculatorData(prev => ({
+      ...prev,
+      type: presetKey,
+      shape: preset.shape,
+      width: preset.width,
+      height: preset.height,
+    }));
+    sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
+  }
+  // Для менеджеров показываем форму после выбора параметров
+  if (mode === 'manager' && !showForm) {
+    setShowForm(true);
+    sendMetrikaEvent('calculator_form_shown');
+  }
+};
 
   const handleCustomMode = () => {
     setCalculatorData(prev => ({
