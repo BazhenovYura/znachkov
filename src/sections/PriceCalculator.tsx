@@ -624,7 +624,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       const shapeName = calculatorData.shape === 'circle' ? 'круглой' : (calculatorData.shape === 'rounded' ? 'со скругленными углами' : 'с прямыми углами');
       setFormData(prev => ({
         ...prev,
-        comment: `Хочу заказать значки ${shapeName} формы размером ${calculatorData.width}×${calculatorData.height} мм из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
+        comment: `Хочу заказать значки ${shapeName} формы размером ${calculatorData.width}×${calculatorData.height} мм в ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
       }));
     }
   }, [calculatorData, showForm]);
