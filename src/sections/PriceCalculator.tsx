@@ -383,60 +383,113 @@ useEffect(() => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-  // Компонент визуализации значка
-  const ShapeVisualization = () => {
-    const displayWidth = calculatorData.width;
-    const displayHeight = calculatorData.height;
-    const ENLARGE_FACTOR = 1.1;
-    
-    const getShapeStyle = () => {
-      if (calculatorData.shape === 'circle') {
-        return { borderRadius: '50%' };
-      }
-      if (calculatorData.shape === 'rounded') {
-        return { borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm` };
-      }
-      return { borderRadius: '0mm' };
+  // Компонент визуализации значка (показывает загруженный файл или схему)
+const ShapeVisualization = () => {
+  const displayWidth = calculatorData.width;
+  const displayHeight = calculatorData.height;
+  const ENLARGE_FACTOR = 1.1;
+  
+  const getShapeStyle = () => {
+    if (calculatorData.shape === 'circle') {
+      return {
+        borderRadius: '50%',
+      };
+    }
+    if (calculatorData.shape === 'rounded') {
+      return {
+        borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
+      };
+    }
+    return {
+      borderRadius: '0mm',
     };
-    
-    const getShapeLabel = () => {
-      if (calculatorData.shape === 'circle') {
-        return `⌀${calculatorData.width} мм`;
-      }
-      return `${calculatorData.width}×${calculatorData.height} мм`;
-    };
-    
+  };
+  
+  const getShapeLabel = () => {
+    if (calculatorData.shape === 'circle') {
+      return `⌀${calculatorData.width} мм`;
+    }
+    return `${calculatorData.width}×${calculatorData.height} мм`;
+  };
+  
+  // Если есть загруженный файл и это изображение, показываем его
+  if (filePreview && uploadedFile?.type.startsWith('image/')) {
     return (
       <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
         <div className="text-center mb-2">
-          <span className="text-gray-400 text-xs">Визуализация значка</span>        
+          <span className="text-gray-400 text-xs">Загруженный эскиз</span>
+          <span className="text-gold text-xs ml-2">{uploadedFile.name}</span>
         </div>
         
-        <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
-          <div className="flex justify-center items-center">
-            <div
-              className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
-              style={{
-                width: `${displayWidth * ENLARGE_FACTOR}mm`,
-                height: `${displayHeight * ENLARGE_FACTOR}mm`,
-                ...getShapeStyle(),
-              }}
-            >
-              <div className="w-full h-full flex items-center justify-center">
-                <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
-                  {getShapeLabel()}
-                </span>
-              </div>
-            </div>
-          </div>
+        <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
+          <img 
+            src={filePreview} 
+            alt="Загруженный эскиз"
+            className="max-w-full max-h-[200px] object-contain rounded-lg"
+          />
         </div>
         <div className="text-center mt-2 text-gray-500 text-xs">
-          <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
-          <div className="text-gold text-xs mt-1">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
+          Размер значка: {calculatorData.width}×{calculatorData.height} мм
         </div>
       </div>
     );
-  };
+  }
+  
+  // Если файл загружен но не изображение (PDF и т.д.)
+  if (uploadedFile && !uploadedFile.type.startsWith('image/')) {
+    return (
+      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+        <div className="text-center mb-2">
+          <span className="text-gray-400 text-xs">Загруженный файл</span>
+          <span className="text-gold text-xs ml-2">{uploadedFile.name}</span>
+        </div>
+        
+        <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
+          <div className="text-center">
+            <FileText className="w-16 h-16 text-gold mx-auto mb-2" />
+            <p className="text-gray-400 text-sm">Файл загружен</p>
+            <p className="text-gray-500 text-xs mt-1">Размер: {(uploadedFile.size / 1024).toFixed(1)} KB</p>
+          </div>
+        </div>
+        <div className="text-center mt-2 text-gray-500 text-xs">
+          Размер значка: {calculatorData.width}×{calculatorData.height} мм
+        </div>
+      </div>
+    );
+  }
+  
+  // Если файл не загружен, показываем визуализацию значка
+  return (
+    <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+      <div className="text-center mb-2">
+        <span className="text-gray-400 text-xs">Визуализация значка</span>        
+      </div>
+      
+      <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
+        <div className="flex justify-center items-center">
+          <div
+            className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
+            style={{
+              width: `${displayWidth * ENLARGE_FACTOR}mm`,
+              height: `${displayHeight * ENLARGE_FACTOR}mm`,
+              ...getShapeStyle(),
+            }}
+          >
+            <div className="w-full h-full flex items-center justify-center">
+              <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
+                {getShapeLabel()}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="text-center mt-2 text-gray-500 text-xs">
+        <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
+        <div className="text-gold text-xs mt-1">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
+      </div>
+    </div>
+  );
+};
 
   const sendTextToTelegram = async () => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
