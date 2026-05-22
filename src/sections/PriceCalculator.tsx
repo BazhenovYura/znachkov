@@ -31,7 +31,7 @@ const PriceCalculator = () => {
   const [copied, setCopied] = useState(false);
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [priceLoadError, setPriceLoadError] = useState(false);
-  const [isLoadingMode, setIsLoadingMode] = useState(true); // Добавляем состояние загрузки режима
+  const [isLoadingMode, setIsLoadingMode] = useState(true);
   
   // Режим работы: 'manager' - показывает цены, 'client' - скрывает цены
   const [mode, setMode] = useState<'manager' | 'client'>('client');
@@ -67,34 +67,47 @@ const PriceCalculator = () => {
   const [showForm, setShowForm] = useState(false);
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+
+  // Функция для получения классов темы в зависимости от выбранного материала
+  const getThemeClasses = () => {
+    const isGold = calculatorData.material === 'gold';
+    return {
+      border: isGold ? 'border-gold' : 'border-silver',
+      bgLight: isGold ? 'bg-gold/10' : 'bg-silver/10',
+      text: isGold ? 'text-gold' : 'text-silver',
+      shadow: isGold ? 'shadow-gold' : 'shadow-silver',
+      gradient: isGold ? 'from-gold/10 to-gold/5' : 'from-silver/10 to-silver/5',
+      buttonFrom: isGold ? 'from-gold' : 'from-gray-400',
+      buttonTo: isGold ? 'to-yellow-600' : 'to-gray-500',
+    };
+  };
   
   // Определяем режим из URL параметра (парсим из хэша, т.к. используется HashRouter)
-useEffect(() => {
-  // Получаем полный URL после # 
-  const hash = window.location.hash;
-  const hashParams = hash.split('?')[1]; // Получаем часть после ?
-  
-  let modeParam = null;
-  if (hashParams) {
-    const params = new URLSearchParams(hashParams);
-    modeParam = params.get('mode');
-  }
-  
-  console.log('Mode from URL (hash):', modeParam);
-  console.log('Full hash:', hash);
-  console.log('Hash params:', hashParams);
-  
-  if (modeParam === 'manager') {
-    setMode('manager');
-    console.log('🔓 Режим менеджера ВКЛЮЧЕН - цены будут показаны');
-  } else {
-    setMode('client');
-    console.log('🔒 Клиентский режим - цены скрыты');
-  }
-  setIsLoadingMode(false);
-}, []);
+  useEffect(() => {
+    const hash = window.location.hash;
+    const hashParams = hash.split('?')[1];
+    
+    let modeParam = null;
+    if (hashParams) {
+      const params = new URLSearchParams(hashParams);
+      modeParam = params.get('mode');
+    }
+    
+    console.log('Mode from URL (hash):', modeParam);
+    console.log('Full hash:', hash);
+    console.log('Hash params:', hashParams);
+    
+    if (modeParam === 'manager') {
+      setMode('manager');
+      console.log('🔓 Режим менеджера ВКЛЮЧЕН - цены будут показаны');
+    } else {
+      setMode('client');
+      console.log('🔒 Клиентский режим - цены скрыты');
+    }
+    setIsLoadingMode(false);
+  }, []);
 
-// Управление показом формы в зависимости от режима
+  // Управление показом формы в зависимости от режима
   useEffect(() => {
     if (!isLoadingMode) {
       if (mode === 'client') {
@@ -107,7 +120,7 @@ useEffect(() => {
     }
   }, [mode, isLoadingMode]);
 
-    // Дополнительная проверка: принудительно показываем форму для клиентов
+  // Дополнительная проверка: принудительно показываем форму для клиентов
   useEffect(() => {
     if (mode === 'client' && !showForm && !isLoadingMode) {
       console.log('Принудительный показ формы для клиента');
@@ -383,149 +396,145 @@ useEffect(() => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-// Компонент визуализации значка (показывает загруженный файл внутри габаритов значка)
-const ShapeVisualization = () => {
-  const displayWidth = calculatorData.width;
-  const displayHeight = calculatorData.height;
-  const ENLARGE_FACTOR = 1.1;
-  
-  const getShapeStyle = () => {
-    if (calculatorData.shape === 'circle') {
+  // Компонент визуализации значка
+  const ShapeVisualization = () => {
+    const displayWidth = calculatorData.width;
+    const displayHeight = calculatorData.height;
+    const ENLARGE_FACTOR = 1.1;
+    
+    const getShapeStyle = () => {
+      if (calculatorData.shape === 'circle') {
+        return {
+          borderRadius: '50%',
+          overflow: 'hidden' as const,
+        };
+      }
+      if (calculatorData.shape === 'rounded') {
+        return {
+          borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
+          overflow: 'hidden' as const,
+        };
+      }
       return {
-        borderRadius: '50%',
+        borderRadius: '0mm',
         overflow: 'hidden' as const,
       };
-    }
-    if (calculatorData.shape === 'rounded') {
-      return {
-        borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
-        overflow: 'hidden' as const,
-      };
-    }
-    return {
-      borderRadius: '0mm',
-      overflow: 'hidden' as const,
     };
-  };
-  
-  const getShapeLabel = () => {
-    if (calculatorData.shape === 'circle') {
-      return `⌀${calculatorData.width} мм`;
-    }
-    return `${calculatorData.width}×${calculatorData.height} мм`;
-  };
-  
-  // Если есть загруженный файл и это изображение, показываем его внутри габаритов
-  if (filePreview && uploadedFile?.type.startsWith('image/')) {
-    return (
-      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
-        <div className="text-center mb-2">
-          <span className="text-gray-400 text-xs">Эскиз в габаритах значка</span>
-          <span className="text-gold text-xs ml-2">{uploadedFile.name}</span>
-        </div>
-        
-        <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
-          <div
-            className="relative bg-dark"
-            style={{
-              width: `${displayWidth * ENLARGE_FACTOR}mm`,
-              height: `${displayHeight * ENLARGE_FACTOR}mm`,
-              ...getShapeStyle(),
-            }}
-          >
-            <img 
-              src={filePreview} 
-              alt="Загруженный эскиз"
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-            {/* Рамка поверх изображения */}
+    
+    const getShapeLabel = () => {
+      if (calculatorData.shape === 'circle') {
+        return `⌀${calculatorData.width} мм`;
+      }
+      return `${calculatorData.width}×${calculatorData.height} мм`;
+    };
+    
+    if (filePreview && uploadedFile?.type.startsWith('image/')) {
+      return (
+        <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+          <div className="text-center mb-2">
+            <span className="text-gray-400 text-xs">Эскиз в габаритах значка</span>
+            <span className={`${theme.text} text-xs ml-2`}>{uploadedFile.name}</span>
+          </div>
+          
+          <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
             <div
-              className="absolute inset-0 border-2 border-gold pointer-events-none"
+              className="relative bg-dark"
               style={{
-                borderRadius: getShapeStyle().borderRadius,
+                width: `${displayWidth * ENLARGE_FACTOR}mm`,
+                height: `${displayHeight * ENLARGE_FACTOR}mm`,
+                ...getShapeStyle(),
               }}
-            />
+            >
+              <img 
+                src={filePreview} 
+                alt="Загруженный эскиз"
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              <div
+                className={`absolute inset-0 border-2 ${theme.border} pointer-events-none`}
+                style={{
+                  borderRadius: getShapeStyle().borderRadius,
+                }}
+              />
+            </div>
+          </div>
+          <div className="text-center mt-2 text-gray-500 text-xs">
+            Размер значка: {calculatorData.width}×{calculatorData.height} мм
+          </div>
+          <div className="text-center text-gray-600 text-[10px] mt-1">
+            Эскиз автоматически вписан в габариты значка
           </div>
         </div>
-        <div className="text-center mt-2 text-gray-500 text-xs">
-          Размер значка: {calculatorData.width}×{calculatorData.height} мм
+      );
+    }
+    
+    if (uploadedFile && !uploadedFile.type.startsWith('image/')) {
+      return (
+        <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+          <div className="text-center mb-2">
+            <span className="text-gray-400 text-xs">Загруженный файл</span>
+            <span className={`${theme.text} text-xs ml-2`}>{uploadedFile.name}</span>
+          </div>
+          
+          <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
+            <div className="text-center">
+              <FileText className={`w-16 h-16 ${theme.text} mx-auto mb-2`} />
+              <p className="text-gray-400 text-sm">Файл загружен</p>
+              <p className="text-gray-500 text-xs mt-1">Размер: {(uploadedFile.size / 1024).toFixed(1)} KB</p>
+            </div>
+          </div>
+          <div className="text-center mt-2 text-gray-500 text-xs">
+            Размер значка: {calculatorData.width}×{calculatorData.height} мм
+          </div>
+          <div className="flex justify-center mt-2">
+            <div
+              className={`border-2 ${theme.border}/50`}
+              style={{
+                width: `${displayWidth * ENLARGE_FACTOR}mm`,
+                height: `${displayHeight * ENLARGE_FACTOR}mm`,
+                ...getShapeStyle(),
+              }}
+            >
+              <div className="w-full h-full flex items-center justify-center">
+                <span className={`${theme.text} text-[2mm] opacity-50`}>
+                  {getShapeLabel()}
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="text-center text-gray-600 text-[10px] mt-1">
-          Эскиз автоматически вписан в габариты значка
-        </div>
-      </div>
-    );
-  }
-  
-  // Если файл загружен но не изображение (PDF и т.д.)
-  if (uploadedFile && !uploadedFile.type.startsWith('image/')) {
+      );
+    }
+    
     return (
       <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
         <div className="text-center mb-2">
-          <span className="text-gray-400 text-xs">Загруженный файл</span>
-          <span className="text-gold text-xs ml-2">{uploadedFile.name}</span>
+          <span className="text-gray-400 text-xs">Визуализация значка</span>        
         </div>
         
-        <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
-          <div className="text-center">
-            <FileText className="w-16 h-16 text-gold mx-auto mb-2" />
-            <p className="text-gray-400 text-sm">Файл загружен</p>
-            <p className="text-gray-500 text-xs mt-1">Размер: {(uploadedFile.size / 1024).toFixed(1)} KB</p>
-          </div>
-        </div>
-        <div className="text-center mt-2 text-gray-500 text-xs">
-          Размер значка: {calculatorData.width}×{calculatorData.height} мм
-        </div>
-        <div className="flex justify-center mt-2">
-          <div
-            className="border-2 border-gold/50"
-            style={{
-              width: `${displayWidth * ENLARGE_FACTOR}mm`,
-              height: `${displayHeight * ENLARGE_FACTOR}mm`,
-              ...getShapeStyle(),
-            }}
-          >
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-gold text-[2mm] opacity-50">
+        <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
+          <div className="flex justify-center items-center">
+            <div
+              className={`bg-gradient-to-br ${theme.gradient} border-2 ${theme.border} ${theme.shadow} flex items-center justify-center`}
+              style={{
+                width: `${displayWidth * ENLARGE_FACTOR}mm`,
+                height: `${displayHeight * ENLARGE_FACTOR}mm`,
+                ...getShapeStyle(),
+              }}
+            >
+              <span className={`${theme.text} text-[2mm] opacity-70 whitespace-nowrap`}>
                 {getShapeLabel()}
               </span>
             </div>
           </div>
         </div>
-      </div>
-    );
-  }
-  
-  // Если файл не загружен, показываем визуализацию значка
-  return (
-    <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
-      <div className="text-center mb-2">
-        <span className="text-gray-400 text-xs">Визуализация значка</span>        
-      </div>
-      
-      <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
-        <div className="flex justify-center items-center">
-          <div
-            className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow flex items-center justify-center"
-            style={{
-              width: `${displayWidth * ENLARGE_FACTOR}mm`,
-              height: `${displayHeight * ENLARGE_FACTOR}mm`,
-              ...getShapeStyle(),
-            }}
-          >
-            <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
-              {getShapeLabel()}
-            </span>
-          </div>
+        <div className="text-center mt-2 text-gray-500 text-xs">
+          <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
+          <div className={`${theme.text} text-xs mt-1`}>Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
         </div>
       </div>
-      <div className="text-center mt-2 text-gray-500 text-xs">
-        <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
-        <div className="text-gold text-xs mt-1">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
-      </div>
-    </div>
-  );
-};
+    );
+  };
 
   const sendTextToTelegram = async () => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
@@ -709,11 +718,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
   useEffect(() => {
     if (showForm) {
-      const materialName = calculatorData.material === 'gold' ? 'золоте 585' : 'серебре 925';
+      const materialName = calculatorData.material === 'gold' ? 'золота 585' : 'серебра 925';
       const shapeName = calculatorData.shape === 'circle' ? 'круглой' : (calculatorData.shape === 'rounded' ? 'со скругленными углами' : 'с прямыми углами');
       setFormData(prev => ({
         ...prev,
-        comment: `Хочу заказать значки ${shapeName} формы размером ${calculatorData.width}×${calculatorData.height} мм в ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
+        comment: `Хочу заказать значки ${shapeName} формы размером ${calculatorData.width}×${calculatorData.height} мм из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
       }));
     }
   }, [calculatorData, showForm]);
@@ -725,6 +734,8 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       </div>
     );
   }
+
+  const theme = getThemeClasses();
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
@@ -747,23 +758,17 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           </div>
         )}
         
-        {/* Hero секция и остальной JSX такой же как был... */}
-        {/* ... (весь остальной код возврата такой же, без изменений) ... */}
-        
-        {/* ВНИМАНИЕ: остальную часть JSX нужно скопировать из предыдущего работающего кода */}
-        {/* Я продолжил ниже, чтобы код был полным */}
-        
         <div className="text-center mb-12 animate-fade-in-up">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/30 rounded-full mb-6">
-            <Calculator className="w-4 h-4 text-gold" />
-            <span className="text-gold text-sm">Калькулятор стоимости</span>
+          <div className={`inline-flex items-center gap-2 px-4 py-2 ${theme.bgLight} border ${theme.border} rounded-full mb-6`}>
+            <Calculator className={`w-4 h-4 ${theme.text}`} />
+            <span className={`${theme.text} text-sm`}>Калькулятор стоимости</span>
             <button
               onClick={refreshPrices}
               disabled={isLoadingPrice}
               className="ml-2 p-1 hover:bg-gold/20 rounded-full transition-colors"
               title="Обновить цены на металлы"
             >
-              <RefreshCw className={`w-3 h-3 text-gold ${isLoadingPrice ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-3 h-3 ${theme.text} ${isLoadingPrice ? 'animate-spin' : ''}`} />
             </button>
           </div>
           <h1 className="font-serif text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
@@ -817,15 +822,15 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         </div>
 
         <div className="flex justify-center gap-6 mb-8 animate-fade-in-up">
-          <div className="flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full">
+          <div className={`flex items-center gap-2 px-4 py-2 ${theme.bgLight} rounded-full`}>
             <div className="w-2 h-2 rounded-full bg-yellow-500" />
             <span className="text-gray-300 text-sm">Золото 999:</span>
-            <span className="text-gold font-medium">{getMaterialPriceDisplay('gold')}</span>
+            <span className={`${theme.text} font-medium`}>{getMaterialPriceDisplay('gold')}</span>
           </div>
-          <div className="flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full">
+          <div className={`flex items-center gap-2 px-4 py-2 ${theme.bgLight} rounded-full`}>
             <div className="w-2 h-2 rounded-full bg-gray-400" />
             <span className="text-gray-300 text-sm">Серебро 999:</span>
-            <span className="text-gold font-medium">{getMaterialPriceDisplay('silver')}</span>
+            <span className={`${theme.text} font-medium`}>{getMaterialPriceDisplay('silver')}</span>
           </div>
           {priceLoadError && (
             <div className="text-red-500 text-xs self-center">
@@ -862,7 +867,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handleMaterialSelect('gold')}
                   className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                     calculatorData.material === 'gold'
-                      ? 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-gold shadow-gold'
+                      ? `bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 ${theme.border} ${theme.shadow}`
                       : 'bg-dark border-gray-700 hover:border-gold/50'
                   }`}
                 >
@@ -874,7 +879,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handleMaterialSelect('silver')}
                   className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                     calculatorData.material === 'silver'
-                      ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/20 border-gold shadow-gold'
+                      ? `bg-gradient-to-r from-gray-400/20 to-gray-600/20 ${theme.border} ${theme.shadow}`
                       : 'bg-dark border-gray-700 hover:border-gold/50'
                   }`}
                 >
@@ -892,7 +897,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('maxi')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'maxi'
-                      ? 'bg-gold text-dark font-medium'
+                      ? `bg-gold text-dark font-medium`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -903,7 +908,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('midi')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'midi'
-                      ? 'bg-gold text-dark font-medium'
+                      ? `bg-gold text-dark font-medium`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -914,7 +919,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('mini')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'mini'
-                      ? 'bg-gold text-dark font-medium'
+                      ? `bg-gold text-dark font-medium`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -925,7 +930,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('micro')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'micro'
-                      ? 'bg-gold text-dark font-medium'
+                      ? `bg-gold text-dark font-medium`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -936,7 +941,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('rounded_small')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'rounded_small'
-                      ? 'bg-gold text-dark font-medium'
+                      ? `bg-gold text-dark font-medium`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -947,7 +952,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('rounded_medium')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'rounded_medium'
-                      ? 'bg-gold text-dark font-medium'
+                      ? `bg-gold text-dark font-medium`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -958,7 +963,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('circle_small')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'circle_small'
-                      ? 'bg-gold text-dark font-medium'
+                      ? `bg-gold text-dark font-medium`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -969,7 +974,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('circle_medium')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'circle_medium'
-                      ? 'bg-gold text-dark font-medium'
+                      ? `bg-gold text-dark font-medium`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -986,7 +991,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={handleCustomMode}
                   className={`px-3 py-1 rounded-lg text-xs transition-all duration-300 ${
                     calculatorData.type === 'custom'
-                      ? 'bg-gold text-dark'
+                      ? `bg-gold text-dark`
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -1002,11 +1007,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       onClick={() => handleShapeSelect('rectangle')}
                       className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
                         calculatorData.shape === 'rectangle'
-                          ? 'bg-gold/20 border-gold'
+                          ? `${theme.bgLight} ${theme.border}`
                           : 'bg-dark border-gray-700 hover:border-gold/50'
                       }`}
                     >
-                      <Square className="w-5 h-5" />
+                      <Square className={`w-5 h-5 ${calculatorData.shape === 'rectangle' ? theme.text : 'text-gray-400'}`} />
                       <span className="text-xs">Прямые углы</span>
                     </button>
                     <button
@@ -1014,12 +1019,12 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       onClick={() => handleShapeSelect('rounded')}
                       className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
                         calculatorData.shape === 'rounded'
-                          ? 'bg-gold/20 border-gold'
+                          ? `${theme.bgLight} ${theme.border}`
                           : 'bg-dark border-gray-700 hover:border-gold/50'
                       }`}
                     >
                       <div className="w-5 h-5 relative">
-                        <Square className="w-5 h-5 absolute" style={{ borderRadius: '4px' }} />
+                        <Square className={`w-5 h-5 absolute ${calculatorData.shape === 'rounded' ? theme.text : 'text-gray-400'}`} style={{ borderRadius: '4px' }} />
                       </div>
                       <span className="text-xs">Скругленные углы</span>
                     </button>
@@ -1028,11 +1033,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       onClick={() => handleShapeSelect('circle')}
                       className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
                         calculatorData.shape === 'circle'
-                          ? 'bg-gold/20 border-gold'
+                          ? `${theme.bgLight} ${theme.border}`
                           : 'bg-dark border-gray-700 hover:border-gold/50'
                       }`}
                     >
-                      <Circle className="w-5 h-5" />
+                      <Circle className={`w-5 h-5 ${calculatorData.shape === 'circle' ? theme.text : 'text-gray-400'}`} />
                       <span className="text-xs">Круг</span>
                     </button>
                   </div>
@@ -1042,7 +1047,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       <span className="text-gray-400">
                         {calculatorData.shape === 'circle' ? 'Диаметр, мм' : 'Ширина, мм'}
                       </span>
-                      <span className="text-gold">{calculatorData.width} мм</span>
+                      <span className={theme.text}>{calculatorData.width} мм</span>
                     </div>
                     <input
                       type="range"
@@ -1064,7 +1069,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-400">Высота, мм</span>
-                        <span className="text-gold">{calculatorData.height} мм</span>
+                        <span className={theme.text}>{calculatorData.height} мм</span>
                       </div>
                       <input
                         type="range"
@@ -1100,7 +1105,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     onClick={() => handleQuantityPreset(preset)}
                     className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
                       calculatorData.quantity === preset
-                        ? 'bg-gold text-dark font-medium'
+                        ? `bg-gold text-dark font-medium`
                         : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                     }`}
                   >
@@ -1152,7 +1157,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             </div>
 
             {/* Результат расчета */}
-            <div className="bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 rounded-xl p-6 text-center">
+            <div className={`bg-gradient-to-r ${theme.gradient} border ${theme.border} rounded-xl p-6 text-center`}>
               <div className="flex justify-between items-center mb-4">
                 <p className="text-gray-400 text-sm">
                   {mode === 'manager' ? 'Предварительная стоимость (с НДС 22%)' : 'Расчет стоимости'}
@@ -1172,7 +1177,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 <p className="text-red-400 text-lg">Цены не загружены</p>
               ) : mode === 'manager' ? (
                 <>
-                  <p className={`font-serif text-3xl md:text-4xl font-bold text-gold-gradient transition-all duration-300 ${priceHighlight ? 'scale-110' : 'scale-100'}`}>
+                  <p className={`font-serif text-3xl md:text-4xl font-bold ${priceHighlight ? 'scale-110' : 'scale-100'} transition-all duration-300 text-gold-gradient`}>
                     {estimatedPrice.toLocaleString()} ₽
                   </p>
                   <p className="text-gray-500 text-sm mt-1">
@@ -1325,7 +1330,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full py-4 bg-gradient-to-r from-gold to-yellow-600 text-dark font-bold rounded-xl hover:shadow-gold transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50"
+                  className={`w-full py-4 bg-gradient-to-r ${theme.buttonFrom} ${theme.buttonTo} text-dark font-bold rounded-xl hover:shadow-gold transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50`}
                 >
                   {isSubmitting ? (
                     <>Отправка...</>
