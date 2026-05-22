@@ -24,16 +24,16 @@ const GOLD_LABOR_COST = 3500;
 const SILVER_LABOR_COST = 2000;
 const GOLD_DENSITY = 0.0134;
 const SILVER_DENSITY = 0.0105;
-const MODEL_3D_COST = 10000; // стоимость 3D-модели
+const MODEL_3D_COST = 10000;
 
 const PriceCalculator = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [priceLoadError, setPriceLoadError] = useState(false);
+  const [isLoadingMode, setIsLoadingMode] = useState(true); // Добавляем состояние загрузки режима
   
   // Режим работы: 'manager' - показывает цены, 'client' - скрывает цены
-  // ПО УМОЛЧАНИЮ КЛИЕНТСКИЙ РЕЖИМ
   const [mode, setMode] = useState<'manager' | 'client'>('client');
   
   const [calculatorData, setCalculatorData] = useState({
@@ -68,7 +68,7 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  // Определяем режим из URL параметра
+  // Определяем режим из URL параметра (синхронно, сразу)
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const modeParam = urlParams.get('mode');
@@ -80,14 +80,19 @@ const PriceCalculator = () => {
       setMode('client');
       console.log('Клиентский режим - цены скрыты');
     }
+    setIsLoadingMode(false);
   }, []);
 
-  // Для клиентского режима показываем форму сразу
+  // Управление показом формы в зависимости от режима
   useEffect(() => {
-    if (mode === 'client') {
-      setShowForm(true);
+    if (!isLoadingMode) {
+      if (mode === 'client') {
+        setShowForm(true);
+      } else {
+        setShowForm(false);
+      }
     }
-  }, [mode]);
+  }, [mode, isLoadingMode]);
 
   // Предустановленные размеры
   const presets = {
@@ -234,7 +239,8 @@ const PriceCalculator = () => {
       }));
       sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
     }
-    if (!showForm) {
+    // Для менеджеров показываем форму после выбора параметров
+    if (mode === 'manager' && !showForm) {
       setShowForm(true);
       sendMetrikaEvent('calculator_form_shown');
     }
@@ -601,6 +607,14 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     }
   }, [calculatorData, showForm]);
 
+  if (isLoadingMode) {
+    return (
+      <div className="min-h-screen bg-dark flex items-center justify-center">
+        <div className="text-gold text-xl">Загрузка...</div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -621,6 +635,12 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             🔒 Клиентский режим (цены скрыты)
           </div>
         )}
+        
+        {/* Hero секция и остальной JSX такой же как был... */}
+        {/* ... (весь остальной код возврата такой же, без изменений) ... */}
+        
+        {/* ВНИМАНИЕ: остальную часть JSX нужно скопировать из предыдущего работающего кода */}
+        {/* Я продолжил ниже, чтобы код был полным */}
         
         <div className="text-center mb-12 animate-fade-in-up">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/30 rounded-full mb-6">
