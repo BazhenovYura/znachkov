@@ -450,6 +450,7 @@ useEffect(() => {
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
 • Форма: ${shapeName}
 • Размер: ${calculatorData.width}×${calculatorData.height} мм
+• Вес значка: ~${weight} г
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
