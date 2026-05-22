@@ -32,6 +32,9 @@ const PriceCalculator = () => {
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [priceLoadError, setPriceLoadError] = useState(false);
   
+  // Режим работы: 'manager' - показывает цены, 'client' - скрывает цены
+  const [mode, setMode] = useState<'manager' | 'client'>('manager');
+  
   const [calculatorData, setCalculatorData] = useState({
     type: 'custom',
     material: 'gold',
@@ -64,6 +67,24 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
+  // Определяем режим из URL параметра
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = urlParams.get('mode');
+    if (modeParam === 'client') {
+      setMode('client');
+    } else if (modeParam === 'manager') {
+      setMode('manager');
+    }
+  }, []);
+
+  // Для клиентского режима показываем форму сразу
+  useEffect(() => {
+    if (mode === 'client') {
+      setShowForm(true);
+    }
+  }, [mode]);
+
   // Предустановленные размеры
   const presets = {
     maxi: { width: 35, height: 30, shape: 'rectangle' as const, label: 'MAXI', complexity: 1.4 },
@@ -215,7 +236,7 @@ const PriceCalculator = () => {
       }));
       sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
     }
-    if (!showForm) {
+    if (mode === 'manager' && !showForm) {
       setShowForm(true);
       sendMetrikaEvent('calculator_form_shown');
     }
@@ -304,6 +325,7 @@ const PriceCalculator = () => {
     params.set('shape', calculatorData.shape);
     params.set('width', String(calculatorData.width));
     params.set('height', String(calculatorData.height));
+    params.set('mode', mode);
     
     const shareUrl = `${window.location.origin}/#/price-calculator?${params.toString()}`;
     navigator.clipboard.writeText(shareUrl);
@@ -337,65 +359,65 @@ const PriceCalculator = () => {
   };
 
   // Компонент визуализации значка (увеличение на 10% для наглядности)
-const ShapeVisualization = () => {
-  const displayWidth = calculatorData.width;
-  const displayHeight = calculatorData.height;
-  const ENLARGE_FACTOR = 1.1; // Увеличение на 10% для лучшей видимости
-  
-  const getShapeStyle = () => {
-    if (calculatorData.shape === 'circle') {
+  const ShapeVisualization = () => {
+    const displayWidth = calculatorData.width;
+    const displayHeight = calculatorData.height;
+    const ENLARGE_FACTOR = 1.1; // Увеличение на 10% для лучшей видимости
+    
+    const getShapeStyle = () => {
+      if (calculatorData.shape === 'circle') {
+        return {
+          borderRadius: '50%',
+        };
+      }
+      if (calculatorData.shape === 'rounded') {
+        return {
+          borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
+        };
+      }
       return {
-        borderRadius: '50%',
+        borderRadius: '0mm',
       };
-    }
-    if (calculatorData.shape === 'rounded') {
-      return {
-        borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
-      };
-    }
-    return {
-      borderRadius: '0mm',
     };
-  };
-  
-  const getShapeLabel = () => {
-    if (calculatorData.shape === 'circle') {
-      return `⌀${calculatorData.width} мм`;
-    }
-    return `${calculatorData.width}×${calculatorData.height} мм`;
-  };
-  
-  return (
-    <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
-      <div className="text-center mb-2">
-        <span className="text-gray-400 text-xs">Визуализация значка</span>        
-      </div>
-      
-      <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
-        <div className="flex justify-center items-center">
-          <div
-            className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
-            style={{
-              width: `${displayWidth * ENLARGE_FACTOR}mm`,
-              height: `${displayHeight * ENLARGE_FACTOR}mm`,
-              ...getShapeStyle(),
-            }}
-          >
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
-                {getShapeLabel()}
-              </span>
+    
+    const getShapeLabel = () => {
+      if (calculatorData.shape === 'circle') {
+        return `⌀${calculatorData.width} мм`;
+      }
+      return `${calculatorData.width}×${calculatorData.height} мм`;
+    };
+    
+    return (
+      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+        <div className="text-center mb-2">
+          <span className="text-gray-400 text-xs">Визуализация значка</span>        
+        </div>
+        
+        <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
+          <div className="flex justify-center items-center">
+            <div
+              className="bg-gradient-to-br from-gold/30 to-gold/10 border-2 border-gold shadow-glow"
+              style={{
+                width: `${displayWidth * ENLARGE_FACTOR}mm`,
+                height: `${displayHeight * ENLARGE_FACTOR}mm`,
+                ...getShapeStyle(),
+              }}
+            >
+              <div className="w-full h-full flex items-center justify-center">
+                <span className="text-gold text-[2mm] opacity-70 whitespace-nowrap">
+                  {getShapeLabel()}
+                </span>
+              </div>
             </div>
           </div>
         </div>
+        <div className="text-center mt-2 text-gray-500 text-xs">
+          <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
+          <div className="text-gold text-xs mt-1">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
+        </div>
       </div>
-      <div className="text-center mt-2 text-gray-500 text-xs">
-  <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
-  <div className="text-gold text-xs mt-1">Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
-</div>
-    </div>
-  );
-};
+    );
+  };
 
   const sendTextToTelegram = async () => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
@@ -403,7 +425,7 @@ const ShapeVisualization = () => {
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>📍 Откуда:</b> Страница калькулятора
+<b>📍 Откуда:</b> Страница калькулятора (${mode === 'manager' ? 'режим менеджера' : 'клиентский режим'})
 
 <b>📊 Параметры заказа:</b>
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
@@ -444,7 +466,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
-<b>📍 Откуда:</b> Страница калькулятора
+<b>📍 Откуда:</b> Страница калькулятора (${mode === 'manager' ? 'режим менеджера' : 'клиентский режим'})
 
 <b>📊 Параметры заказа:</b>
 • Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
@@ -514,14 +536,16 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         orderType: calculatorData.type,
         material: calculatorData.material,
         quantity: calculatorData.quantity,
-        estimatedPrice: estimatedPrice
+        estimatedPrice: estimatedPrice,
+        mode: mode
       });
       
       navigate('/thanks', { 
         state: { 
           from: '/price-calculator',
           section: 'calculator',
-          screenWidth: window.innerWidth
+          screenWidth: window.innerWidth,
+          mode: mode
         } 
       });
       
@@ -594,6 +618,13 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       </div>
 
       <div className="relative z-10 w-full px-4 sm:px-6 lg:px-12 xl:px-20 max-w-7xl mx-auto">
+        {/* Индикатор режима (только для разработчиков) */}
+        {mode === 'client' && (
+          <div className="fixed bottom-4 right-4 z-50 bg-dark-light border border-gold/30 rounded-full px-3 py-1 text-xs text-gold">
+            Клиентский режим (цены скрыты)
+          </div>
+        )}
+        
         <div className="text-center mb-12 animate-fade-in-up">
           <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 border border-gold/30 rounded-full mb-6">
             <Calculator className="w-4 h-4 text-gold" />
@@ -992,9 +1023,12 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               <p className="text-gray-500 text-xs mt-2">От 10 до 10 000 штук</p>
             </div>
 
+            {/* Результат расчета */}
             <div className="bg-gradient-to-r from-gold/10 to-gold/5 border border-gold/20 rounded-xl p-6 text-center">
               <div className="flex justify-between items-center mb-4">
-                <p className="text-gray-400 text-sm">Предварительная стоимость (с НДС 22%)</p>
+                <p className="text-gray-400 text-sm">
+                  {mode === 'manager' ? 'Предварительная стоимость (с НДС 22%)' : 'Расчет стоимости'}
+                </p>
                 <button
                   onClick={copyShareLink}
                   className="flex items-center gap-2 text-gray-500 hover:text-gold transition-colors text-sm"
@@ -1003,11 +1037,13 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   {copied ? 'Скопировано!' : 'Поделиться расчётом'}
                 </button>
               </div>
+              
               {!isPriceLoaded && !priceLoadError ? (
                 <p className="text-gray-400 text-lg">Загрузка цен...</p>
               ) : priceLoadError ? (
                 <p className="text-red-400 text-lg">Цены не загружены</p>
-              ) : (
+              ) : mode === 'manager' ? (
+                // Режим менеджера - показываем цену
                 <>
                   <p className={`font-serif text-3xl md:text-4xl font-bold text-gold-gradient transition-all duration-300 ${priceHighlight ? 'scale-110' : 'scale-100'}`}>
                     {estimatedPrice.toLocaleString()} ₽
@@ -1022,12 +1058,25 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   <p className="text-gray-500 text-xs mt-1">
                     3D-модель (единоразово): {model3DCostWithVAT.toLocaleString()} ₽ с НДС
                   </p>
+                  <p className="text-gray-500 text-xs mt-1">*Для точного расчета оставьте заявку ниже</p>
+                </>
+              ) : (
+                // Клиентский режим - не показываем цену, мотивируем оставить заявку
+                <>
+                  <div className="my-4">
+                    <Gift className="w-12 h-12 text-gold mx-auto mb-3" />
+                    <p className="text-white text-lg font-medium mb-2">Получите точный расчет!</p>
+                    <p className="text-gray-400 text-sm">
+                      Заполните форму ниже и наши специалисты рассчитают<br />
+                      индивидуальную стоимость с учётом всех пожеланий
+                    </p>
+                  </div>
                 </>
               )}
-              <p className="text-gray-500 text-xs mt-1">*Для точного расчета оставьте заявку ниже</p>
             </div>
           </div>
 
+          {/* Форма для точного расчета */}
           {showForm && (
             <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 animate-fade-in-up backdrop-blur-sm">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
@@ -1035,7 +1084,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   <h2 className="font-serif text-2xl md:text-3xl text-white">
                     Шаг 2. Получите точный расчет
                   </h2>
-                  <p className="text-gray-400 text-sm mt-1">Заполните форму и получите персональное предложение со скидкой</p>
+                  <p className="text-gray-400 text-sm mt-1">
+                    {mode === 'manager' 
+                      ? 'Заполните форму и получите персональное предложение со скидкой'
+                      : 'Оставьте контакты, и мы рассчитаем стоимость заказа'}
+                  </p>
                 </div>
                 <div className="flex items-center gap-2 bg-gold/10 px-4 py-2 rounded-full">
                   <Zap className="w-4 h-4 text-gold" />
@@ -1150,10 +1203,15 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 >
                   {isSubmitting ? (
                     <>Отправка...</>
-                  ) : (
+                  ) : mode === 'manager' ? (
                     <>
                       <Send className="w-5 h-5" />
                       Получить точный расчет
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" />
+                      Отправить заявку на расчет
                     </>
                   )}
                 </button>
