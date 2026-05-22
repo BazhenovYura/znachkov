@@ -68,31 +68,31 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  // Определяем режим из URL параметра (синхронно, сразу)
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const modeParam = urlParams.get('mode');
-    console.log('Mode from URL:', modeParam);
-    if (modeParam === 'manager') {
-      setMode('manager');
-      console.log('Режим менеджера ВКЛЮЧЕН - цены будут показаны');
-    } else {
-      setMode('client');
-      console.log('Клиентский режим - цены скрыты');
-    }
-    setIsLoadingMode(false);
-  }, []);
-
-  // Управление показом формы в зависимости от режима
-  useEffect(() => {
-    if (!isLoadingMode) {
-      if (mode === 'client') {
-        setShowForm(true);
-      } else {
-        setShowForm(false);
-      }
-    }
-  }, [mode, isLoadingMode]);
+  // Определяем режим из URL параметра (парсим из хэша, т.к. используется HashRouter)
+useEffect(() => {
+  // Получаем полный URL после # 
+  const hash = window.location.hash;
+  const hashParams = hash.split('?')[1]; // Получаем часть после ?
+  
+  let modeParam = null;
+  if (hashParams) {
+    const params = new URLSearchParams(hashParams);
+    modeParam = params.get('mode');
+  }
+  
+  console.log('Mode from URL (hash):', modeParam);
+  console.log('Full hash:', hash);
+  console.log('Hash params:', hashParams);
+  
+  if (modeParam === 'manager') {
+    setMode('manager');
+    console.log('🔓 Режим менеджера ВКЛЮЧЕН - цены будут показаны');
+  } else {
+    setMode('client');
+    console.log('🔒 Клиентский режим - цены скрыты');
+  }
+  setIsLoadingMode(false);
+}, []);
 
   // Предустановленные размеры
   const presets = {
