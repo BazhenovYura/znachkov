@@ -94,6 +94,27 @@ useEffect(() => {
   setIsLoadingMode(false);
 }, []);
 
+// Управление показом формы в зависимости от режима
+  useEffect(() => {
+    if (!isLoadingMode) {
+      if (mode === 'client') {
+        setShowForm(true);
+        console.log('Клиентский режим: форма должна быть видна');
+      } else {
+        setShowForm(false);
+        console.log('Режим менеджера: форма скрыта до выбора параметров');
+      }
+    }
+  }, [mode, isLoadingMode]);
+
+    // Дополнительная проверка: принудительно показываем форму для клиентов
+  useEffect(() => {
+    if (mode === 'client' && !showForm && !isLoadingMode) {
+      console.log('Принудительный показ формы для клиента');
+      setShowForm(true);
+    }
+  }, [mode, showForm, isLoadingMode]);
+  
   // Предустановленные размеры
   const presets = {
     maxi: { width: 35, height: 30, shape: 'rectangle' as const, label: 'MAXI', complexity: 1.4 },
