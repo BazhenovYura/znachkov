@@ -145,3 +145,58 @@
     animation-delay: 500ms;
   }
 }
+/* Серебряная тема для калькулятора */
+.border-silver {
+  border-color: #C0C0C0;
+}
+
+.bg-silver\/10 {
+  background-color: rgba(192, 192, 192, 0.1);
+}
+
+.bg-silver\/20 {
+  background-color: rgba(192, 192, 192, 0.2);
+}
+
+.text-silver {
+  color: #C0C0C0;
+}
+
+.shadow-silver {
+  box-shadow: 0 0 20px rgba(192, 192, 192, 0.3);
+}
+
+.from-silver\/10 {
+  --tw-gradient-from: rgba(192, 192, 192, 0.1);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(192, 192, 192, 0));
+}
+
+.to-silver\/5 {
+  --tw-gradient-to: rgba(192, 192, 192, 0.05);
+}
+
+.from-gray-400 {
+  --tw-gradient-from: #9CA3AF;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(156, 163, 175, 0));
+}
+
+.to-gray-500 {
+  --tw-gradient-to: #6B7280;
+}
+
+/* Анимация для серебряной темы */
+@keyframes silver-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(192, 192, 192, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(192, 192, 192, 0.5);
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(192, 192, 192, 0.3);
+  }
+}
+
+.shadow-silver-glow {
+  animation: silver-glow 2s infinite;
+}
