@@ -33,13 +33,14 @@ const PriceCalculator = () => {
   const [priceLoadError, setPriceLoadError] = useState(false);
   
   // Режим работы: 'manager' - показывает цены, 'client' - скрывает цены
-  const [mode, setMode] = useState<'manager' | 'client'>('client'); // по умолчанию клиентский режим
+  // ПО УМОЛЧАНИЮ КЛИЕНТСКИЙ РЕЖИМ
+  const [mode, setMode] = useState<'manager' | 'client'>('client');
   
   const [calculatorData, setCalculatorData] = useState({
     type: 'custom',
     material: 'gold',
     quantity: 500,
-    shape: 'rectangle', // 'rectangle', 'rounded', 'circle'
+    shape: 'rectangle',
     width: 30,
     height: 30,
   });
@@ -67,16 +68,19 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  /// Определяем режим из URL параметра
-useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const modeParam = urlParams.get('mode');
-  if (modeParam === 'manager') {
-    setMode('manager');
-  } else {
-    setMode('client'); // по умолчанию клиент
-  }
-}, []);
+  // Определяем режим из URL параметра
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const modeParam = urlParams.get('mode');
+    console.log('Mode from URL:', modeParam);
+    if (modeParam === 'manager') {
+      setMode('manager');
+      console.log('Режим менеджера ВКЛЮЧЕН - цены будут показаны');
+    } else {
+      setMode('client');
+      console.log('Клиентский режим - цены скрыты');
+    }
+  }, []);
 
   // Для клиентского режима показываем форму сразу
   useEffect(() => {
@@ -138,7 +142,6 @@ useEffect(() => {
     if (calculatorData.type !== 'custom' && presets[calculatorData.type as keyof typeof presets]) {
       return presets[calculatorData.type as keyof typeof presets].complexity;
     }
-    // Для пользовательских размеров сложность зависит от размера
     const avgSize = (calculatorData.width + calculatorData.height) / 2;
     if (avgSize >= 35) return 1.4;
     if (avgSize >= 25) return 1.3;
@@ -169,7 +172,6 @@ useEffect(() => {
     const metalCostWithVAT = metalPrice * purityFactor * LOSS_FACTOR * VAT_BUY_FACTOR;
     const totalCostPerGram = metalCostWithVAT + laborCost;
     
-    // Площадь фигуры
     let area: number;
     if (calculatorData.shape === 'circle') {
       const radius = calculatorData.width / 2;
@@ -178,7 +180,6 @@ useEffect(() => {
       area = calculatorData.width * calculatorData.height;
     }
     
-    // Толщина значка ~1мм, объём = площадь * 1
     const volume = area * 1;
     const weight = volume * density;
     
@@ -186,10 +187,7 @@ useEffect(() => {
     const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
     const totalItemsPrice = pricePerItem * calculatorData.quantity;
     
-    // Стоимость 3D-модели с НДС
     const model3DCostWithVAT = MODEL_3D_COST * VAT_SELL_FACTOR;
-    
-    // Итоговая цена: стоимость всех значков + стоимость 3D-модели
     const totalPrice = totalItemsPrice + model3DCostWithVAT;
     
     return {
@@ -225,23 +223,22 @@ useEffect(() => {
   }, []);
 
   const handlePresetSelect = (presetKey: string) => {
-  const preset = presets[presetKey as keyof typeof presets];
-  if (preset) {
-    setCalculatorData(prev => ({
-      ...prev,
-      type: presetKey,
-      shape: preset.shape,
-      width: preset.width,
-      height: preset.height,
-    }));
-    sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
-  }
-  // Для менеджеров показываем форму после выбора параметров
-  if (mode === 'manager' && !showForm) {
-    setShowForm(true);
-    sendMetrikaEvent('calculator_form_shown');
-  }
-};
+    const preset = presets[presetKey as keyof typeof presets];
+    if (preset) {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: presetKey,
+        shape: preset.shape,
+        width: preset.width,
+        height: preset.height,
+      }));
+      sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
+    }
+    if (!showForm) {
+      setShowForm(true);
+      sendMetrikaEvent('calculator_form_shown');
+    }
+  };
 
   const handleCustomMode = () => {
     setCalculatorData(prev => ({
@@ -359,26 +356,20 @@ useEffect(() => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-  // Компонент визуализации значка (увеличение на 10% для наглядности)
+  // Компонент визуализации значка
   const ShapeVisualization = () => {
     const displayWidth = calculatorData.width;
     const displayHeight = calculatorData.height;
-    const ENLARGE_FACTOR = 1.1; // Увеличение на 10% для лучшей видимости
+    const ENLARGE_FACTOR = 1.1;
     
     const getShapeStyle = () => {
       if (calculatorData.shape === 'circle') {
-        return {
-          borderRadius: '50%',
-        };
+        return { borderRadius: '50%' };
       }
       if (calculatorData.shape === 'rounded') {
-        return {
-          borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
-        };
+        return { borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm` };
       }
-      return {
-        borderRadius: '0mm',
-      };
+      return { borderRadius: '0mm' };
     };
     
     const getShapeLabel = () => {
@@ -619,10 +610,15 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       </div>
 
       <div className="relative z-10 w-full px-4 sm:px-6 lg:px-12 xl:px-20 max-w-7xl mx-auto">
-        {/* Индикатор режима (только для разработчиков) */}
+        {/* Индикатор режима */}
+        {mode === 'manager' && (
+          <div className="fixed bottom-4 right-4 z-50 bg-green-500/20 border border-green-500/50 rounded-full px-3 py-1 text-xs text-green-400">
+            🔓 Режим менеджера (цены видны)
+          </div>
+        )}
         {mode === 'client' && (
-          <div className="fixed bottom-4 right-4 z-50 bg-dark-light border border-gold/30 rounded-full px-3 py-1 text-xs text-gold">
-            Клиентский режим (цены скрыты)
+          <div className="fixed bottom-4 right-4 z-50 bg-gold/10 border border-gold/30 rounded-full px-3 py-1 text-xs text-gold">
+            🔒 Клиентский режим (цены скрыты)
           </div>
         )}
         
@@ -1044,7 +1040,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               ) : priceLoadError ? (
                 <p className="text-red-400 text-lg">Цены не загружены</p>
               ) : mode === 'manager' ? (
-                // Режим менеджера - показываем цену
                 <>
                   <p className={`font-serif text-3xl md:text-4xl font-bold text-gold-gradient transition-all duration-300 ${priceHighlight ? 'scale-110' : 'scale-100'}`}>
                     {estimatedPrice.toLocaleString()} ₽
@@ -1062,7 +1057,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   <p className="text-gray-500 text-xs mt-1">*Для точного расчета оставьте заявку ниже</p>
                 </>
               ) : (
-                // Клиентский режим - не показываем цену, мотивируем оставить заявку
                 <>
                   <div className="my-4">
                     <Gift className="w-12 h-12 text-gold mx-auto mb-3" />
