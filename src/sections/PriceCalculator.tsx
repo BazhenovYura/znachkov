@@ -932,52 +932,68 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             </h2>
             
             {/* Материал */}
-            {mode === 'manager' ? (
-              <div className="mb-6">
-                <label className="block text-gray-400 text-sm mb-3">Материал *</label>
-                <div className="flex gap-4">
-                  <button
-                    type="button"
-                    onClick={() => handleMaterialSelect('gold')}
-                    className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
-                      calculatorData.material === 'gold'
-                        ? `bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 ${theme.border} ${theme.shadow}`
-                        : 'bg-dark border-gray-700 hover:border-gold/50'
-                    }`}
-                  >
-                    <div className="font-bold text-yellow-500">Золото 585</div>
-                    <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('gold')} (биржа)</div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMaterialSelect('silver')}
-                    className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
-                      calculatorData.material === 'silver'
-                        ? `bg-gradient-to-r from-gray-400/20 to-gray-600/20 ${theme.border} ${theme.shadow}`
-                        : 'bg-dark border-gray-700 hover:border-gold/50'
-                    }`}
-                  >
-                    <div className="font-bold text-gray-400">Серебро 925</div>
-                    <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('silver')} (биржа)</div>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="mb-6">
-                <label className="block text-gray-400 text-sm mb-3">Материал</label>
-                <div className="flex gap-4">
-                  <div className="flex-1 p-4 rounded-xl border border-gray-700 text-center bg-dark">
-                    <div className="font-bold text-yellow-500">Золото 585</div>
-                    <div className="text-xs text-gray-500 mt-1">для предварительного расчета</div>
-                  </div>
-                  <div className="flex-1 p-4 rounded-xl border border-gray-700 text-center bg-dark">
-                    <div className="font-bold text-gray-400">Серебро 925</div>
-                    <div className="text-xs text-gray-500 mt-1">для предварительного расчета</div>
-                  </div>
-                </div>
-                <p className="text-gray-500 text-xs mt-2 text-center">Материал фиксирован. Точный расчет — после заполнения формы</p>
-              </div>
-            )}
+{mode === 'manager' ? (
+  <div className="mb-6">
+    <label className="block text-gray-400 text-sm mb-3">Материал *</label>
+    <div className="flex gap-4">
+      <button
+        type="button"
+        onClick={() => handleMaterialSelect('gold')}
+        className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+          calculatorData.material === 'gold'
+            ? `bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 ${theme.border} ${theme.shadow}`
+            : 'bg-dark border-gray-700 hover:border-gold/50'
+        }`}
+      >
+        <div className="font-bold text-yellow-500">Золото 585</div>
+        <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('gold')} (биржа)</div>
+      </button>
+      <button
+        type="button"
+        onClick={() => handleMaterialSelect('silver')}
+        className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+          calculatorData.material === 'silver'
+            ? `bg-gradient-to-r from-gray-400/20 to-gray-600/20 ${theme.border} ${theme.shadow}`
+            : 'bg-dark border-gray-700 hover:border-gold/50'
+        }`}
+      >
+        <div className="font-bold text-gray-400">Серебро 925</div>
+        <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('silver')} (биржа)</div>
+      </button>
+    </div>
+  </div>
+) : (
+  <div className="mb-6">
+    <label className="block text-gray-400 text-sm mb-3">Материал *</label>
+    <div className="flex gap-4">
+      <button
+        type="button"
+        onClick={() => handleMaterialSelect('gold')}
+        className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+          calculatorData.material === 'gold'
+            ? 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-gold/50'
+            : 'bg-dark border-gray-700 hover:border-gold/50'
+        }`}
+      >
+        <div className="font-bold text-yellow-500">Золото 585</div>
+        <div className="text-xs text-gray-500 mt-1">выберите для расчета</div>
+      </button>
+      <button
+        type="button"
+        onClick={() => handleMaterialSelect('silver')}
+        className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+          calculatorData.material === 'silver'
+            ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/20 border-silver/50'
+            : 'bg-dark border-gray-700 hover:border-gold/50'
+        }`}
+      >
+        <div className="font-bold text-gray-400">Серебро 925</div>
+        <div className="text-xs text-gray-500 mt-1">выберите для расчета</div>
+      </button>
+    </div>
+    <p className="text-gray-500 text-xs mt-2 text-center">Выберите материал для расчета</p>
+  </div>
+)}
 
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Готовые форматы</label>
@@ -1481,7 +1497,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             <div className="text-center mb-6">
               <div className="text-gold text-2xl mb-2">🔐</div>
               <h3 className="text-white text-xl font-semibold">Вход в режим менеджера</h3>
-              <p className="text-gray-400 text-sm mt-1">Введите логин и пароль для доступа к ценам</p>
+              <p className="text-gray-400 text-sm mt-1">Введите логин и пароль</p>
             </div>
             
             <div className="space-y-4">
