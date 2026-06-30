@@ -289,13 +289,26 @@ const PriceCalculator = () => {
   };
 
   const handleShapeSelect = (shape: 'rectangle' | 'rounded' | 'circle') => {
-    setCalculatorData(prev => ({
+  setCalculatorData(prev => {
+    // Если выбрали круг, выравниваем стороны по минимальному значению
+    if (shape === 'circle') {
+      const minSize = Math.min(prev.width, prev.height);
+      return {
+        ...prev,
+        type: 'custom',
+        shape,
+        width: minSize,
+        height: minSize,
+      };
+    }
+    return {
       ...prev,
       type: 'custom',
       shape,
-    }));
-    sendMetrikaEvent('calculator_param_change', { param: 'shape', value: shape });
-  };
+    };
+  });
+  sendMetrikaEvent('calculator_param_change', { param: 'shape', value: shape });
+};
 
   const handleWidthChange = (value: number) => {
     let newValue = Math.max(8, Math.min(35, value));
