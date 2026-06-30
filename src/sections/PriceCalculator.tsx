@@ -39,10 +39,10 @@ const PriceCalculator = () => {
   const [calculatorData, setCalculatorData] = useState({
     type: 'custom',
     material: 'gold',
-    quantity: 2, // стартовое количество 2шт
-    shape: 'rectangle',
-    width: 30,
-    height: 30,
+    quantity: 2,
+    shape: 'circle', // стартовая форма - круг
+    width: 20, // стартовый размер 20х20
+    height: 20,
   });
   
   const [metalPrices, setMetalPrices] = useState<{ gold: number | null; silver: number | null }>({
@@ -332,7 +332,7 @@ const PriceCalculator = () => {
   };
 
   // Новые обработчики для количества
-  const quantityPresets = [5, 10, 20, 30, 50];
+  const quantityPresets = [5, 10, 20, 30, 50, 100, 500];
   
   const handleQuantityPreset = (quantity: number) => {
     setCalculatorData(prev => ({ ...prev, quantity }));
@@ -351,6 +351,11 @@ const PriceCalculator = () => {
     value = Math.max(2, Math.min(10000, value));
     setCalculatorData(prev => ({ ...prev, quantity: value }));
     sendMetrikaEvent('calculator_quantity_manual', { quantity: value });
+  };
+
+  const handleQuantityMin = () => {
+    setCalculatorData(prev => ({ ...prev, quantity: 2 }));
+    sendMetrikaEvent('calculator_quantity_change', { quantity: 2 });
   };
 
   const refreshPrices = () => {
@@ -1100,7 +1105,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Количество (шт.) *</label>
               
-              {/* Быстрые кнопки 5, 10, 20, 30, 50 */}
+              {/* Быстрые кнопки */}
               <div className="flex flex-wrap gap-2 mb-3">
                 {quantityPresets.map(preset => (
                   <button
@@ -1118,8 +1123,15 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 ))}
               </div>
               
-              {/* Кнопки ручного изменения -1, -5 и +1, +5 */}
+              {/* Кнопки ручного изменения */}
               <div className="flex items-center gap-2 mb-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuantityChange(-10)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors text-sm"
+                >
+                  −10
+                </button>
                 <button
                   type="button"
                   onClick={() => handleQuantityChange(-5)}
@@ -1158,9 +1170,25 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 >
                   +5
                 </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuantityChange(10)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors text-sm"
+                >
+                  +10
+                </button>
+                <button
+                  type="button"
+                  onClick={handleQuantityMin}
+                  className="w-12 h-10 bg-dark border border-gold/50 rounded-lg flex items-center justify-center text-gold hover:bg-gold/10 transition-colors text-sm font-medium"
+                >
+                  MIN
+                </button>
               </div>
               
-              <p className="text-gray-500 text-xs mt-2">От 2 до 10 000 штук</p>
+              {/* Подсказка */}
+              <p className="text-gray-400 text-xs mt-2">Вы можете ввести число вручную</p>
+              <p className="text-gray-500 text-xs">От 2 до 10 000 штук</p>
             </div>
 
             {/* Результат расчета */}
