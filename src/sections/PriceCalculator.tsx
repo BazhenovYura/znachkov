@@ -67,6 +67,12 @@ const PriceCalculator = () => {
   const [showForm, setShowForm] = useState(false);
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  
+  // Состояния для модального окна входа
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
 
   // Функция для получения классов темы в зависимости от выбранного материала
   const getThemeClasses = () => {
@@ -81,6 +87,14 @@ const PriceCalculator = () => {
       buttonTo: isGold ? 'to-yellow-600' : 'to-gray-500',
     };
   };
+  
+  // Восстанавливаем режим из sessionStorage при загрузке
+  useEffect(() => {
+    const savedMode = sessionStorage.getItem('calculator_mode');
+    if (savedMode === 'manager') {
+      setMode('manager');
+    }
+  }, []);
   
   // Определяем режим из URL параметра (парсим из хэша, т.к. используется HashRouter)
   useEffect(() => {
@@ -289,26 +303,25 @@ const PriceCalculator = () => {
   };
 
   const handleShapeSelect = (shape: 'rectangle' | 'rounded' | 'circle') => {
-  setCalculatorData(prev => {
-    // Если выбрали круг, выравниваем стороны по минимальному значению
-    if (shape === 'circle') {
-      const minSize = Math.min(prev.width, prev.height);
+    setCalculatorData(prev => {
+      if (shape === 'circle') {
+        const minSize = Math.min(prev.width, prev.height);
+        return {
+          ...prev,
+          type: 'custom',
+          shape,
+          width: minSize,
+          height: minSize,
+        };
+      }
       return {
         ...prev,
         type: 'custom',
         shape,
-        width: minSize,
-        height: minSize,
       };
-    }
-    return {
-      ...prev,
-      type: 'custom',
-      shape,
-    };
-  });
-  sendMetrikaEvent('calculator_param_change', { param: 'shape', value: shape });
-};
+    });
+    sendMetrikaEvent('calculator_param_change', { param: 'shape', value: shape });
+  };
 
   const handleWidthChange = (value: number) => {
     let newValue = Math.max(8, Math.min(35, value));
@@ -331,11 +344,20 @@ const PriceCalculator = () => {
 
   const handleHeightChange = (value: number) => {
     const newValue = Math.max(8, Math.min(35, value));
-    setCalculatorData(prev => ({
-      ...prev,
-      type: 'custom',
-      height: newValue,
-    }));
+    if (calculatorData.shape === 'circle') {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: 'custom',
+        width: newValue,
+        height: newValue,
+      }));
+    } else {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: 'custom',
+        height: newValue,
+      }));
+    }
     sendMetrikaEvent('calculator_param_change', { param: 'height', value: newValue });
   };
 
@@ -369,6 +391,30 @@ const PriceCalculator = () => {
   const handleQuantityMin = () => {
     setCalculatorData(prev => ({ ...prev, quantity: 2 }));
     sendMetrikaEvent('calculator_quantity_change', { quantity: 2 });
+  };
+
+  // Обработчики для входа в режим менеджера
+  const handleClientModeClick = () => {
+    setShowLoginModal(true);
+    setLogin('');
+    setPassword('');
+    setLoginError('');
+  };
+
+  const handleLogin = () => {
+    const ADMIN_LOGIN = 'Админ';
+    const ADMIN_PASSWORD = '142536';
+    
+    if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD) {
+      setMode('manager');
+      setShowLoginModal(false);
+      setLogin('');
+      setPassword('');
+      setLoginError('');
+      sessionStorage.setItem('calculator_mode', 'manager');
+    } else {
+      setLoginError('Неверный логин или пароль');
+    }
   };
 
   const refreshPrices = () => {
@@ -773,8 +819,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           </div>
         )}
         {mode === 'client' && (
-          <div className="fixed bottom-4 right-4 z-50 bg-gold/10 border border-gold/30 rounded-full px-3 py-1 text-xs text-gold">
-            🔒 Клиентский режим (цены скрыты)
+          <div 
+            onClick={handleClientModeClick}
+            className="fixed bottom-4 right-4 z-50 bg-gold/10 border border-gold/30 rounded-full px-3 py-1 text-xs text-gold cursor-pointer hover:bg-gold/20 transition-colors"
+          >
+            🔒 Клиентский режим
           </div>
         )}
         
@@ -1424,6 +1473,70 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           )}
         </div>
       </div>
+
+      {/* Модальное окно входа для менеджеров */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-light border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 animate-fade-in-up">
+            <div className="text-center mb-6">
+              <div className="text-gold text-2xl mb-2">🔐</div>
+              <h3 className="text-white text-xl font-semibold">Вход в режим менеджера</h3>
+              <p className="text-gray-400 text-sm mt-1">Введите логин и пароль для доступа к ценам</p>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Логин</label>
+                <input
+                  type="text"
+                  value={login}
+                  onChange={(e) => setLogin(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                  placeholder="Введите логин"
+                  autoFocus
+                />
+              </div>
+              
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Пароль</label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                  placeholder="Введите пароль"
+                />
+              </div>
+              
+              {loginError && (
+                <p className="text-red-500 text-sm text-center">{loginError}</p>
+              )}
+              
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    setLogin('');
+                    setPassword('');
+                    setLoginError('');
+                  }}
+                  className="flex-1 py-3 bg-dark border border-gray-700 text-gray-400 rounded-lg hover:border-gold transition-colors"
+                >
+                  Отмена
+                </button>
+                <button
+                  onClick={handleLogin}
+                  className="flex-1 py-3 bg-gradient-to-r from-gold to-yellow-600 text-dark font-bold rounded-lg hover:shadow-gold transition-all duration-300"
+                >
+                  Войти
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
