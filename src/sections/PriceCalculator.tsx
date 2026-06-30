@@ -39,7 +39,7 @@ const PriceCalculator = () => {
   const [calculatorData, setCalculatorData] = useState({
     type: 'custom',
     material: 'gold',
-    quantity: 500,
+    quantity: 2, // стартовое количество 2шт
     shape: 'rectangle',
     width: 30,
     height: 30,
@@ -331,21 +331,24 @@ const PriceCalculator = () => {
     sendMetrikaEvent('calculator_param_change', { param: 'material', value: materialId });
   };
 
+  // Новые обработчики для количества
+  const quantityPresets = [5, 10, 20, 30, 50];
+  
   const handleQuantityPreset = (quantity: number) => {
     setCalculatorData(prev => ({ ...prev, quantity }));
     sendMetrikaEvent('calculator_quantity_change', { quantity });
   };
 
   const handleQuantityChange = (delta: number) => {
-    const newQuantity = Math.max(10, Math.min(10000, calculatorData.quantity + delta));
+    const newQuantity = Math.max(2, Math.min(10000, calculatorData.quantity + delta));
     setCalculatorData(prev => ({ ...prev, quantity: newQuantity }));
     sendMetrikaEvent('calculator_quantity_change', { quantity: newQuantity });
   };
 
   const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = parseInt(e.target.value);
-    if (isNaN(value)) value = 500;
-    value = Math.max(10, Math.min(10000, value));
+    if (isNaN(value)) value = 2;
+    value = Math.max(2, Math.min(10000, value));
     setCalculatorData(prev => ({ ...prev, quantity: value }));
     sendMetrikaEvent('calculator_quantity_manual', { quantity: value });
   };
@@ -386,7 +389,6 @@ const PriceCalculator = () => {
   const { weight, metalCostPerGram, totalCostPerGram, model3DCostWithVAT } = calculatePrice();
   const isGold = calculatorData.material === 'gold';
   const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
-  const quantityPresets = [100, 500, 1000, 5000];
   const isPriceLoaded = metalPrices.gold !== null && metalPrices.silver !== null;
 
   const getMaterialPriceDisplay = (material: 'gold' | 'silver') => {
@@ -897,7 +899,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('maxi')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'maxi'
-                      ? `bg-gold text-dark font-medium`
+                      ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -908,7 +910,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('midi')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'midi'
-                      ? `bg-gold text-dark font-medium`
+                      ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -919,7 +921,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('mini')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'mini'
-                      ? `bg-gold text-dark font-medium`
+                      ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -930,7 +932,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('micro')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'micro'
-                      ? `bg-gold text-dark font-medium`
+                      ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -941,7 +943,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('rounded_small')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'rounded_small'
-                      ? `bg-gold text-dark font-medium`
+                      ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -952,7 +954,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('rounded_medium')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'rounded_medium'
-                      ? `bg-gold text-dark font-medium`
+                      ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -963,7 +965,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('circle_small')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'circle_small'
-                      ? `bg-gold text-dark font-medium`
+                      ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -974,7 +976,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={() => handlePresetSelect('circle_medium')}
                   className={`px-3 py-2 rounded-lg text-sm transition-all duration-300 text-center ${
                     calculatorData.type === 'circle_medium'
-                      ? `bg-gold text-dark font-medium`
+                      ? 'bg-gold text-dark font-medium'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -991,7 +993,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   onClick={handleCustomMode}
                   className={`px-3 py-1 rounded-lg text-xs transition-all duration-300 ${
                     calculatorData.type === 'custom'
-                      ? `bg-gold text-dark`
+                      ? 'bg-gold text-dark'
                       : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                   }`}
                 >
@@ -1097,6 +1099,8 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Количество (шт.) *</label>
+              
+              {/* Быстрые кнопки 5, 10, 20, 30, 50 */}
               <div className="flex flex-wrap gap-2 mb-3">
                 {quantityPresets.map(preset => (
                   <button
@@ -1105,55 +1109,58 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     onClick={() => handleQuantityPreset(preset)}
                     className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
                       calculatorData.quantity === preset
-                        ? `bg-gold text-dark font-medium`
+                        ? 'bg-gold text-dark font-medium'
                         : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
                     }`}
                   >
-                    {preset.toLocaleString()} шт.
+                    {preset} шт.
                   </button>
                 ))}
               </div>
-              <div className="flex items-center gap-3">
+              
+              {/* Кнопки ручного изменения -1, -5 и +1, +5 */}
+              <div className="flex items-center gap-2 mb-2">
                 <button
                   type="button"
-                  onClick={() => handleQuantityChange(-100)}
-                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                  onClick={() => handleQuantityChange(-5)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors text-sm"
                 >
-                  −100
+                  −5
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleQuantityChange(-10)}
-                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                  onClick={() => handleQuantityChange(-1)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors text-sm"
                 >
-                  −10
+                  −1
                 </button>
                 <input
                   type="number"
                   name="quantity"
                   value={calculatorData.quantity}
                   onChange={handleQuantityInput}
-                  min="10"
+                  min="2"
                   max="10000"
-                  step="10"
+                  step="1"
                   className="flex-1 px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white text-center focus:border-gold focus:outline-none transition-colors"
                 />
                 <button
                   type="button"
-                  onClick={() => handleQuantityChange(10)}
-                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                  onClick={() => handleQuantityChange(1)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors text-sm"
                 >
-                  +10
+                  +1
                 </button>
                 <button
                   type="button"
-                  onClick={() => handleQuantityChange(100)}
-                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                  onClick={() => handleQuantityChange(5)}
+                  className="w-10 h-10 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors text-sm"
                 >
-                  +100
+                  +5
                 </button>
               </div>
-              <p className="text-gray-500 text-xs mt-2">От 10 до 10 000 штук</p>
+              
+              <p className="text-gray-500 text-xs mt-2">От 2 до 10 000 штук</p>
             </div>
 
             {/* Результат расчета */}
