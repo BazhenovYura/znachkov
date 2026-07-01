@@ -121,6 +121,46 @@ const PriceCalculator = () => {
     setIsLoadingMode(false);
   }, []);
 
+  // Загрузка параметров из URL (для шаринга)
+  useEffect(() => {
+    const hash = window.location.hash;
+    const hashParams = hash.split('?')[1];
+    
+    if (!hashParams) return;
+    
+    const params = new URLSearchParams(hashParams);
+    
+    // Проверяем наличие параметров калькулятора
+    const type = params.get('type');
+    const material = params.get('material');
+    const quantity = params.get('quantity');
+    const shape = params.get('shape');
+    const width = params.get('width');
+    const height = params.get('height');
+    
+    // Если есть хотя бы один параметр, применяем настройки
+    if (type || material || quantity || shape || width || height) {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: type || prev.type,
+        material: material || prev.material,
+        quantity: quantity ? parseInt(quantity) : prev.quantity,
+        shape: (shape as 'rectangle' | 'rounded' | 'circle') || prev.shape,
+        width: width ? parseInt(width) : prev.width,
+        height: height ? parseInt(height) : prev.height,
+      }));
+      
+      console.log('📋 Загружены параметры из ссылки:', {
+        type,
+        material,
+        quantity,
+        shape,
+        width,
+        height
+      });
+    }
+  }, []);
+
   // Управление показом формы в зависимости от режима
   useEffect(() => {
     if (!isLoadingMode) {
@@ -932,68 +972,68 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             </h2>
             
             {/* Материал */}
-{mode === 'manager' ? (
-  <div className="mb-6">
-    <label className="block text-gray-400 text-sm mb-3">Материал *</label>
-    <div className="flex gap-4">
-      <button
-        type="button"
-        onClick={() => handleMaterialSelect('gold')}
-        className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
-          calculatorData.material === 'gold'
-            ? `bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 ${theme.border} ${theme.shadow}`
-            : 'bg-dark border-gray-700 hover:border-gold/50'
-        }`}
-      >
-        <div className="font-bold text-yellow-500">Золото 585</div>
-        <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('gold')} (биржа)</div>
-      </button>
-      <button
-        type="button"
-        onClick={() => handleMaterialSelect('silver')}
-        className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
-          calculatorData.material === 'silver'
-            ? `bg-gradient-to-r from-gray-400/20 to-gray-600/20 ${theme.border} ${theme.shadow}`
-            : 'bg-dark border-gray-700 hover:border-gold/50'
-        }`}
-      >
-        <div className="font-bold text-gray-400">Серебро 925</div>
-        <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('silver')} (биржа)</div>
-      </button>
-    </div>
-  </div>
-) : (
-  <div className="mb-6">
-    <label className="block text-gray-400 text-sm mb-3">Материал *</label>
-    <div className="flex gap-4">
-      <button
-        type="button"
-        onClick={() => handleMaterialSelect('gold')}
-        className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
-          calculatorData.material === 'gold'
-            ? 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-gold/50'
-            : 'bg-dark border-gray-700 hover:border-gold/50'
-        }`}
-      >
-        <div className="font-bold text-yellow-500">Золото 585</div>
-        <div className="text-xs text-gray-500 mt-1">выберите для расчета</div>
-      </button>
-      <button
-        type="button"
-        onClick={() => handleMaterialSelect('silver')}
-        className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
-          calculatorData.material === 'silver'
-            ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/20 border-silver/50'
-            : 'bg-dark border-gray-700 hover:border-gold/50'
-        }`}
-      >
-        <div className="font-bold text-gray-400">Серебро 925</div>
-        <div className="text-xs text-gray-500 mt-1">выберите для расчета</div>
-      </button>
-    </div>
-    <p className="text-gray-500 text-xs mt-2 text-center">Выберите материал для расчета</p>
-  </div>
-)}
+            {mode === 'manager' ? (
+              <div className="mb-6">
+                <label className="block text-gray-400 text-sm mb-3">Материал *</label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => handleMaterialSelect('gold')}
+                    className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+                      calculatorData.material === 'gold'
+                        ? `bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 ${theme.border} ${theme.shadow}`
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <div className="font-bold text-yellow-500">Золото 585</div>
+                    <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('gold')} (биржа)</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMaterialSelect('silver')}
+                    className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+                      calculatorData.material === 'silver'
+                        ? `bg-gradient-to-r from-gray-400/20 to-gray-600/20 ${theme.border} ${theme.shadow}`
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <div className="font-bold text-gray-400">Серебро 925</div>
+                    <div className="text-xs text-gray-500 mt-1">{getMaterialPriceDisplay('silver')} (биржа)</div>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mb-6">
+                <label className="block text-gray-400 text-sm mb-3">Материал *</label>
+                <div className="flex gap-4">
+                  <button
+                    type="button"
+                    onClick={() => handleMaterialSelect('gold')}
+                    className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+                      calculatorData.material === 'gold'
+                        ? 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-gold/50'
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <div className="font-bold text-yellow-500">Золото 585</div>
+                    <div className="text-xs text-gray-500 mt-1">выберите для расчета</div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleMaterialSelect('silver')}
+                    className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
+                      calculatorData.material === 'silver'
+                        ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/20 border-silver/50'
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <div className="font-bold text-gray-400">Серебро 925</div>
+                    <div className="text-xs text-gray-500 mt-1">выберите для расчета</div>
+                  </button>
+                </div>
+                <p className="text-gray-500 text-xs mt-2 text-center">Выберите материал для расчета</p>
+              </div>
+            )}
 
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Готовые форматы</label>
