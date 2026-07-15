@@ -863,7 +863,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             onClick={handleClientModeClick}
             className="fixed bottom-4 right-4 z-50 bg-gold/10 border border-gold/30 rounded-full px-3 py-1 text-xs text-gold cursor-pointer hover:bg-gold/20 transition-colors"
           >
-            🔒 Клиент
+            🔒
           </div>
         )}
         
