@@ -855,7 +855,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         {/* Индикатор режима */}
         {mode === 'manager' && (
           <div className="fixed bottom-4 right-4 z-50 bg-green-500/20 border border-green-500/50 rounded-full px-3 py-1 text-xs text-green-400">
-            🔓 Режим менеджера (цены видны)
+            🔓 Менеджер
           </div>
         )}
         {mode === 'client' && (
@@ -863,7 +863,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             onClick={handleClientModeClick}
             className="fixed bottom-4 right-4 z-50 bg-gold/10 border border-gold/30 rounded-full px-3 py-1 text-xs text-gold cursor-pointer hover:bg-gold/20 transition-colors"
           >
-            🔒 Клиентский режим
+            🔒 Клиент
           </div>
         )}
         
