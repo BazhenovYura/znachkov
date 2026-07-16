@@ -236,6 +236,8 @@ const PriceCalculator = () => {
       return presets[calculatorData.type as keyof typeof presets].complexity;
     }
     const avgSize = (calculatorData.width + calculatorData.height) / 2;
+    if (avgSize >= 50) return 1.6;
+    if (avgSize >= 40) return 1.5;
     if (avgSize >= 35) return 1.4;
     if (avgSize >= 25) return 1.3;
     if (avgSize >= 20) return 1.2;
@@ -364,7 +366,7 @@ const PriceCalculator = () => {
   };
 
   const handleWidthChange = (value: number) => {
-    let newValue = Math.max(8, Math.min(35, value));
+    let newValue = Math.max(8, Math.min(50, value));
     if (calculatorData.shape === 'circle') {
       setCalculatorData(prev => ({
         ...prev,
@@ -383,7 +385,7 @@ const PriceCalculator = () => {
   };
 
   const handleHeightChange = (value: number) => {
-    const newValue = Math.max(8, Math.min(35, value));
+    const newValue = Math.max(8, Math.min(50, value));
     if (calculatorData.shape === 'circle') {
       setCalculatorData(prev => ({
         ...prev,
@@ -1198,7 +1200,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     <input
                       type="range"
                       min="8"
-                      max="35"
+                      max="50"
                       step="1"
                       value={calculatorData.width}
                       onChange={(e) => handleWidthChange(parseInt(e.target.value))}
@@ -1206,8 +1208,8 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     />
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
                       <span>8</span>
-                      <span>20</span>
-                      <span>35</span>
+                      <span>30</span>
+                      <span>50</span>
                     </div>
                   </div>
 
@@ -1220,7 +1222,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       <input
                         type="range"
                         min="8"
-                        max="35"
+                        max="50"
                         step="1"
                         value={calculatorData.height}
                         onChange={(e) => handleHeightChange(parseInt(e.target.value))}
@@ -1229,7 +1231,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
                         <span>8</span>
                         <span>20</span>
-                        <span>35</span>
+                        <span>50</span>
                       </div>
                     </div>
                   )}
