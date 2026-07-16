@@ -25,6 +25,7 @@ const SILVER_LABOR_COST = 2000;
 const GOLD_DENSITY = 0.0134;
 const SILVER_DENSITY = 0.0105;
 const MODEL_3D_COST = 10000;
+const ADDITIONAL_PROCESSING_COST = 1500; // стоимость за штуку без НДС
 
 const PriceCalculator = () => {
   const navigate = useNavigate();
@@ -73,6 +74,15 @@ const PriceCalculator = () => {
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
+
+  // Состояния для дополнительной обработки
+  const [additionalProcessing, setAdditionalProcessing] = useState({
+    goldPlating: false, // Золочение
+    rhodium: false,     // Родирование
+    blackening: false,  // Чернение
+    enamel: false,      // Эмаль
+    enamelColors: 1,    // Количество цветов эмали
+  });
 
   // Функция для получения классов темы в зависимости от выбранного материала
   const getThemeClasses = () => {
@@ -241,7 +251,8 @@ const PriceCalculator = () => {
     if (avgSize >= 35) return 1.4;
     if (avgSize >= 25) return 1.3;
     if (avgSize >= 20) return 1.2;
-    return 1.1;
+    if (avgSize >= 10) return 1.1;
+    return 1.0;
   };
 
   // Функция расчета цены
@@ -257,6 +268,7 @@ const PriceCalculator = () => {
         metalCostPerGram: 0,
         totalCostPerGram: 0,
         model3DCostWithVAT: 0,
+        additionalCostPerUnit: 0,
       };
     }
     
@@ -280,7 +292,20 @@ const PriceCalculator = () => {
     
     const pricePerItemBeforeVAT = totalCostPerGram * weight * getCurrentComplexity();
     const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
-    const totalItemsPrice = pricePerItem * calculatorData.quantity;
+    
+    // Расчет стоимости дополнительной обработки
+    let additionalCostPerUnit = 0;
+    const { goldPlating, rhodium, blackening, enamel, enamelColors } = additionalProcessing;
+    
+    if (goldPlating) additionalCostPerUnit += ADDITIONAL_PROCESSING_COST;
+    if (rhodium) additionalCostPerUnit += ADDITIONAL_PROCESSING_COST;
+    if (blackening) additionalCostPerUnit += ADDITIONAL_PROCESSING_COST;
+    if (enamel) additionalCostPerUnit += ADDITIONAL_PROCESSING_COST * enamelColors;
+    
+    // Дополнительная обработка с НДС
+    const additionalCostWithVAT = additionalCostPerUnit * VAT_SELL_FACTOR;
+    
+    const totalItemsPrice = (pricePerItem + additionalCostWithVAT) * calculatorData.quantity;
     
     const model3DCostWithVAT = MODEL_3D_COST * VAT_SELL_FACTOR;
     const totalPrice = totalItemsPrice + model3DCostWithVAT;
@@ -292,6 +317,7 @@ const PriceCalculator = () => {
       metalCostPerGram: Math.round(metalCostWithVAT),
       totalCostPerGram: Math.round(totalCostPerGram),
       model3DCostWithVAT: Math.round(model3DCostWithVAT),
+      additionalCostPerUnit: Math.round(additionalCostWithVAT),
     };
   };
 
@@ -308,7 +334,7 @@ const PriceCalculator = () => {
     
     setEstimatedPrice(totalPrice);
     setPricePerUnit(pricePerUnit);
-  }, [calculatorData, metalPrices]);
+  }, [calculatorData, metalPrices, additionalProcessing]);
 
   // Загрузка цен при старте
   useEffect(() => {
@@ -366,7 +392,7 @@ const PriceCalculator = () => {
   };
 
   const handleWidthChange = (value: number) => {
-    let newValue = Math.max(8, Math.min(50, value));
+    let newValue = Math.max(5, Math.min(50, value));
     if (calculatorData.shape === 'circle') {
       setCalculatorData(prev => ({
         ...prev,
@@ -385,7 +411,7 @@ const PriceCalculator = () => {
   };
 
   const handleHeightChange = (value: number) => {
-    const newValue = Math.max(8, Math.min(50, value));
+    const newValue = Math.max(5, Math.min(50, value));
     if (calculatorData.shape === 'circle') {
       setCalculatorData(prev => ({
         ...prev,
@@ -433,6 +459,21 @@ const PriceCalculator = () => {
   const handleQuantityMin = () => {
     setCalculatorData(prev => ({ ...prev, quantity: 2 }));
     sendMetrikaEvent('calculator_quantity_change', { quantity: 2 });
+  };
+
+  // Обработчики для дополнительной обработки
+  const handleProcessingToggle = (type: 'goldPlating' | 'rhodium' | 'blackening' | 'enamel') => {
+    setAdditionalProcessing(prev => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
+
+  const handleEnamelColorsChange = (delta: number) => {
+    setAdditionalProcessing(prev => ({
+      ...prev,
+      enamelColors: Math.max(1, Math.min(5, prev.enamelColors + delta)),
+    }));
   };
 
   // Обработчики для входа в режим менеджера
@@ -492,7 +533,7 @@ const PriceCalculator = () => {
     });
   };
 
-  const { weight, metalCostPerGram, totalCostPerGram, model3DCostWithVAT } = calculatePrice();
+  const { weight, metalCostPerGram, totalCostPerGram, model3DCostWithVAT, additionalCostPerUnit } = calculatePrice();
   const isGold = calculatorData.material === 'gold';
   const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
   const isPriceLoaded = metalPrices.gold !== null && metalPrices.silver !== null;
@@ -646,6 +687,17 @@ const PriceCalculator = () => {
 
   const sendTextToTelegram = async () => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
+    
+    let processingList = [];
+    if (additionalProcessing.goldPlating) processingList.push('Золочение');
+    if (additionalProcessing.rhodium) processingList.push('Родирование');
+    if (additionalProcessing.blackening) processingList.push('Чернение');
+    if (additionalProcessing.enamel) processingList.push(`Эмаль (${additionalProcessing.enamelColors} цв.)`);
+    
+    const processingText = processingList.length > 0 
+      ? `• Доп. обработка: ${processingList.join(', ')}\n• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)`
+      : '• Доп. обработка: не выбрана';
+    
     const message = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -662,6 +714,7 @@ const PriceCalculator = () => {
 • Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
 • Итого себестоимость с работой: ${totalCostPerGram.toLocaleString()} ₽/г
 • Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
+${processingText}
 • Расчетная стоимость (с НДС 22%): ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку (с НДС 22%): ${pricePerUnit.toLocaleString()} ₽
 
@@ -688,6 +741,17 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
   const sendFileToTelegram = async (file: File) => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
+    
+    let processingList = [];
+    if (additionalProcessing.goldPlating) processingList.push('Золочение');
+    if (additionalProcessing.rhodium) processingList.push('Родирование');
+    if (additionalProcessing.blackening) processingList.push('Чернение');
+    if (additionalProcessing.enamel) processingList.push(`Эмаль (${additionalProcessing.enamelColors} цв.)`);
+    
+    const processingText = processingList.length > 0 
+      ? `• Доп. обработка: ${processingList.join(', ')}\n• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)`
+      : '• Доп. обработка: не выбрана';
+    
     const caption = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
@@ -701,6 +765,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
+${processingText}
 • Расчетная стоимость (с НДС 22%): ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку (с НДС 22%): ${pricePerUnit.toLocaleString()} ₽
 
@@ -828,12 +893,23 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     if (showForm) {
       const materialName = calculatorData.material === 'gold' ? 'золота 585' : 'серебра 925';
       const shapeName = calculatorData.shape === 'circle' ? 'круглой' : (calculatorData.shape === 'rounded' ? 'со скругленными углами' : 'с прямыми углами');
+      
+      let processingText = '';
+      const processingList = [];
+      if (additionalProcessing.goldPlating) processingList.push('золочение');
+      if (additionalProcessing.rhodium) processingList.push('родирование');
+      if (additionalProcessing.blackening) processingList.push('чернение');
+      if (additionalProcessing.enamel) processingList.push(`эмаль (${additionalProcessing.enamelColors} цв.)`);
+      if (processingList.length > 0) {
+        processingText = `, доп. обработка: ${processingList.join(', ')}`;
+      }
+      
       setFormData(prev => ({
         ...prev,
-        comment: `Хочу заказать значки ${shapeName} формы размером ${calculatorData.width}×${calculatorData.height} мм из ${materialName}, тираж ${calculatorData.quantity} шт. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
+        comment: `Хочу заказать значки ${shapeName} формы размером ${calculatorData.width}×${calculatorData.height} мм из ${materialName}, тираж ${calculatorData.quantity} шт${processingText}. Рассчитайте точную стоимость и подберите скидку под этот заказ.`
       }));
     }
-  }, [calculatorData, showForm]);
+  }, [calculatorData, showForm, additionalProcessing]);
 
   if (isLoadingMode) {
     return (
@@ -1199,7 +1275,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     </div>
                     <input
                       type="range"
-                      min="8"
+                      min="5"
                       max="50"
                       step="1"
                       value={calculatorData.width}
@@ -1207,7 +1283,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
                     />
                     <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>8</span>
+                      <span>5</span>
                       <span>30</span>
                       <span>50</span>
                     </div>
@@ -1221,7 +1297,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       </div>
                       <input
                         type="range"
-                        min="8"
+                        min="5"
                         max="50"
                         step="1"
                         value={calculatorData.height}
@@ -1229,7 +1305,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                         className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
                       />
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>8</span>
+                        <span>5</span>
                         <span>30</span>
                         <span>50</span>
                       </div>
@@ -1332,6 +1408,105 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               <p className="text-gray-500 text-xs">От 2 до 10 000 штук</p>
             </div>
 
+            {/* Дополнительная обработка */}
+            <div className="mb-6">
+              <label className="block text-gray-400 text-sm mb-3">Дополнительная обработка</label>
+              <div className="bg-dark/30 rounded-xl p-4 border border-gray-800">
+                <p className="text-gray-500 text-xs mb-3">Выберите варианты дополнительной обработки. Стоимость: 1 500 ₽/шт (без НДС)</p>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {/* Золочение */}
+                  <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
+                    additionalProcessing.goldPlating
+                      ? `${theme.border} ${theme.bgLight}`
+                      : 'border-gray-700 hover:border-gold/50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={additionalProcessing.goldPlating}
+                      onChange={() => handleProcessingToggle('goldPlating')}
+                      className="w-4 h-4 accent-gold"
+                    />
+                    <span className="text-white text-sm">Золочение</span>
+                  </label>
+                  
+                  {/* Родирование */}
+                  <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
+                    additionalProcessing.rhodium
+                      ? `${theme.border} ${theme.bgLight}`
+                      : 'border-gray-700 hover:border-gold/50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={additionalProcessing.rhodium}
+                      onChange={() => handleProcessingToggle('rhodium')}
+                      className="w-4 h-4 accent-gold"
+                    />
+                    <span className="text-white text-sm">Родирование</span>
+                  </label>
+                  
+                  {/* Чернение */}
+                  <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
+                    additionalProcessing.blackening
+                      ? `${theme.border} ${theme.bgLight}`
+                      : 'border-gray-700 hover:border-gold/50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={additionalProcessing.blackening}
+                      onChange={() => handleProcessingToggle('blackening')}
+                      className="w-4 h-4 accent-gold"
+                    />
+                    <span className="text-white text-sm">Чернение</span>
+                  </label>
+                  
+                  {/* Эмаль */}
+                  <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
+                    additionalProcessing.enamel
+                      ? `${theme.border} ${theme.bgLight}`
+                      : 'border-gray-700 hover:border-gold/50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={additionalProcessing.enamel}
+                      onChange={() => handleProcessingToggle('enamel')}
+                      className="w-4 h-4 accent-gold"
+                    />
+                    <span className="text-white text-sm">Эмаль</span>
+                  </label>
+                </div>
+                
+                {/* Поле для количества цветов эмали */}
+                {additionalProcessing.enamel && (
+                  <div className="mt-4 pt-4 border-t border-gray-800">
+                    <div className="flex items-center gap-4">
+                      <span className="text-gray-400 text-sm">Количество цветов эмали:</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEnamelColorsChange(-1)}
+                          className="w-8 h-8 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                        >
+                          −
+                        </button>
+                        <span className={`${theme.text} font-medium text-lg w-8 text-center`}>
+                          {additionalProcessing.enamelColors}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleEnamelColorsChange(1)}
+                          className="w-8 h-8 bg-dark border border-gray-700 rounded-lg flex items-center justify-center text-white hover:border-gold transition-colors"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-gray-500 text-xs">(от 1 до 5)</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
             {/* Результат расчета */}
             <div className={`bg-gradient-to-r ${theme.gradient} border ${theme.border} rounded-xl p-6 text-center`}>
               <div className="flex justify-between items-center mb-4">
@@ -1366,6 +1541,11 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   <p className="text-gray-500 text-xs mt-1">
                     3D-модель (единоразово): {model3DCostWithVAT.toLocaleString()} ₽ с НДС
                   </p>
+                  {additionalCostPerUnit > 0 && (
+                    <p className="text-gray-500 text-xs mt-1">
+                      Доп. обработка: {additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)
+                    </p>
+                  )}
                   <p className="text-gray-500 text-xs mt-1">*Для точного расчета оставьте заявку ниже</p>
                 </>
               ) : (
