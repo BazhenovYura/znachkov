@@ -1230,7 +1230,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                       />
                       <div className="flex justify-between text-xs text-gray-500 mt-1">
                         <span>8</span>
-                        <span>20</span>
+                        <span>30</span>
                         <span>50</span>
                       </div>
                     </div>
