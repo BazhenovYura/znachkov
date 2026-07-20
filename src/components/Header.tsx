@@ -45,78 +45,113 @@ const Header = () => {
   }, []);
 
   // Обработка скролла при возврате с якорем
-useEffect(() => {
-  if (location.pathname === '/' && location.state?.scrollTo) {
-    const sectionId = location.state.scrollTo;
-    const originalScreenWidth = location.state?.originalScreenWidth;
-    
-    console.log('🎯 Попытка скролла к секции:', sectionId);
-    console.log('📱 Текущая ширина экрана:', window.innerWidth);
-    console.log('📱 Исходная ширина экрана:', originalScreenWidth);
-    console.log('📦 Полный state:', location.state);
-    
-    // Проверяем, есть ли элемент в DOM прямо сейчас
-    const elementNow = document.getElementById(sectionId);
-    console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
-    
-    if (elementNow) {
-      const rect = elementNow.getBoundingClientRect();
-      console.log('📐 Позиция элемента сейчас:', {
-        top: rect.top,
-        bottom: rect.bottom,
-        height: rect.height,
-        offsetTop: elementNow.offsetTop,
-        pageYOffset: window.pageYOffset
-      });
-    } else {
-      const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
-      console.log('📋 Все ID на странице:', allIds);
-    }
-    
-    const timer = setTimeout(() => {
-      const element = document.getElementById(sectionId);
-      console.log('⏰ Через 800мс - элемент найден:', !!element);
+  useEffect(() => {
+    if (location.pathname === '/' && location.state?.scrollTo) {
+      const sectionId = location.state.scrollTo;
+      const originalScreenWidth = location.state?.originalScreenWidth;
       
-      if (element) {
-        console.log('✅ Элемент найден, скроллим к', sectionId);
-        
-        const getYOffsetByScreenWidth = (width: number) => {
-          if (width < 640) return -40;
-          if (width < 768) return -50;
-          if (width < 1024) return -60;
-          if (width < 1280) return -70;
-          return -80;
-        };
-        
-        const widthForOffset = originalScreenWidth || window.innerWidth;
-        const yOffset = getYOffsetByScreenWidth(widthForOffset);
-        console.log('📏 Отступ для ширины', widthForOffset, ':', yOffset);
-        
-        const targetY = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-        console.log('🎯 Целевая позиция скролла:', targetY);
-        console.log('📍 Текущая позиция скролла ДО:', window.scrollY);
-        
-        window.scrollTo({ top: targetY, behavior: 'smooth' });
-        
-        // Проверим, куда реально проскроллило через 100мс
-        setTimeout(() => {
-          console.log('📍 ПОСЛЕ скролла позиция:', window.scrollY);
-          console.log('🎯 Должны были попасть в:', targetY);
-          console.log('📐 Разница:', Math.abs(window.scrollY - targetY));
-          
-          // Очищаем state ТОЛЬКО после того, как скролл выполнился
-          navigate('/', { replace: true, state: {} });
-        }, 100);
+      console.log('🎯 Попытка скролла к секции:', sectionId);
+      console.log('📱 Текущая ширина экрана:', window.innerWidth);
+      console.log('📱 Исходная ширина экрана:', originalScreenWidth);
+      console.log('📦 Полный state:', location.state);
+      
+      // Проверяем, есть ли элемент в DOM прямо сейчас
+      const elementNow = document.getElementById(sectionId);
+      console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
+      
+      if (elementNow) {
+        const rect = elementNow.getBoundingClientRect();
+        console.log('📐 Позиция элемента сейчас:', {
+          top: rect.top,
+          bottom: rect.bottom,
+          height: rect.height,
+          offsetTop: elementNow.offsetTop,
+          pageYOffset: window.pageYOffset
+        });
       } else {
-        console.log('❌ Элемент не найден через 800мс');
-        // Очищаем state даже если элемент не найден
-        navigate('/', { replace: true, state: {} });
+        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+        console.log('📋 Все ID на странице:', allIds);
       }
-    }, 800);
-    
-    return () => clearTimeout(timer);
-  }
-}, [location, navigate]);
+      
+      // Увеличиваем задержку до 1500ms для полной загрузки всех элементов
+      const timer = setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        console.log('⏰ Через 1500мс - элемент найден:', !!element);
+        
+        if (element) {
+          console.log('✅ Элемент найден, скроллим к', sectionId);
+          
+          const getYOffsetByScreenWidth = (width: number) => {
+            if (width < 640) return -40;
+            if (width < 768) return -50;
+            if (width < 1024) return -60;
+            if (width < 1280) return -70;
+            return -80;
+          };
+          
+          const widthForOffset = originalScreenWidth || window.innerWidth;
+          const yOffset = getYOffsetByScreenWidth(widthForOffset);
+          console.log('📏 Отступ для ширины', widthForOffset, ':', yOffset);
+          
+          // Получаем позицию элемента
+          const rect = element.getBoundingClientRect();
+          const targetY = rect.top + window.pageYOffset + yOffset;
+          console.log('🎯 Целевая позиция скролла:', targetY);
+          console.log('📍 Текущая позиция скролла ДО:', window.scrollY);
+          
+          // Сначала скроллим без анимации для точности
+          window.scrollTo({ top: targetY, behavior: 'instant' });
+          
+          // Через 50ms проверяем и при необходимости корректируем
+          setTimeout(() => {
+            const currentScroll = window.scrollY;
+            console.log('📍 ПОСЛЕ instant скролла позиция:', currentScroll);
+            console.log('🎯 Должны были попасть в:', targetY);
+            console.log('📐 Разница:', Math.abs(currentScroll - targetY));
+            
+            // Если разница больше 10px, скроллим снова
+            if (Math.abs(currentScroll - targetY) > 10) {
+              console.log('🔄 Повторный скролл для точности');
+              window.scrollTo({ top: targetY, behavior: 'smooth' });
+            }
+            
+            // Очищаем state после скролла
+            setTimeout(() => {
+              navigate('/', { replace: true, state: {} });
+            }, 300);
+          }, 50);
+        } else {
+          console.log('❌ Элемент не найден через 1500мс');
+          // Очищаем state даже если элемент не найден
+          navigate('/', { replace: true, state: {} });
+        }
+      }, 1500);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location, navigate]);
+
+  // Дополнительная проверка после полной загрузки страницы
+  useEffect(() => {
+    if (location.pathname === '/' && location.state?.scrollTo) {
+      const sectionId = location.state.scrollTo;
+      
+      const handleLoad = () => {
+        console.log('🔄 Страница полностью загружена, проверяем скролл для:', sectionId);
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const yOffset = -80;
+          const rect = element.getBoundingClientRect();
+          const targetY = rect.top + window.pageYOffset + yOffset;
+          console.log('🎯 Повторный скролл после загрузки страницы к:', sectionId);
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+        }
+      };
+      
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
+    }
+  }, [location]);
 
   const navLinks = [
     { name: 'Портфолио', href: '#portfolio' },
@@ -356,7 +391,7 @@ useEffect(() => {
       >
         <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
           <div className="flex items-center justify-between">
-            {/* Логотип - добавили обработчик клика */}
+            {/* Логотип */}
             <button 
               onClick={goToHome} 
               className="flex items-center gap-2"
@@ -379,7 +414,7 @@ useEffect(() => {
             </nav>
 
             <div className="hidden lg:flex items-center gap-6">
-              {/* Телефон - добавили обработчик клика */}
+              {/* Телефон */}
               <a
                 href="tel:+79227474474"
                 onClick={handlePhoneClick}
@@ -440,7 +475,7 @@ useEffect(() => {
               ))}
               
               <div className="pt-8 mt-8 border-t border-gray-800">
-                {/* Телефон в мобильном меню - убрали неиспользуемый параметр e */}
+                {/* Телефон в мобильном меню */}
                 <a
                   href="tel:+79227474474"
                   onClick={() => {
