@@ -2,6 +2,23 @@ import { Phone, Mail, MapPin } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 const Footer = () => {
+  const navigateToHome = (section: string) => {
+    // Отправляем событие в Метрику
+    sendMetrikaEvent('navigation', { to: section, from: 'footer' });
+    
+    // Переходим на главную страницу
+    window.location.href = '/';
+    
+    // После перехода скролим к нужной секции
+    // Используем setTimeout, чтобы страница успела загрузиться
+    setTimeout(() => {
+      const element = document.getElementById(section);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 500);
+  };
+
   const handlePhoneClick = () => {
     sendMetrikaGoal('phone_click');
     console.log('📞 Клик по телефону в футере');
@@ -20,6 +37,7 @@ const Footer = () => {
   const handleLogoClick = () => {
     sendMetrikaEvent('navigation', { to: 'home', from: 'footer_logo' });
     console.log('🏠 Клик по логотипу в футере');
+    window.location.href = '/';
   };
 
   const handlePrivacyClick = () => {
@@ -28,10 +46,10 @@ const Footer = () => {
   };
 
   const navLinks = [
-    { name: 'Портфолио', href: 'https://значков.рф/#portfolio' },
-    { name: 'Процесс', href: 'https://значков.рф/#process' },
-    { name: 'О нас', href: 'https://значков.рф/#why-us' },
-    { name: 'Контакты', href: 'https://значков.рф/#contact' },
+    { name: 'Портфолио', id: 'portfolio' },
+    { name: 'Процесс', id: 'process' },
+    { name: 'О нас', id: 'why-us' },
+    { name: 'Контакты', id: 'contact' },
   ];
 
   return (
@@ -40,15 +58,14 @@ const Footer = () => {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* Logo & Description */}
           <div className="lg:col-span-2">
-            <a 
-              href="https://значков.рф" 
+            <button 
               onClick={handleLogoClick}
-              className="inline-block mb-4"
+              className="inline-block mb-4 hover:opacity-80 transition-opacity"
             >
               <span className="font-serif text-2xl font-bold text-gold-gradient">
                 ЗНАЧКОВ.РФ
               </span>
-            </a>
+            </button>
             <p className="text-gray-400 text-sm leading-relaxed max-w-md mb-6">
               Производство ювелирных значков из золота и серебра с 1972 года. 
               Собственное производство полного цикла. Индивидуальное изготовление 
@@ -66,12 +83,12 @@ const Footer = () => {
             <ul className="space-y-3">
               {navLinks.map((link) => (
                 <li key={link.name}>
-                  <a
-                    href={link.href}
+                  <button
+                    onClick={() => navigateToHome(link.id)}
                     className="text-gray-400 hover:text-gold transition-colors text-sm"
                   >
                     {link.name}
-                  </a>
+                  </button>
                 </li>
               ))}
             </ul>
