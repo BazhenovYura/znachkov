@@ -79,7 +79,7 @@ const Header = () => {
       // Флаг для отслеживания состояния скролла
       let isScrolling = false;
       let scrollAttempts = 0;
-      const MAX_ATTEMPTS = 3;
+      const MAX_ATTEMPTS = 5;
       
       const timer = setTimeout(() => {
         console.log(`⏰ Таймер сработал через 800ms, попытка ${scrollAttempts + 1}`);
@@ -115,23 +115,23 @@ const Header = () => {
           (window as any).__targetY = targetY;
           (window as any).__sectionId = sectionId;
           
-          console.log('🔄 Выполняю scrollTo с behavior: smooth');
-          window.scrollTo({ top: targetY, behavior: 'smooth' });
+          // СНАЧАЛА скроллим без анимации для точности
+          console.log('🔄 Выполняю scrollTo с behavior: instant (для точности)');
+          window.scrollTo({ top: targetY, behavior: 'instant' });
           
-          // Проверяем через 100ms
+          // Проверяем через 50ms после instant
           setTimeout(() => {
             const currentScroll = window.scrollY;
-            console.log(`📍 ПОСЛЕ скролла (через 100ms) позиция:`, currentScroll);
+            console.log(`📍 ПОСЛЕ INSTANT скролла позиция:`, currentScroll);
             console.log(`🎯 Должны были попасть в:`, targetY);
             console.log(`📐 Разница:`, Math.abs(currentScroll - targetY));
-            console.log(`⏰ Время проверки:`, new Date().toISOString());
             
-            // Если разница большая, скроллим снова
-            if (Math.abs(currentScroll - targetY) > 20 && scrollAttempts < MAX_ATTEMPTS) {
-              console.log(`🔄 Повторный скролл для точности (попытка ${scrollAttempts + 1})`);
+            // Если разница есть, доводим smooth
+            if (Math.abs(currentScroll - targetY) > 10) {
+              console.log(`🔄 Доводка smooth скроллом (попытка ${scrollAttempts})`);
               window.scrollTo({ top: targetY, behavior: 'smooth' });
               
-              // Еще одна проверка через 100ms
+              // Проверяем через 200ms после smooth
               setTimeout(() => {
                 const finalScroll = window.scrollY;
                 console.log(`📍 ФИНАЛЬНАЯ позиция скролла:`, finalScroll);
@@ -139,18 +139,24 @@ const Header = () => {
                 console.log(`📐 Финальная разница:`, Math.abs(finalScroll - targetY));
                 console.log(`⏰ Финальное время:`, new Date().toISOString());
                 
-                // Проверяем, не сбросился ли скролл наверх
-                if (finalScroll < 100) {
-                  console.warn('⚠️ СКРОЛЛ СБРОСИЛСЯ НАВЕРХ! Возможная причина: перерендер или событие load');
+                if (Math.abs(finalScroll - targetY) > 20 && scrollAttempts < MAX_ATTEMPTS) {
+                  console.log(`⚠️ Всё ещё не доехали, повторим через 1 секунду`);
+                  setTimeout(() => {
+                    if (!isScrolling) return;
+                    console.log(`🔄 Финальный скролл (попытка ${scrollAttempts + 1})`);
+                    window.scrollTo({ top: targetY, behavior: 'smooth' });
+                    isScrolling = false;
+                  }, 1000);
+                } else {
+                  console.log('✅ Скролл выполнен успешно');
+                  isScrolling = false;
                 }
-                
-                isScrolling = false;
-              }, 100);
+              }, 200);
             } else {
-              console.log('✅ Скролл выполнен точно, разница в пределах 20px');
+              console.log('✅ Скролл выполнен точно, разница в пределах 10px');
               isScrolling = false;
             }
-          }, 100);
+          }, 50);
         } else {
           console.log('❌ Элемент не найден через 800ms или уже идет скролл');
           if (!element) {
