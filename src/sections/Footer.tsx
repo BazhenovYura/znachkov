@@ -6,8 +6,16 @@ const Footer = () => {
     // Отправляем событие в Метрику
     sendMetrikaEvent('navigation', { to: section, from: 'footer' });
     
-    // Переходим на главную страницу с якорем
-    window.location.href = `/#${section}`;
+    // Переходим на главную страницу
+    window.location.href = '/';
+    
+    // Скроллим через 300ms после загрузки страницы
+    setTimeout(() => {
+      const element = document.getElementById(section);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }, 300);
   };
 
   const handlePhoneClick = () => {
@@ -51,7 +59,7 @@ const Footer = () => {
           <div className="lg:col-span-2">
             <button 
               onClick={handleLogoClick}
-              className="inline-block mb-4 hover:opacity-80 transition-opacity"
+              className="inline-block mb-4 hover:opacity-80 transition-opacity cursor-pointer"
             >
               <span className="font-serif text-2xl font-bold text-gold-gradient">
                 ЗНАЧКОВ.РФ
@@ -76,7 +84,7 @@ const Footer = () => {
                 <li key={link.name}>
                   <button
                     onClick={() => navigateToHome(link.id)}
-                    className="text-gray-400 hover:text-gold transition-colors text-sm"
+                    className="text-gray-400 hover:text-gold transition-colors text-sm cursor-pointer"
                   >
                     {link.name}
                   </button>
