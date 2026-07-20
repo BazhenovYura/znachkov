@@ -87,23 +87,31 @@ const Header = () => {
   const navLinks = [
     { name: 'Портфолио', href: '#portfolio' },
     { name: 'Процесс', href: '#process' },
+    { name: 'Калькулятор', href: '/price-calculator' },
     { name: 'О нас', href: '#why-us' },
     { name: 'Контакты', href: '#contact' },
   ];
 
   const handleNavClick = (href: string) => {
-    const sectionId = href.substring(1);
-    sendMetrikaEvent('navigation', { to: sectionId, from: 'header_menu' });
-    
-    if (location.pathname === '/') {
-      const element = document.getElementById(sectionId);
-      if (element) {
-        const yOffset = -80;
-        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-        window.scrollTo({ top: y, behavior: 'smooth' });
+    // Проверяем, является ли ссылка якорем (начинается с #) или полным маршрутом
+    if (href.startsWith('#')) {
+      const sectionId = href.substring(1);
+      sendMetrikaEvent('navigation', { to: sectionId, from: 'header_menu' });
+      
+      if (location.pathname === '/') {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const yOffset = -80;
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      } else {
+        navigate('/', { state: { scrollTo: sectionId } });
       }
     } else {
-      navigate('/', { state: { scrollTo: sectionId } });
+      // Для обычных ссылок (например, /price-calculator)
+      sendMetrikaEvent('navigation', { to: href, from: 'header_menu' });
+      navigate(href);
     }
     
     setIsMobileMenuOpen(false);
