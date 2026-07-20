@@ -7,44 +7,42 @@ const Footer = () => {
   const location = useLocation();
 
   const handleNavClick = (href: string) => {
-    const sectionId = href.substring(1);
-    console.log('🔗 Навигация к секции из Footer:', sectionId);
-    
-    sendMetrikaEvent('navigation', { to: sectionId, from: 'footer' });
-    
-    if (location.pathname === '/') {
-      // Если на главной - скролим к секции
-      const element = document.getElementById(sectionId);
-      if (element) {
-        const yOffset = -80;
-        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
-        window.scrollTo({ top: y, behavior: 'smooth' });
+    // Проверяем, является ли ссылка якорем (начинается с #) или полным маршрутом
+    if (href.startsWith('#')) {
+      const sectionId = href.substring(1);
+      sendMetrikaEvent('navigation', { to: sectionId, from: 'footer' });
+      
+      if (location.pathname === '/') {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const yOffset = -80;
+          const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: y, behavior: 'smooth' });
+        }
+      } else {
+        navigate('/', { state: { scrollTo: sectionId } });
       }
     } else {
-      // Если не на главной - переходим с state
-      // Header сам обработает скролл через свой useEffect
-      navigate('/', { state: { scrollTo: sectionId } });
+      // Для обычных ссылок (например, /price-calculator)
+      sendMetrikaEvent('navigation', { to: href, from: 'footer' });
+      navigate(href);
     }
   };
 
   const handlePhoneClick = () => {
     sendMetrikaGoal('phone_click');
-    console.log('📞 Клик по телефону в футере');
   };
 
   const handleMailClick = () => {
     sendMetrikaEvent('email_click', { from: 'footer' });
-    console.log('📧 Клик по email в футере');
   };
 
   const handleAddressClick = () => {
     sendMetrikaEvent('address_click', { from: 'footer' });
-    console.log('📍 Клик по адресу в футере');
   };
 
   const handleLogoClick = () => {
     sendMetrikaEvent('navigation', { to: 'home', from: 'footer_logo' });
-    console.log('🏠 Клик по логотипу в футере');
     
     if (location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -58,12 +56,12 @@ const Footer = () => {
 
   const handlePrivacyClick = () => {
     sendMetrikaEvent('privacy_policy_click', { from: 'footer' });
-    console.log('📄 Клик по политике конфиденциальности');
   };
 
   const navLinks = [
     { name: 'Портфолио', href: '#portfolio' },
     { name: 'Процесс', href: '#process' },
+    { name: 'Калькулятор', href: '/price-calculator' },
     { name: 'О нас', href: '#why-us' },
     { name: 'Контакты', href: '#contact' },
   ];
