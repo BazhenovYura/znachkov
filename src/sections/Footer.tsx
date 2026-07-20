@@ -6,9 +6,49 @@ const Footer = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Копируем useEffect из Header для обработки скролла при переходе с якорем
+  useEffect(() => {
+    if (location.pathname === '/' && location.state?.scrollTo) {
+      const sectionId = location.state.scrollTo;
+      console.log('🎯 Попытка скролла к секции из Footer:', sectionId);
+      
+      const timer = setTimeout(() => {
+        const element = document.getElementById(sectionId);
+        
+        if (element) {
+          console.log('✅ Элемент найден, скроллим к', sectionId);
+          
+          const getYOffsetByScreenWidth = (width: number) => {
+            if (width < 640) return -40;
+            if (width < 768) return -50;
+            if (width < 1024) return -60;
+            if (width < 1280) return -70;
+            return -80;
+          };
+          
+          const originalScreenWidth = location.state?.originalScreenWidth || window.innerWidth;
+          const yOffset = getYOffsetByScreenWidth(originalScreenWidth);
+          
+          const targetY = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+          
+          // Очищаем state после скролла
+          setTimeout(() => {
+            navigate('/', { replace: true, state: {} });
+          }, 200);
+        } else {
+          console.log('❌ Элемент не найден');
+          navigate('/', { replace: true, state: {} });
+        }
+      }, 300);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [location, navigate]);
+
   const handleNavClick = (href: string) => {
     const sectionId = href.substring(1);
-    console.log('🔗 Навигация к секции:', sectionId);
+    console.log('🔗 Навигация к секции из Footer:', sectionId);
     
     // Отправляем событие в Метрику
     sendMetrikaEvent('navigation', { to: sectionId, from: 'footer' });
