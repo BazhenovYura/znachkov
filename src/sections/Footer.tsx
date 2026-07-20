@@ -4,40 +4,46 @@ import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 const Footer = () => {
   const scrollToSection = (href: string) => {
     const sectionId = href.substring(1);
-    const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
+    
+    // Проверяем, находимся ли мы на главной странице
+    const isHomePage = window.location.pathname === '/' || window.location.pathname === '';
+    
+    if (isHomePage) {
+      // Если на главной - скролим к секции
+      const element = document.querySelector(href);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    } else {
+      // Если не на главной - переходим на главную с якорем
+      window.location.href = `/${href}`;
     }
+    
     // Отправляем событие в Метрику
     sendMetrikaEvent('navigation', { to: sectionId, from: 'footer' });
   };
 
   const handlePhoneClick = () => {
-    // Отправляем событие в Метрику - клик по телефону
     sendMetrikaGoal('phone_click');
     console.log('📞 Клик по телефону в футере');
   };
 
   const handleMailClick = () => {
-    // Отправляем событие в Метрику - клик по email
     sendMetrikaEvent('email_click', { from: 'footer' });
     console.log('📧 Клик по email в футере');
   };
 
   const handleAddressClick = () => {
-    // Отправляем событие в Метрику - клик по адресу
     sendMetrikaEvent('address_click', { from: 'footer' });
     console.log('📍 Клик по адресу в футере');
   };
 
   const handleLogoClick = () => {
-    // Отправляем событие в Метрику - клик по логотипу
     sendMetrikaEvent('navigation', { to: 'home', from: 'footer_logo' });
     console.log('🏠 Клик по логотипу в футере');
   };
 
   const handlePrivacyClick = () => {
-    // Отправляем событие в Метрику - клик по политике конфиденциальности
     sendMetrikaEvent('privacy_policy_click', { from: 'footer' });
     console.log('📄 Клик по политике конфиденциальности');
   };
@@ -56,7 +62,7 @@ const Footer = () => {
           {/* Logo & Description */}
           <div className="lg:col-span-2">
             <a 
-              href="#" 
+              href="/" 
               onClick={handleLogoClick}
               className="inline-block mb-4"
             >
