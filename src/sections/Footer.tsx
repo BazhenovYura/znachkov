@@ -1,21 +1,30 @@
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 const Footer = () => {
-  const navigateToHome = (section: string) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleNavClick = (href: string) => {
+    const sectionId = href.substring(1);
+    console.log('🔗 Навигация к секции:', sectionId);
+    
     // Отправляем событие в Метрику
-    sendMetrikaEvent('navigation', { to: section, from: 'footer' });
+    sendMetrikaEvent('navigation', { to: sectionId, from: 'footer' });
     
-    // Переходим на главную страницу
-    window.location.href = '/';
-    
-    // Скроллим через 300ms после загрузки страницы
-    setTimeout(() => {
-      const element = document.getElementById(section);
+    if (location.pathname === '/') {
+      // Если на главной - скролим к секции
+      const element = document.getElementById(sectionId);
       if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
+        const yOffset = -80;
+        const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        window.scrollTo({ top: y, behavior: 'smooth' });
       }
-    }, 300);
+    } else {
+      // Если не на главной - переходим с state
+      navigate('/', { state: { scrollTo: sectionId } });
+    }
   };
 
   const handlePhoneClick = () => {
@@ -36,7 +45,15 @@ const Footer = () => {
   const handleLogoClick = () => {
     sendMetrikaEvent('navigation', { to: 'home', from: 'footer_logo' });
     console.log('🏠 Клик по логотипу в футере');
-    window.location.href = '/';
+    
+    if (location.pathname === '/') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate('/');
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }, 500);
+    }
   };
 
   const handlePrivacyClick = () => {
@@ -45,10 +62,10 @@ const Footer = () => {
   };
 
   const navLinks = [
-    { name: 'Портфолио', id: 'portfolio' },
-    { name: 'Процесс', id: 'process' },
-    { name: 'О нас', id: 'why-us' },
-    { name: 'Контакты', id: 'contact' },
+    { name: 'Портфолио', href: '#portfolio' },
+    { name: 'Процесс', href: '#process' },
+    { name: 'О нас', href: '#why-us' },
+    { name: 'Контакты', href: '#contact' },
   ];
 
   return (
@@ -83,7 +100,7 @@ const Footer = () => {
               {navLinks.map((link) => (
                 <li key={link.name}>
                   <button
-                    onClick={() => navigateToHome(link.id)}
+                    onClick={() => handleNavClick(link.href)}
                     className="text-gray-400 hover:text-gold transition-colors text-sm cursor-pointer"
                   >
                     {link.name}
