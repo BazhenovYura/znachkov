@@ -1,41 +1,7 @@
-import { useNavigate } from 'react-router-dom';
 import { Phone, Mail, MapPin } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 const Footer = () => {
-  const navigate = useNavigate();
-
-  const scrollToSection = (href: string) => {
-    const sectionId = href.substring(1);
-    
-    // Проверяем, находимся ли мы на главной странице
-    const isHomePage = window.location.pathname === '/' || 
-                       window.location.pathname === '' ||
-                       window.location.hash === '#/' ||
-                       window.location.hash === '';
-    
-    if (isHomePage) {
-      // Если на главной - скролим к секции
-      const element = document.querySelector(href);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    } else {
-      // Если не на главной - переходим на главную
-      navigate('/');
-      // После перехода на главную, скролим к секции
-      setTimeout(() => {
-        const element = document.querySelector(href);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
-        }
-      }, 300);
-    }
-    
-    // Отправляем событие в Метрику
-    sendMetrikaEvent('navigation', { to: sectionId, from: 'footer' });
-  };
-
   const handlePhoneClick = () => {
     sendMetrikaGoal('phone_click');
     console.log('📞 Клик по телефону в футере');
@@ -62,10 +28,10 @@ const Footer = () => {
   };
 
   const navLinks = [
-    { name: 'Портфолио', href: '#portfolio' },
-    { name: 'Процесс', href: '#process' },
-    { name: 'О нас', href: '#why-us' },
-    { name: 'Контакты', href: '#contact' },
+    { name: 'Портфолио', href: 'https://значков.рф/#portfolio' },
+    { name: 'Процесс', href: 'https://значков.рф/#process' },
+    { name: 'О нас', href: 'https://значков.рф/#why-us' },
+    { name: 'Контакты', href: 'https://значков.рф/#contact' },
   ];
 
   return (
@@ -75,12 +41,8 @@ const Footer = () => {
           {/* Logo & Description */}
           <div className="lg:col-span-2">
             <a 
-              href="/" 
-              onClick={(e) => {
-                e.preventDefault();
-                navigate('/');
-                handleLogoClick();
-              }}
+              href="https://значков.рф" 
+              onClick={handleLogoClick}
               className="inline-block mb-4"
             >
               <span className="font-serif text-2xl font-bold text-gold-gradient">
@@ -104,12 +66,12 @@ const Footer = () => {
             <ul className="space-y-3">
               {navLinks.map((link) => (
                 <li key={link.name}>
-                  <button
-                    onClick={() => scrollToSection(link.href)}
+                  <a
+                    href={link.href}
                     className="text-gray-400 hover:text-gold transition-colors text-sm"
                   >
                     {link.name}
-                  </button>
+                  </a>
                 </li>
               ))}
             </ul>
