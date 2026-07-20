@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { Phone, X, Menu } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
-// Константа с URL вашей Яндекс Функции
 const YANDEX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ejvffqhagifq5goidk';
 
 const Header = () => {
@@ -19,12 +18,6 @@ const Header = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Отладка: логируем состояние при загрузке компонента
-  console.log('📍 Header загружен');
-  console.log('📍 Текущий pathname:', location.pathname);
-  console.log('📦 State из навигации:', location.state);
-
-  // Блокировка скролла при открытом меню или модальном окне
   useEffect(() => {
     if (isMobileMenuOpen || isModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -50,37 +43,15 @@ const Header = () => {
       const sectionId = location.state.scrollTo;
       const originalScreenWidth = location.state?.originalScreenWidth;
       
-      console.log('🎯 Попытка скролла к секции:', sectionId);
-      console.log('📱 Текущая ширина экрана:', window.innerWidth);
-      console.log('📱 Исходная ширина экрана:', originalScreenWidth);
-      console.log('📦 Полный state:', location.state);
-      
-      // Проверяем, есть ли элемент в DOM прямо сейчас
-      const elementNow = document.getElementById(sectionId);
-      console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
-      
-      if (elementNow) {
-        const rect = elementNow.getBoundingClientRect();
-        console.log('📐 Позиция элемента сейчас:', {
-          top: rect.top,
-          bottom: rect.bottom,
-          height: rect.height,
-          offsetTop: elementNow.offsetTop,
-          pageYOffset: window.pageYOffset
-        });
-      } else {
-        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
-        console.log('📋 Все ID на странице:', allIds);
+      // Если уже скроллили, ничего не делаем
+      if (location.state?._scrolled) {
+        return;
       }
       
-      // Увеличиваем задержку до 1500ms для полной загрузки всех элементов
       const timer = setTimeout(() => {
         const element = document.getElementById(sectionId);
-        console.log('⏰ Через 1500мс - элемент найден:', !!element);
         
         if (element) {
-          console.log('✅ Элемент найден, скроллим к', sectionId);
-          
           const getYOffsetByScreenWidth = (width: number) => {
             if (width < 640) return -40;
             if (width < 768) return -50;
@@ -91,67 +62,32 @@ const Header = () => {
           
           const widthForOffset = originalScreenWidth || window.innerWidth;
           const yOffset = getYOffsetByScreenWidth(widthForOffset);
-          console.log('📏 Отступ для ширины', widthForOffset, ':', yOffset);
-          
-          // Получаем позицию элемента
           const rect = element.getBoundingClientRect();
           const targetY = rect.top + window.pageYOffset + yOffset;
-          console.log('🎯 Целевая позиция скролла:', targetY);
-          console.log('📍 Текущая позиция скролла ДО:', window.scrollY);
           
-          // Сначала скроллим без анимации для точности
-          window.scrollTo({ top: targetY, behavior: 'instant' });
+          // Отмечаем, что скролл выполняется
+          navigate('/', { 
+            replace: true, 
+            state: { 
+              scrollTo: sectionId, 
+              _scrolled: true 
+            } 
+          });
           
-          // Через 50ms проверяем и при необходимости корректируем
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+          
+          // Очищаем state после скролла
           setTimeout(() => {
-            const currentScroll = window.scrollY;
-            console.log('📍 ПОСЛЕ instant скролла позиция:', currentScroll);
-            console.log('🎯 Должны были попасть в:', targetY);
-            console.log('📐 Разница:', Math.abs(currentScroll - targetY));
-            
-            // Если разница больше 10px, скроллим снова
-            if (Math.abs(currentScroll - targetY) > 10) {
-              console.log('🔄 Повторный скролл для точности');
-              window.scrollTo({ top: targetY, behavior: 'smooth' });
-            }
-            
-            // Очищаем state после скролла
-            setTimeout(() => {
-              navigate('/', { replace: true, state: {} });
-            }, 300);
-          }, 50);
+            navigate('/', { replace: true, state: {} });
+          }, 500);
         } else {
-          console.log('❌ Элемент не найден через 1500мс');
-          // Очищаем state даже если элемент не найден
           navigate('/', { replace: true, state: {} });
         }
-      }, 1500);
+      }, 300);
       
       return () => clearTimeout(timer);
     }
   }, [location, navigate]);
-
-  // Дополнительная проверка после полной загрузки страницы
-  useEffect(() => {
-    if (location.pathname === '/' && location.state?.scrollTo) {
-      const sectionId = location.state.scrollTo;
-      
-      const handleLoad = () => {
-        console.log('🔄 Страница полностью загружена, проверяем скролл для:', sectionId);
-        const element = document.getElementById(sectionId);
-        if (element) {
-          const yOffset = -80;
-          const rect = element.getBoundingClientRect();
-          const targetY = rect.top + window.pageYOffset + yOffset;
-          console.log('🎯 Повторный скролл после загрузки страницы к:', sectionId);
-          window.scrollTo({ top: targetY, behavior: 'smooth' });
-        }
-      };
-      
-      window.addEventListener('load', handleLoad);
-      return () => window.removeEventListener('load', handleLoad);
-    }
-  }, [location]);
 
   const navLinks = [
     { name: 'Портфолио', href: '#portfolio' },
@@ -162,9 +98,6 @@ const Header = () => {
 
   const handleNavClick = (href: string) => {
     const sectionId = href.substring(1);
-    console.log('🔗 Навигация к секции:', sectionId);
-    
-    // Отправляем событие в Метрику
     sendMetrikaEvent('navigation', { to: sectionId, from: 'header_menu' });
     
     if (location.pathname === '/') {
@@ -182,14 +115,10 @@ const Header = () => {
   };
 
   const handlePhoneClick = () => {
-    // Отправляем событие в Метрику - клик по телефону
     sendMetrikaGoal('phone_click');
-    console.log('📞 Клик по телефону');
   };
 
   const goToHome = () => {
-    console.log('🏠 Возврат на главную');
-    // Отправляем событие в Метрику - клик по логотипу
     sendMetrikaEvent('navigation', { to: 'home', from: 'logo' });
     
     if (location.pathname === '/') {
@@ -203,7 +132,6 @@ const Header = () => {
     setIsMobileMenuOpen(false);
   };
 
-  // Обновленная функция отправки через Яндекс Функцию
   const sendToTelegram = async (data: typeof formData) => {
     const message = `
 📞 <b>Заказ обратного звонка с сайта ЗНАЧКОВ.РФ</b>
@@ -230,11 +158,9 @@ const Header = () => {
     });
 
     const responseData = await response.json();
-    
     if (!responseData.ok) {
       throw new Error('Ошибка отправки в Telegram');
     }
-
     return responseData;
   };
 
@@ -242,13 +168,11 @@ const Header = () => {
     e.preventDefault();
     
     if (!isAgreed) {
-      // Отправляем событие о неудачной попытке (не согласился с политикой)
       sendMetrikaEvent('form_validation_error', { reason: 'privacy_not_agreed' });
       alert('Необходимо согласиться с политикой конфиденциальности');
       return;
     }
     
-    // Валидация полей
     if (!formData.name.trim() || !formData.phone.trim()) {
       sendMetrikaEvent('form_validation_error', { reason: 'empty_fields' });
       alert('Пожалуйста, заполните все обязательные поля');
@@ -259,18 +183,13 @@ const Header = () => {
     
     try {
       await sendToTelegram(formData);
-      
-      // Отправляем цель в Метрику - успешная отправка формы
       sendMetrikaGoal('callback_form_submit');
-      
       setIsModalOpen(false);
       
-      // ===== ВАЖНО: Определяем текущую секцию =====
-      let currentSection = 'hero'; // по умолчанию
+      let currentSection = 'hero';
       let currentScreenWidth = window.innerWidth;
       
       if (location.pathname === '/') {
-        // Массив всех секций на главной
         const sections = [
           { id: 'hero', element: document.getElementById('hero') },
           { id: 'portfolio', element: document.getElementById('portfolio') },
@@ -282,36 +201,20 @@ const Header = () => {
           { id: 'contact', element: document.getElementById('contact') }
         ];
         
-        // Текущая позиция скролла с учётом шапки
         const scrollPosition = window.scrollY + 200;
         
-        console.log('📏 Текущая позиция скролла:', scrollPosition);
-        console.log('📱 Ширина экрана при отправке:', currentScreenWidth);
-        
-        // Ищем секцию, в которой находится пользователь
         for (const section of sections) {
           if (section.element) {
             const rect = section.element.getBoundingClientRect();
             const sectionTop = window.scrollY + rect.top;
             const sectionBottom = sectionTop + rect.height;
-            
-            console.log(`🔍 Секция ${section.id}: от ${sectionTop} до ${sectionBottom}, текущая ${scrollPosition}`);
-            
-            // Если текущая позиция скролла внутри этой секции
             if (scrollPosition >= sectionTop && scrollPosition <= sectionBottom) {
               currentSection = section.id;
-              console.log(`✅ Пользователь в секции: ${section.id}`);
               break;
             }
-          } else {
-            console.log(`⚠️ Элемент ${section.id} не найден на странице`);
           }
         }
       }
-      // ============================================
-      
-      console.log('📤 Отправляем на thanks с секцией:', currentSection);
-      console.log('📱 Передаём ширину экрана:', currentScreenWidth);
       
       navigate('/thanks', { 
         state: { 
@@ -326,7 +229,6 @@ const Header = () => {
       
     } catch (error) {
       console.error('❌ Ошибка отправки:', error);
-      // Отправляем событие об ошибке
       sendMetrikaEvent('form_submit_error', { error: String(error) });
       alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
@@ -336,25 +238,18 @@ const Header = () => {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
+    setFormData({ ...formData, [name]: value });
     
-    // Отправляем событие о начале заполнения поля (только первый раз)
     if (!formData[name as keyof typeof formData] && value) {
       sendMetrikaEvent('form_field_filled', { field: name });
     }
   };
 
   const handleFocus = (fieldName: string) => {
-    // Отправляем событие о фокусе на поле
     sendMetrikaEvent('form_field_focus', { field: fieldName });
   };
 
   const openModal = () => {
-    console.log('📱 Открытие модального окна');
-    // Отправляем цель в Метрику - открытие модалки обратного звонка
     sendMetrikaGoal('open_callback_modal');
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
@@ -363,7 +258,6 @@ const Header = () => {
   };
 
   const closeModal = () => {
-    // Отправляем событие о закрытии модалки
     if (formData.name || formData.phone) {
       sendMetrikaEvent('modal_closed_with_data');
     } else {
@@ -374,7 +268,6 @@ const Header = () => {
 
   return (
     <>
-      {/* Затемнение фона при открытом мобильном меню */}
       {isMobileMenuOpen && (
         <div 
           className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40"
@@ -391,7 +284,6 @@ const Header = () => {
       >
         <div className="w-full px-4 sm:px-6 lg:px-12 xl:px-20">
           <div className="flex items-center justify-between">
-            {/* Логотип */}
             <button 
               onClick={goToHome} 
               className="flex items-center gap-2"
@@ -414,7 +306,6 @@ const Header = () => {
             </nav>
 
             <div className="hidden lg:flex items-center gap-6">
-              {/* Телефон */}
               <a
                 href="tel:+79227474474"
                 onClick={handlePhoneClick}
@@ -442,7 +333,6 @@ const Header = () => {
         </div>
       </header>
 
-      {/* Мобильное меню на весь экран */}
       <div
         className={`lg:hidden fixed inset-0 z-[70] transform transition-transform duration-300 ease-in-out ${
           isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
@@ -475,7 +365,6 @@ const Header = () => {
               ))}
               
               <div className="pt-8 mt-8 border-t border-gray-800">
-                {/* Телефон в мобильном меню */}
                 <a
                   href="tel:+79227474474"
                   onClick={() => {
