@@ -6,7 +6,11 @@ const Footer = () => {
     const sectionId = href.substring(1);
     
     // Проверяем, находимся ли мы на главной странице
-    const isHomePage = window.location.pathname === '/' || window.location.pathname === '';
+    // Для HashRouter главная страница имеет вид / или /#/
+    const isHomePage = window.location.pathname === '/' || 
+                       window.location.pathname === '' ||
+                       window.location.hash === '#/' ||
+                       window.location.hash === '';
     
     if (isHomePage) {
       // Если на главной - скролим к секции
@@ -15,11 +19,10 @@ const Footer = () => {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      // Если не на главной - переходим на главную с якорем через HashRouter
-      // Для HashRouter используем window.location.hash
-      window.location.hash = href;
-      // Перезагружаем страницу, чтобы применились изменения
-      window.location.reload();
+      // Если не на главной - переходим на главную с якорем
+      // Формируем правильный URL для HashRouter
+      const targetUrl = `/#/${href}`;
+      window.location.href = targetUrl;
     }
     
     // Отправляем событие в Метрику
