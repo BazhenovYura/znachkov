@@ -43,14 +43,20 @@ const Header = () => {
 
   // Обработка скролла при возврате с якорем
   useEffect(() => {
+    console.log('🔄 useEffect [location, navigate] сработал');
+    console.log('📍 location.pathname:', location.pathname);
+    console.log('📍 location.state:', location.state);
+    console.log('📍 location.state?.scrollTo:', location.state?.scrollTo);
+    
     if (location.pathname === '/' && location.state?.scrollTo) {
       const sectionId = location.state.scrollTo;
       const originalScreenWidth = location.state?.originalScreenWidth;
       
-      console.log('🎯 Попытка скролла к секции:', sectionId);
+      console.log('🎯 НАЧАЛО: Попытка скролла к секции:', sectionId);
       console.log('📱 Текущая ширина экрана:', window.innerWidth);
       console.log('📱 Исходная ширина экрана:', originalScreenWidth);
       console.log('📦 Полный state:', location.state);
+      console.log('⏰ Текущее время:', new Date().toISOString());
       
       const elementNow = document.getElementById(sectionId);
       console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
@@ -64,14 +70,27 @@ const Header = () => {
           offsetTop: elementNow.offsetTop,
           pageYOffset: window.pageYOffset
         });
+      } else {
+        console.log('❌ Элемент НЕ найден в DOM');
+        const allIds = Array.from(document.querySelectorAll('[id]')).map(el => el.id);
+        console.log('📋 Все ID на странице:', allIds);
       }
       
+      // Флаг для отслеживания состояния скролла
+      let isScrolling = false;
+      let scrollAttempts = 0;
+      const MAX_ATTEMPTS = 3;
+      
       const timer = setTimeout(() => {
+        console.log(`⏰ Таймер сработал через 800ms, попытка ${scrollAttempts + 1}`);
         const element = document.getElementById(sectionId);
-        console.log('⏰ Через 800мс - элемент найден:', !!element);
+        console.log('🔍 Элемент через 800ms найден:', !!element);
         
-        if (element) {
-          console.log('✅ Элемент найден, скроллим к', sectionId);
+        if (element && !isScrolling) {
+          isScrolling = true;
+          scrollAttempts++;
+          
+          console.log(`✅ Элемент найден, скроллим к ${sectionId} (попытка ${scrollAttempts})`);
           
           const getYOffsetByScreenWidth = (width: number) => {
             if (width < 640) return -40;
@@ -85,54 +104,148 @@ const Header = () => {
           const yOffset = getYOffsetByScreenWidth(widthForOffset);
           console.log('📏 Отступ для ширины', widthForOffset, ':', yOffset);
           
-          const targetY = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          const rect = element.getBoundingClientRect();
+          const targetY = rect.top + window.pageYOffset + yOffset;
           console.log('🎯 Целевая позиция скролла:', targetY);
           console.log('📍 Текущая позиция скролла ДО:', window.scrollY);
+          console.log('📐 Позиция элемента rect.top:', rect.top);
+          console.log('📐 pageYOffset:', window.pageYOffset);
           
-          // Сначала скроллим без анимации для точности
-          window.scrollTo({ top: targetY, behavior: 'instant' });
+          // Сохраняем targetY в глобальную переменную для отладки
+          (window as any).__targetY = targetY;
+          (window as any).__sectionId = sectionId;
           
+          console.log('🔄 Выполняю scrollTo с behavior: smooth');
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+          
+          // Проверяем через 100ms
           setTimeout(() => {
             const currentScroll = window.scrollY;
-            console.log('📍 ПОСЛЕ скролла позиция:', currentScroll);
-            console.log('🎯 Должны были попасть в:', targetY);
-            console.log('📐 Разница:', Math.abs(currentScroll - targetY));
+            console.log(`📍 ПОСЛЕ скролла (через 100ms) позиция:`, currentScroll);
+            console.log(`🎯 Должны были попасть в:`, targetY);
+            console.log(`📐 Разница:`, Math.abs(currentScroll - targetY));
+            console.log(`⏰ Время проверки:`, new Date().toISOString());
             
-            // Очищаем state после скролла
-            setTimeout(() => {
-              navigate('/', { replace: true, state: {} });
-            }, 300);
-          }, 50);
+            // Если разница большая, скроллим снова
+            if (Math.abs(currentScroll - targetY) > 20 && scrollAttempts < MAX_ATTEMPTS) {
+              console.log(`🔄 Повторный скролл для точности (попытка ${scrollAttempts + 1})`);
+              window.scrollTo({ top: targetY, behavior: 'smooth' });
+              
+              // Еще одна проверка через 100ms
+              setTimeout(() => {
+                const finalScroll = window.scrollY;
+                console.log(`📍 ФИНАЛЬНАЯ позиция скролла:`, finalScroll);
+                console.log(`🎯 Целевая позиция:`, targetY);
+                console.log(`📐 Финальная разница:`, Math.abs(finalScroll - targetY));
+                console.log(`⏰ Финальное время:`, new Date().toISOString());
+                
+                // Проверяем, не сбросился ли скролл наверх
+                if (finalScroll < 100) {
+                  console.warn('⚠️ СКРОЛЛ СБРОСИЛСЯ НАВЕРХ! Возможная причина: перерендер или событие load');
+                }
+                
+                isScrolling = false;
+              }, 100);
+            } else {
+              console.log('✅ Скролл выполнен точно, разница в пределах 20px');
+              isScrolling = false;
+            }
+          }, 100);
         } else {
-          console.log('❌ Элемент не найден через 800мс');
-          navigate('/', { replace: true, state: {} });
+          console.log('❌ Элемент не найден через 800ms или уже идет скролл');
+          if (!element) {
+            console.log('❌ Элемент с id="' + sectionId + '" не существует на странице');
+          }
+          if (isScrolling) {
+            console.log('⚠️ Скролл уже выполняется, пропускаем');
+          }
         }
       }, 800);
       
-      return () => clearTimeout(timer);
+      return () => {
+        console.log('🧹 Очистка таймера, isScrolling:', isScrolling);
+        clearTimeout(timer);
+        isScrolling = true;
+      };
+    } else {
+      console.log('ℹ️ Условие для скролла НЕ выполнено');
+      console.log('  - pathname === "/"?', location.pathname === '/');
+      console.log('  - state?.scrollTo существует?', !!location.state?.scrollTo);
     }
   }, [location, navigate]);
 
   // Дополнительная проверка после полной загрузки страницы
   useEffect(() => {
+    console.log('🔄 useEffect [location] (load event) сработал');
+    console.log('📍 location.pathname:', location.pathname);
+    console.log('📍 location.state:', location.state);
+    
     if (location.pathname === '/' && location.state?.scrollTo) {
       const sectionId = location.state.scrollTo;
+      console.log('📌 Будет добавлен слушатель события load для секции:', sectionId);
       
       const handleLoad = () => {
-        console.log('🔄 Страница полностью загружена, проверяем скролл для:', sectionId);
+        console.log('🔄 СОБЫТИЕ LOAD: Страница полностью загружена');
+        console.log('🔄 Проверяем скролл для секции:', sectionId);
+        console.log('📍 Текущий scrollY:', window.scrollY);
+        
         const element = document.getElementById(sectionId);
+        console.log('🔍 Элемент на load:', !!element);
+        
         if (element) {
           const yOffset = -80;
           const rect = element.getBoundingClientRect();
           const targetY = rect.top + window.pageYOffset + yOffset;
-          console.log('🎯 Повторный скролл после загрузки страницы к:', sectionId);
+          console.log(`🔄 Событие LOAD: скроллим к ${sectionId}, targetY:`, targetY);
+          console.log(`📍 Текущий scrollY ДО скролла на load:`, window.scrollY);
+          
           window.scrollTo({ top: targetY, behavior: 'smooth' });
+          
+          setTimeout(() => {
+            console.log(`📍 ПОСЛЕ скролла на load позиция:`, window.scrollY);
+            console.log(`🎯 Целевая позиция на load:`, targetY);
+            console.log(`📐 Разница на load:`, Math.abs(window.scrollY - targetY));
+          }, 200);
+        } else {
+          console.warn(`⚠️ Элемент ${sectionId} не найден на событии load`);
         }
       };
       
+      console.log('📌 Добавляем слушатель события load');
       window.addEventListener('load', handleLoad);
-      return () => window.removeEventListener('load', handleLoad);
+      
+      return () => {
+        console.log('🧹 Удаляем слушатель события load');
+        window.removeEventListener('load', handleLoad);
+      };
+    } else {
+      console.log('ℹ️ Условие для load event НЕ выполнено');
     }
+  }, [location]);
+
+  // Отслеживаем изменения scrollY
+  useEffect(() => {
+    let lastScrollY = window.scrollY;
+    
+    const handleScrollDebug = () => {
+      const currentScrollY = window.scrollY;
+      if (Math.abs(currentScrollY - lastScrollY) > 50) {
+        console.log(`📊 Изменение скролла: ${lastScrollY} -> ${currentScrollY}`);
+        lastScrollY = currentScrollY;
+        
+        // Если скролл упал до 0, логируем это
+        if (currentScrollY < 50 && lastScrollY > 100) {
+          console.warn('⚠️⚠️⚠️ ОБНАРУЖЕН СБРОС СКРОЛЛА НАВЕРХ!');
+          console.warn(`📊 Предыдущая позиция: ${lastScrollY}, Текущая: ${currentScrollY}`);
+          console.warn(`⏰ Время сброса: ${new Date().toISOString()}`);
+          console.warn(`📍 Текущий pathname: ${location.pathname}`);
+          console.warn(`📍 Текущий state:`, location.state);
+        }
+      }
+    };
+    
+    window.addEventListener('scroll', handleScrollDebug, { passive: true });
+    return () => window.removeEventListener('scroll', handleScrollDebug);
   }, [location]);
 
   const navLinks = [
@@ -144,18 +257,26 @@ const Header = () => {
 
   const handleNavClick = (href: string) => {
     const sectionId = href.substring(1);
-    console.log('🔗 Навигация к секции:', sectionId);
+    console.log(`🔗 НАВИГАЦИЯ: Клик по ссылке "${href}" -> секция "${sectionId}"`);
+    console.log(`📍 Текущий pathname: ${location.pathname}`);
+    console.log(`⏰ Время клика: ${new Date().toISOString()}`);
     
     sendMetrikaEvent('navigation', { to: sectionId, from: 'header_menu' });
     
     if (location.pathname === '/') {
+      console.log('📍 На главной странице, скроллим напрямую');
       const element = document.getElementById(sectionId);
       if (element) {
         const yOffset = -80;
         const y = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+        console.log(`🎯 Прямой скролл к ${sectionId}, targetY:`, y);
+        console.log(`📍 Текущий scrollY:`, window.scrollY);
         window.scrollTo({ top: y, behavior: 'smooth' });
+      } else {
+        console.warn(`⚠️ Элемент ${sectionId} не найден на главной странице`);
       }
     } else {
+      console.log(`📍 Переход на главную с state: { scrollTo: "${sectionId}" }`);
       navigate('/', { state: { scrollTo: sectionId } });
     }
     
@@ -169,13 +290,19 @@ const Header = () => {
 
   const goToHome = () => {
     console.log('🏠 Возврат на главную');
+    console.log(`📍 Текущий pathname: ${location.pathname}`);
+    console.log(`⏰ Время клика: ${new Date().toISOString()}`);
+    
     sendMetrikaEvent('navigation', { to: 'home', from: 'logo' });
     
     if (location.pathname === '/') {
+      console.log('📍 На главной, скроллим наверх');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
+      console.log('📍 Переход на главную');
       navigate('/');
       setTimeout(() => {
+        console.log('📍 Через 500ms скроллим наверх');
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }, 500);
     }
