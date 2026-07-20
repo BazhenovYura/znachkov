@@ -18,6 +18,10 @@ const Header = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  console.log('📍 Header загружен');
+  console.log('📍 Текущий pathname:', location.pathname);
+  console.log('📦 State из навигации:', location.state);
+
   useEffect(() => {
     if (isMobileMenuOpen || isModalOpen) {
       document.body.style.overflow = 'hidden';
@@ -43,15 +47,32 @@ const Header = () => {
       const sectionId = location.state.scrollTo;
       const originalScreenWidth = location.state?.originalScreenWidth;
       
-      // Если уже скроллили, ничего не делаем
-      if (location.state?._scrolled) {
-        return;
+      console.log('🎯 Попытка скролла к секции:', sectionId);
+      console.log('📱 Текущая ширина экрана:', window.innerWidth);
+      console.log('📱 Исходная ширина экрана:', originalScreenWidth);
+      console.log('📦 Полный state:', location.state);
+      
+      const elementNow = document.getElementById(sectionId);
+      console.log('🔍 Элемент сейчас в DOM:', !!elementNow);
+      
+      if (elementNow) {
+        const rect = elementNow.getBoundingClientRect();
+        console.log('📐 Позиция элемента сейчас:', {
+          top: rect.top,
+          bottom: rect.bottom,
+          height: rect.height,
+          offsetTop: elementNow.offsetTop,
+          pageYOffset: window.pageYOffset
+        });
       }
       
       const timer = setTimeout(() => {
         const element = document.getElementById(sectionId);
+        console.log('⏰ Через 800мс - элемент найден:', !!element);
         
         if (element) {
+          console.log('✅ Элемент найден, скроллим к', sectionId);
+          
           const getYOffsetByScreenWidth = (width: number) => {
             if (width < 640) return -40;
             if (width < 768) return -50;
@@ -62,32 +83,57 @@ const Header = () => {
           
           const widthForOffset = originalScreenWidth || window.innerWidth;
           const yOffset = getYOffsetByScreenWidth(widthForOffset);
-          const rect = element.getBoundingClientRect();
-          const targetY = rect.top + window.pageYOffset + yOffset;
+          console.log('📏 Отступ для ширины', widthForOffset, ':', yOffset);
           
-          // Отмечаем, что скролл выполняется
-          navigate('/', { 
-            replace: true, 
-            state: { 
-              scrollTo: sectionId, 
-              _scrolled: true 
-            } 
-          });
+          const targetY = element.getBoundingClientRect().top + window.pageYOffset + yOffset;
+          console.log('🎯 Целевая позиция скролла:', targetY);
+          console.log('📍 Текущая позиция скролла ДО:', window.scrollY);
           
-          window.scrollTo({ top: targetY, behavior: 'smooth' });
+          // Сначала скроллим без анимации для точности
+          window.scrollTo({ top: targetY, behavior: 'instant' });
           
-          // Очищаем state после скролла
           setTimeout(() => {
-            navigate('/', { replace: true, state: {} });
-          }, 500);
+            const currentScroll = window.scrollY;
+            console.log('📍 ПОСЛЕ скролла позиция:', currentScroll);
+            console.log('🎯 Должны были попасть в:', targetY);
+            console.log('📐 Разница:', Math.abs(currentScroll - targetY));
+            
+            // Очищаем state после скролла
+            setTimeout(() => {
+              navigate('/', { replace: true, state: {} });
+            }, 300);
+          }, 50);
         } else {
+          console.log('❌ Элемент не найден через 800мс');
           navigate('/', { replace: true, state: {} });
         }
-      }, 300);
+      }, 800);
       
       return () => clearTimeout(timer);
     }
   }, [location, navigate]);
+
+  // Дополнительная проверка после полной загрузки страницы
+  useEffect(() => {
+    if (location.pathname === '/' && location.state?.scrollTo) {
+      const sectionId = location.state.scrollTo;
+      
+      const handleLoad = () => {
+        console.log('🔄 Страница полностью загружена, проверяем скролл для:', sectionId);
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const yOffset = -80;
+          const rect = element.getBoundingClientRect();
+          const targetY = rect.top + window.pageYOffset + yOffset;
+          console.log('🎯 Повторный скролл после загрузки страницы к:', sectionId);
+          window.scrollTo({ top: targetY, behavior: 'smooth' });
+        }
+      };
+      
+      window.addEventListener('load', handleLoad);
+      return () => window.removeEventListener('load', handleLoad);
+    }
+  }, [location]);
 
   const navLinks = [
     { name: 'Портфолио', href: '#portfolio' },
@@ -98,6 +144,8 @@ const Header = () => {
 
   const handleNavClick = (href: string) => {
     const sectionId = href.substring(1);
+    console.log('🔗 Навигация к секции:', sectionId);
+    
     sendMetrikaEvent('navigation', { to: sectionId, from: 'header_menu' });
     
     if (location.pathname === '/') {
@@ -116,9 +164,11 @@ const Header = () => {
 
   const handlePhoneClick = () => {
     sendMetrikaGoal('phone_click');
+    console.log('📞 Клик по телефону');
   };
 
   const goToHome = () => {
+    console.log('🏠 Возврат на главную');
     sendMetrikaEvent('navigation', { to: 'home', from: 'logo' });
     
     if (location.pathname === '/') {
@@ -250,6 +300,7 @@ const Header = () => {
   };
 
   const openModal = () => {
+    console.log('📱 Открытие модального окна');
     sendMetrikaGoal('open_callback_modal');
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
