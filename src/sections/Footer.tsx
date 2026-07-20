@@ -6,17 +6,8 @@ const Footer = () => {
     // Отправляем событие в Метрику
     sendMetrikaEvent('navigation', { to: section, from: 'footer' });
     
-    // Переходим на главную страницу
-    window.location.href = '/';
-    
-    // После перехода скролим к нужной секции
-    // Используем setTimeout, чтобы страница успела загрузиться
-    setTimeout(() => {
-      const element = document.getElementById(section);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }, 500);
+    // Переходим на главную страницу с якорем
+    window.location.href = `/#${section}`;
   };
 
   const handlePhoneClick = () => {
