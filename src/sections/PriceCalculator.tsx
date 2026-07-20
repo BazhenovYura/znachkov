@@ -25,7 +25,7 @@ const SILVER_LABOR_COST = 2000;
 const GOLD_DENSITY = 0.0134;
 const SILVER_DENSITY = 0.0105;
 const MODEL_3D_COST = 10000;
-const ADDITIONAL_PROCESSING_COST = 1500; // стоимость за штуку без НДС
+const ADDITIONAL_PROCESSING_COST = 1500;
 
 const PriceCalculator = () => {
   const navigate = useNavigate();
@@ -34,7 +34,6 @@ const PriceCalculator = () => {
   const [priceLoadError, setPriceLoadError] = useState(false);
   const [isLoadingMode, setIsLoadingMode] = useState(true);
   
-  // Режим работы: 'manager' - показывает цены, 'client' - скрывает цены
   const [mode, setMode] = useState<'manager' | 'client'>('client');
   
   const [calculatorData, setCalculatorData] = useState({
@@ -69,22 +68,19 @@ const PriceCalculator = () => {
   const [priceHighlight, setPriceHighlight] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   
-  // Состояния для модального окна входа
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  // Состояния для дополнительной обработки
   const [additionalProcessing, setAdditionalProcessing] = useState({
-    goldPlating: false, // Золочение
-    rhodium: false,     // Родирование
-    blackening: false,  // Чернение
-    enamel: false,      // Эмаль
-    enamelColors: 1,    // Количество цветов эмали
+    goldPlating: false,
+    rhodium: false,
+    blackening: false,
+    enamel: false,
+    enamelColors: 1,
   });
 
-  // Функция для получения классов темы в зависимости от выбранного материала
   const getThemeClasses = () => {
     const isGold = calculatorData.material === 'gold';
     return {
@@ -98,15 +94,14 @@ const PriceCalculator = () => {
     };
   };
   
-  // Восстанавливаем режим из sessionStorage при загрузке
   useEffect(() => {
     const savedMode = sessionStorage.getItem('calculator_mode');
     if (savedMode === 'manager') {
       setMode('manager');
+      setCalculatorData(prev => ({ ...prev, quantity: 1 }));
     }
   }, []);
   
-  // Определяем режим из URL параметра (парсим из хэша, т.к. используется HashRouter)
   useEffect(() => {
     const hash = window.location.hash;
     const hashParams = hash.split('?')[1];
@@ -131,7 +126,6 @@ const PriceCalculator = () => {
     setIsLoadingMode(false);
   }, []);
 
-  // Загрузка параметров из URL (для шаринга)
   useEffect(() => {
     const hash = window.location.hash;
     const hashParams = hash.split('?')[1];
@@ -140,7 +134,6 @@ const PriceCalculator = () => {
     
     const params = new URLSearchParams(hashParams);
     
-    // Проверяем наличие параметров калькулятора
     const type = params.get('type');
     const material = params.get('material');
     const quantity = params.get('quantity');
@@ -148,7 +141,6 @@ const PriceCalculator = () => {
     const width = params.get('width');
     const height = params.get('height');
     
-    // Если есть хотя бы один параметр, применяем настройки
     if (type || material || quantity || shape || width || height) {
       setCalculatorData(prev => ({
         ...prev,
@@ -171,7 +163,6 @@ const PriceCalculator = () => {
     }
   }, []);
 
-  // Управление показом формы в зависимости от режима
   useEffect(() => {
     if (!isLoadingMode) {
       if (mode === 'client') {
@@ -184,7 +175,6 @@ const PriceCalculator = () => {
     }
   }, [mode, isLoadingMode]);
 
-  // Дополнительная проверка: принудительно показываем форму для клиентов
   useEffect(() => {
     if (mode === 'client' && !showForm && !isLoadingMode) {
       console.log('Принудительный показ формы для клиента');
@@ -192,7 +182,6 @@ const PriceCalculator = () => {
     }
   }, [mode, showForm, isLoadingMode]);
   
-  // Предустановленные размеры
   const presets = {
     maxi: { width: 35, height: 30, shape: 'rectangle' as const, label: 'MAXI', complexity: 1.4 },
     midi: { width: 25, height: 22, shape: 'rectangle' as const, label: 'MIDI', complexity: 1.3 },
@@ -205,7 +194,6 @@ const PriceCalculator = () => {
     circle_large: { width: 35, height: 35, shape: 'circle' as const, label: 'Круглый L', complexity: 1.35 },
   };
 
-  // Загрузка цен через прокси-функцию
   const fetchMetalPrices = async () => {
     setIsLoadingPrice(true);
     setPriceLoadError(false);
@@ -240,7 +228,6 @@ const PriceCalculator = () => {
     }
   };
 
-  // Получить текущую сложность
   const getCurrentComplexity = () => {
     if (calculatorData.type !== 'custom' && presets[calculatorData.type as keyof typeof presets]) {
       return presets[calculatorData.type as keyof typeof presets].complexity;
@@ -255,7 +242,6 @@ const PriceCalculator = () => {
     return 1.0;
   };
 
-  // Функция расчета цены
   const calculatePrice = () => {
     const isGold = calculatorData.material === 'gold';
     const metalPrice = isGold ? metalPrices.gold : metalPrices.silver;
@@ -293,7 +279,6 @@ const PriceCalculator = () => {
     const pricePerItemBeforeVAT = totalCostPerGram * weight * getCurrentComplexity();
     const pricePerItem = pricePerItemBeforeVAT * VAT_SELL_FACTOR;
     
-    // Расчет стоимости дополнительной обработки
     let additionalCostPerUnit = 0;
     const { goldPlating, rhodium, blackening, enamel, enamelColors } = additionalProcessing;
     
@@ -302,7 +287,6 @@ const PriceCalculator = () => {
     if (blackening) additionalCostPerUnit += ADDITIONAL_PROCESSING_COST;
     if (enamel) additionalCostPerUnit += ADDITIONAL_PROCESSING_COST * enamelColors;
     
-    // Дополнительная обработка с НДС
     const additionalCostWithVAT = additionalCostPerUnit * VAT_SELL_FACTOR;
     
     const totalItemsPrice = (pricePerItem + additionalCostWithVAT) * calculatorData.quantity;
@@ -321,7 +305,6 @@ const PriceCalculator = () => {
     };
   };
 
-  // Пересчет цены
   useEffect(() => {
     if (!metalPrices.gold || !metalPrices.silver) return;
     
@@ -336,7 +319,6 @@ const PriceCalculator = () => {
     setPricePerUnit(pricePerUnit);
   }, [calculatorData, metalPrices, additionalProcessing]);
 
-  // Загрузка цен при старте
   useEffect(() => {
     fetchMetalPrices();
     window.scrollTo(0, 0);
@@ -355,7 +337,6 @@ const PriceCalculator = () => {
       }));
       sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
     }
-    // Для менеджеров показываем форму после выбора параметров
     if (mode === 'manager' && !showForm) {
       setShowForm(true);
       sendMetrikaEvent('calculator_form_shown');
@@ -434,34 +415,38 @@ const PriceCalculator = () => {
     sendMetrikaEvent('calculator_param_change', { param: 'material', value: materialId });
   };
 
-  // Обработчики для количества
   const quantityPresets = [5, 10, 20, 30, 50, 100, 500];
   
   const handleQuantityPreset = (quantity: number) => {
+    if (mode === 'client' && quantity < 2) {
+      quantity = 2;
+    }
     setCalculatorData(prev => ({ ...prev, quantity }));
     sendMetrikaEvent('calculator_quantity_change', { quantity });
   };
 
   const handleQuantityChange = (delta: number) => {
-    const newQuantity = Math.max(2, Math.min(10000, calculatorData.quantity + delta));
+    const minQuantity = mode === 'manager' ? 1 : 2;
+    const newQuantity = Math.max(minQuantity, Math.min(10000, calculatorData.quantity + delta));
     setCalculatorData(prev => ({ ...prev, quantity: newQuantity }));
     sendMetrikaEvent('calculator_quantity_change', { quantity: newQuantity });
   };
 
   const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = parseInt(e.target.value);
-    if (isNaN(value)) value = 2;
-    value = Math.max(2, Math.min(10000, value));
+    const minQuantity = mode === 'manager' ? 1 : 2;
+    if (isNaN(value)) value = minQuantity;
+    value = Math.max(minQuantity, Math.min(10000, value));
     setCalculatorData(prev => ({ ...prev, quantity: value }));
     sendMetrikaEvent('calculator_quantity_manual', { quantity: value });
   };
 
   const handleQuantityMin = () => {
-    setCalculatorData(prev => ({ ...prev, quantity: 2 }));
-    sendMetrikaEvent('calculator_quantity_change', { quantity: 2 });
+    const minQuantity = mode === 'manager' ? 1 : 2;
+    setCalculatorData(prev => ({ ...prev, quantity: minQuantity }));
+    sendMetrikaEvent('calculator_quantity_change', { quantity: minQuantity });
   };
 
-  // Обработчики для дополнительной обработки
   const handleProcessingToggle = (type: 'goldPlating' | 'rhodium' | 'blackening' | 'enamel') => {
     setAdditionalProcessing(prev => ({
       ...prev,
@@ -476,7 +461,6 @@ const PriceCalculator = () => {
     }));
   };
 
-  // Обработчики для входа в режим менеджера
   const handleClientModeClick = () => {
     setShowLoginModal(true);
     setLogin('');
@@ -495,6 +479,7 @@ const PriceCalculator = () => {
       setPassword('');
       setLoginError('');
       sessionStorage.setItem('calculator_mode', 'manager');
+      setCalculatorData(prev => ({ ...prev, quantity: 1 }));
     } else {
       setLoginError('Неверный логин или пароль');
     }
@@ -545,7 +530,6 @@ const PriceCalculator = () => {
     return `${price.toLocaleString()} ₽/г`;
   };
 
-  // Компонент визуализации значка
   const ShapeVisualization = () => {
     const displayWidth = calculatorData.width;
     const displayHeight = calculatorData.height;
@@ -930,7 +914,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       </div>
 
       <div className="relative z-10 w-full px-4 sm:px-6 lg:px-12 xl:px-20 max-w-7xl mx-auto">
-        {/* Индикатор режима */}
         {mode === 'manager' && (
           <div className="fixed bottom-4 right-4 z-50 bg-green-500/20 border border-green-500/50 rounded-full px-3 py-1 text-xs text-green-400">
             🔓 Менеджер
@@ -1008,7 +991,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           </div>
         </div>
 
-        {/* Цены на металлы (только для менеджеров) */}
         {mode === 'manager' && (
           <div className="flex justify-center gap-6 mb-8 animate-fade-in-up">
             <div className={`flex items-center gap-2 px-4 py-2 ${theme.bgLight} rounded-full`}>
@@ -1049,7 +1031,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               Шаг 1. Выберите параметры заказа
             </h2>
             
-            {/* Материал */}
             {mode === 'manager' ? (
               <div className="mb-6">
                 <label className="block text-gray-400 text-sm mb-3">Материал *</label>
@@ -1322,8 +1303,20 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Количество (шт.) *</label>
               
-              {/* Быстрые кнопки */}
               <div className="flex flex-wrap gap-2 mb-3">
+                {mode === 'manager' && (
+                  <button
+                    type="button"
+                    onClick={() => handleQuantityPreset(1)}
+                    className={`px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
+                      calculatorData.quantity === 1
+                        ? 'bg-gold text-dark font-medium'
+                        : 'bg-dark border border-gray-700 text-gray-400 hover:border-gold/50'
+                    }`}
+                  >
+                    1 шт.
+                  </button>
+                )}
                 {quantityPresets.map(preset => (
                   <button
                     key={preset}
@@ -1340,7 +1333,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 ))}
               </div>
               
-              {/* Кнопки ручного изменения */}
               <div className="flex items-center gap-2 mb-2">
                 <button
                   type="button"
@@ -1375,7 +1367,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   name="quantity"
                   value={calculatorData.quantity}
                   onChange={handleQuantityInput}
-                  min="2"
+                  min={mode === 'manager' ? 1 : 2}
                   max="10000"
                   step="1"
                   className="flex-1 px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white text-center focus:border-gold focus:outline-none transition-colors"
@@ -1403,19 +1395,18 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 </button>
               </div>
               
-              {/* Подсказка */}
               <p className="text-gray-400 text-xs mt-2">Вы можете ввести число вручную</p>
-              <p className="text-gray-500 text-xs">От 2 до 10 000 штук</p>
+              <p className="text-gray-500 text-xs">
+                {mode === 'manager' ? 'От 1 до 10 000 штук' : 'От 2 до 10 000 штук'}
+              </p>
             </div>
 
-            {/* Дополнительная обработка */}
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Дополнительная обработка</label>
               <div className="bg-dark/30 rounded-xl p-4 border border-gray-800">
-                <p className="text-gray-500 text-xs mb-3">Выберите варианты дополнительной обработки.</p>
+                <p className="text-gray-500 text-xs mb-3">Выберите варианты дополнительной обработки. Стоимость: 1 500 ₽/шт (без НДС)</p>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {/* Золочение */}
                   <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
                     additionalProcessing.goldPlating
                       ? `${theme.border} ${theme.bgLight}`
@@ -1430,7 +1421,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     <span className="text-white text-sm">Золочение</span>
                   </label>
                   
-                  {/* Родирование */}
                   <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
                     additionalProcessing.rhodium
                       ? `${theme.border} ${theme.bgLight}`
@@ -1445,7 +1435,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     <span className="text-white text-sm">Родирование</span>
                   </label>
                   
-                  {/* Чернение */}
                   <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
                     additionalProcessing.blackening
                       ? `${theme.border} ${theme.bgLight}`
@@ -1460,7 +1449,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     <span className="text-white text-sm">Чернение</span>
                   </label>
                   
-                  {/* Эмаль */}
                   <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
                     additionalProcessing.enamel
                       ? `${theme.border} ${theme.bgLight}`
@@ -1476,7 +1464,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   </label>
                 </div>
                 
-                {/* Поле для количества цветов эмали */}
                 {additionalProcessing.enamel && (
                   <div className="mt-4 pt-4 border-t border-gray-800">
                     <div className="flex items-center gap-4">
@@ -1507,7 +1494,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
               </div>
             </div>
 
-            {/* Результат расчета */}
             <div className={`bg-gradient-to-r ${theme.gradient} border ${theme.border} rounded-xl p-6 text-center`}>
               <div className="flex justify-between items-center mb-4">
                 <p className="text-gray-400 text-sm">
@@ -1563,7 +1549,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             </div>
           </div>
 
-          {/* Форма для точного расчета */}
           {showForm && (
             <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 animate-fade-in-up backdrop-blur-sm">
               <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
@@ -1712,7 +1697,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         </div>
       </div>
 
-      {/* Модальное окно входа для менеджеров */}
       {showLoginModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-dark-light border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 animate-fade-in-up">
