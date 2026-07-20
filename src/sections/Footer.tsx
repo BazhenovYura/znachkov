@@ -15,8 +15,11 @@ const Footer = () => {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     } else {
-      // Если не на главной - переходим на главную с якорем
-      window.location.href = `/${href}`;
+      // Если не на главной - переходим на главную с якорем через HashRouter
+      // Для HashRouter используем window.location.hash
+      window.location.hash = href;
+      // Перезагружаем страницу, чтобы применились изменения
+      window.location.reload();
     }
     
     // Отправляем событие в Метрику
@@ -144,7 +147,6 @@ const Footer = () => {
             © {new Date().getFullYear()} ЗНАЧКОВ.РФ — Все права защищены
           </p>
           <div className="flex flex-col items-center sm:items-end gap-2">
-            {/* Privacy Policy Link */}
             <a
               href="https://disk.yandex.ru/i/SUN1UhIcS4pW7Q"
               target="_blank"
