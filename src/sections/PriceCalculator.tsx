@@ -14,6 +14,13 @@ const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abd
 // URL вашей прокси-функции для получения цен металлов
 const METAL_PRICES_PROXY_URL = 'https://functions.yandexcloud.net/d4eubr12aftt733bpe1e';
 
+// Заголовки против кеширования
+const NO_CACHE_HEADERS = {
+  'Cache-Control': 'no-cache, no-store, must-revalidate',
+  'Pragma': 'no-cache',
+  'Expires': '0'
+};
+
 // Коэффициенты расчета
 const GOLD_PURITY_FACTOR = 0.585;
 const SILVER_PURITY_FACTOR = 0.926;
@@ -200,7 +207,12 @@ const PriceCalculator = () => {
     
     try {
       console.log('Загрузка цен через прокси-функцию...');
-      const response = await fetch(METAL_PRICES_PROXY_URL);
+      const response = await fetch(METAL_PRICES_PROXY_URL, {
+        headers: {
+          ...NO_CACHE_HEADERS,
+          'Content-Type': 'application/json',
+        },
+      });
       const data = await response.json();
       
       if (data.error) {
@@ -777,6 +789,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...NO_CACHE_HEADERS,
         },
         body: JSON.stringify({ message: part }),
       });
@@ -848,6 +861,9 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         
         const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
           method: 'POST',
+          headers: {
+            ...NO_CACHE_HEADERS,
+          },
           body: fd,
         });
 
@@ -861,6 +877,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...NO_CACHE_HEADERS,
           },
           body: JSON.stringify({ message: part }),
         });
