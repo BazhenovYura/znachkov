@@ -27,49 +27,6 @@ const SILVER_DENSITY = 0.0105;
 const MODEL_3D_COST = 10000;
 const ADDITIONAL_PROCESSING_COST = 1500;
 
-// Функция для отправки с повторными попытками
-const sendWithRetry = async (url: string, options: RequestInit, maxRetries: number = 3) => {
-  let lastError: Error | null = null;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 секунд таймаут
-      
-      const response = await fetch(url, {
-        ...options,
-        signal: controller.signal,
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-      
-      const data = await response.json();
-      
-      if (!data.ok) {
-        throw new Error(data.error || 'Ошибка отправки');
-      }
-      
-      return data;
-    } catch (error) {
-      lastError = error as Error;
-      console.log(`⚠️ Попытка ${attempt} из ${maxRetries} не удалась:`, error);
-      
-      if (attempt < maxRetries) {
-        // Ждём перед повторной попыткой (экспоненциальная задержка)
-        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
-        console.log(`⏳ Повторная попытка через ${delay}ms...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-    }
-  }
-  
-  throw lastError || new Error('Все попытки отправки не удались');
-};
-
 const PriceCalculator = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -712,7 +669,58 @@ const PriceCalculator = () => {
     );
   };
 
-  // ОБНОВЛЕННАЯ ФУНКЦИЯ ОТПРАВКИ ТЕКСТА
+  // Функция для разбиения сообщения на части
+  const splitMessageIntoParts = (text: string, maxLength: number = 4000): string[] => {
+    if (text.length <= maxLength) {
+      return [text];
+    }
+
+    const parts: string[] = [];
+    let remaining = text;
+
+    while (remaining.length > maxLength) {
+      let splitIndex = -1;
+      
+      const newlineIndex = remaining.lastIndexOf('\n', maxLength);
+      const dotIndex = remaining.lastIndexOf('. ', maxLength);
+      const dotWithoutSpaceIndex = remaining.lastIndexOf('.', maxLength);
+      const commaIndex = remaining.lastIndexOf(', ', maxLength);
+      const commaWithoutSpaceIndex = remaining.lastIndexOf(',', maxLength);
+      const spaceIndex = remaining.lastIndexOf(' ', maxLength);
+
+      if (newlineIndex > splitIndex) splitIndex = newlineIndex;
+      if (dotIndex > splitIndex) splitIndex = dotIndex;
+      if (dotWithoutSpaceIndex > splitIndex) splitIndex = dotWithoutSpaceIndex;
+      if (commaIndex > splitIndex) splitIndex = commaIndex;
+      if (commaWithoutSpaceIndex > splitIndex) splitIndex = commaWithoutSpaceIndex;
+      if (spaceIndex > splitIndex) splitIndex = spaceIndex;
+
+      if (splitIndex === -1 || splitIndex < maxLength * 0.5) {
+        splitIndex = maxLength;
+      }
+
+      let part = remaining.substring(0, splitIndex + 1).trimEnd();
+      parts.push(part + '\n\n📌 Продолжение следует...');
+      remaining = remaining.substring(splitIndex + 1).trimStart();
+    }
+
+    if (remaining.trim()) {
+      parts.push(remaining.trim());
+    }
+
+    if (parts.length > 1) {
+      return parts.map((part, index) => {
+        if (index === 0) {
+          return part + '\n\n📄 Часть 1 из ' + parts.length;
+        } else {
+          return `📄 Часть ${index + 1} из ${parts.length}\n\n` + part;
+        }
+      });
+    }
+
+    return parts;
+  };
+
   const sendTextToTelegram = async () => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
     
@@ -726,7 +734,7 @@ const PriceCalculator = () => {
       ? `• Доп. обработка: ${processingList.join(', ')}\n• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)`
       : '• Доп. обработка: не выбрана';
     
-    const message = `
+    const fullMessage = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -754,21 +762,35 @@ ${processingText}
 
 ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n` : ''}
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
+  `;
 
-    // Используем sendWithRetry для отправки
-    return await sendWithRetry(
-      YANDEX_TEXT_FUNCTION_URL,
-      {
+    const messageParts = splitMessageIntoParts(fullMessage);
+    
+    console.log(`📤 Сообщение разбито на ${messageParts.length} частей`);
+
+    const results = [];
+    for (let i = 0; i < messageParts.length; i++) {
+      const part = messageParts[i];
+      console.log(`📤 Отправка части ${i + 1}/${messageParts.length} (${part.length} символов)`);
+      
+      const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message }),
-      },
-      3 // 3 попытки
-    );
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message: part }),
+      });
+
+      const responseData = await response.json();
+      if (!responseData.ok) {
+        throw new Error(`Ошибка отправки части ${i + 1}: ${responseData.error || 'Неизвестная ошибка'}`);
+      }
+      results.push(responseData);
+    }
+
+    return results;
   };
 
-  // ОБНОВЛЕННАЯ ФУНКЦИЯ ОТПРАВКИ ФАЙЛА
   const sendFileToTelegram = async (file: File) => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
     
@@ -782,7 +804,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       ? `• Доп. обработка: ${processingList.join(', ')}\n• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)`
       : '• Доп. обработка: не выбрана';
     
-    const caption = `
+    const fullCaption = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -809,21 +831,48 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 📎 <b>Прикрепленный эскиз:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
 
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
+  `;
 
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('caption', caption);
+    const captionParts = splitMessageIntoParts(fullCaption);
     
-    // Используем sendWithRetry для отправки файла
-    return await sendWithRetry(
-      YANDEX_FILE_FUNCTION_URL,
-      {
-        method: 'POST',
-        body: fd,
-      },
-      3 // 3 попытки
-    );
+    console.log(`📤 Caption разбит на ${captionParts.length} частей`);
+
+    const results = [];
+    for (let i = 0; i < captionParts.length; i++) {
+      const part = captionParts[i];
+      
+      if (i === 0) {
+        const fd = new FormData();
+        fd.append('file', file);
+        fd.append('caption', part);
+        
+        const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
+          method: 'POST',
+          body: fd,
+        });
+
+        const responseData = await response.json();
+        if (!responseData.ok) {
+          throw new Error(`Ошибка отправки части ${i + 1}`);
+        }
+        results.push(responseData);
+      } else {
+        const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ message: part }),
+        });
+        const responseData = await response.json();
+        if (!responseData.ok) {
+          throw new Error(`Ошибка отправки текстовой части ${i + 1}`);
+        }
+        results.push(responseData);
+      }
+    }
+
+    return results;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -844,7 +893,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     }
     
     setIsSubmitting(true);
-    setSubmitError('');
     
     try {
       if (uploadedFile) {
