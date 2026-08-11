@@ -27,6 +27,49 @@ const SILVER_DENSITY = 0.0105;
 const MODEL_3D_COST = 10000;
 const ADDITIONAL_PROCESSING_COST = 1500;
 
+// Функция для отправки с повторными попытками
+const sendWithRetry = async (url: string, options: RequestInit, maxRetries: number = 3) => {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 35000); // 35 секунд таймаут
+      
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+      
+      const data = await response.json();
+      
+      if (!data.ok) {
+        throw new Error(data.error || 'Ошибка отправки');
+      }
+      
+      return data;
+    } catch (error) {
+      lastError = error as Error;
+      console.log(`⚠️ Попытка ${attempt} из ${maxRetries} не удалась:`, error);
+      
+      if (attempt < maxRetries) {
+        // Ждём перед повторной попыткой (экспоненциальная задержка)
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+        console.log(`⏳ Повторная попытка через ${delay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError || new Error('Все попытки отправки не удались');
+};
+
 const PriceCalculator = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -669,6 +712,7 @@ const PriceCalculator = () => {
     );
   };
 
+  // ОБНОВЛЕННАЯ ФУНКЦИЯ ОТПРАВКИ ТЕКСТА
   const sendTextToTelegram = async () => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
     
@@ -712,17 +756,19 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
-    });
-
-    const responseData = await response.json();
-    if (!responseData.ok) throw new Error('Ошибка отправки в Telegram');
-    return responseData;
+    // Используем sendWithRetry для отправки
+    return await sendWithRetry(
+      YANDEX_TEXT_FUNCTION_URL,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      },
+      3 // 3 попытки
+    );
   };
 
+  // ОБНОВЛЕННАЯ ФУНКЦИЯ ОТПРАВКИ ФАЙЛА
   const sendFileToTelegram = async (file: File) => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
     
@@ -769,14 +815,15 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     fd.append('file', file);
     fd.append('caption', caption);
     
-    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-      method: 'POST',
-      body: fd,
-    });
-
-    const responseData = await response.json();
-    if (!responseData.ok) throw new Error('Ошибка отправки в Telegram');
-    return responseData;
+    // Используем sendWithRetry для отправки файла
+    return await sendWithRetry(
+      YANDEX_FILE_FUNCTION_URL,
+      {
+        method: 'POST',
+        body: fd,
+      },
+      3 // 3 попытки
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -797,6 +844,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     }
     
     setIsSubmitting(true);
+    setSubmitError('');
     
     try {
       if (uploadedFile) {
@@ -831,7 +879,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
       setShowForm(false);
       
     } catch (error) {
-      console.error('Ошибка отправки:', error);
+      console.error('❌ Ошибка отправки:', error);
       sendMetrikaEvent('form_submit_error', { form: 'calculator', error: String(error) });
       setSubmitError('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
