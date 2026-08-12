@@ -6,7 +6,7 @@ import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 // Константа с URL вашей Яндекс Функции для MAX
 const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
 
-// Максимальный размер файла: 1 МБ
+// Максимальный размер файла: 1 МБ (для сжатия)
 const MAX_FILE_SIZE = 1024 * 1024;
 
 const Hero = () => {
@@ -24,6 +24,7 @@ const Hero = () => {
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -62,6 +63,7 @@ const Hero = () => {
       setUploadedFile(null);
       setFilePreview(null);
       setFileError(null);
+      setUploadProgress(0);
     }
   }, [isModalOpen]);
 
@@ -105,12 +107,11 @@ const Hero = () => {
         img.src = event.target?.result as string;
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const MAX_SIZE = 800; // Максимальный размер стороны
+          const MAX_SIZE = 800;
           
           let width = img.width;
           let height = img.height;
           
-          // Пропорционально уменьшаем изображение
           if (width > height) {
             if (width > MAX_SIZE) {
               height = (height * MAX_SIZE) / width;
@@ -129,7 +130,6 @@ const Hero = () => {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
           
-          // Конвертируем в JPEG с качеством 70%
           canvas.toBlob(
             (blob) => {
               if (blob) {
@@ -142,7 +142,7 @@ const Hero = () => {
               }
             },
             'image/jpeg',
-            0.7 // Качество 70%
+            0.7
           );
         };
         reader.onerror = (error) => reject(error);
@@ -150,7 +150,7 @@ const Hero = () => {
     });
   };
 
-  // Функция отправки в MAX с поддержкой файлов
+  // Функция отправки в MAX с поддержкой файлов (через base64)
   const sendToMax = async (data: typeof formData, file?: File) => {
     let message = `
 🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА (HERO блок)</b>
@@ -164,38 +164,27 @@ const Hero = () => {
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    // Формируем payload
     const payload: any = { text: message };
 
-    // Если есть файл, обрабатываем его
+    // Если есть файл, преобразуем в base64 и добавляем в payload
     if (file) {
       let fileToSend = file;
       
-      // Если файл > 1 МБ и это изображение, сжимаем его
-      if (file.size > MAX_FILE_SIZE) {
-        if (file.type.startsWith('image/')) {
-          try {
-            fileToSend = await compressImage(file);
-            console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
-          } catch (error) {
-            console.error('Ошибка сжатия:', error);
-            throw new Error('Не удалось сжать изображение. Попробуйте загрузить файл поменьше.');
-          }
-        } else {
-          // Для не-изображений показываем ошибку
-          throw new Error(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
+      // Сжимаем если файл > 1 МБ и это изображение
+      if (file.size > MAX_FILE_SIZE && file.type.startsWith('image/')) {
+        try {
+          fileToSend = await compressImage(file);
+          console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+        } catch (error) {
+          console.error('Ошибка сжатия:', error);
+          throw new Error('Не удалось сжать изображение. Попробуйте загрузить файл поменьше.');
         }
-      }
-      
-      // Проверяем размер после сжатия
-      if (fileToSend.size > MAX_FILE_SIZE) {
-        throw new Error(`Файл слишком большой (${(fileToSend.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
       }
       
       const base64File = await fileToBase64(fileToSend);
       payload.file = base64File;
       payload.fileName = fileToSend.name;
-      payload.fileSize = fileToSend.size;
+      payload.fileType = fileToSend.type || 'image/jpeg';
     }
 
     const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
@@ -205,11 +194,6 @@ const Hero = () => {
       },
       body: JSON.stringify(payload),
     });
-
-    // Проверяем ответ
-    if (response.status === 413) {
-      throw new Error('Файл слишком большой для отправки. Попробуйте загрузить изображение меньшего размера.');
-    }
 
     const responseData = await response.json();
     if (!responseData.ok) {
@@ -221,6 +205,7 @@ const Hero = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFileError(null);
+    setUploadProgress(0);
     
     if (!isAgreed) {
       sendMetrikaEvent('form_validation_error', { reason: 'privacy_not_agreed', form: 'hero' });
@@ -235,10 +220,13 @@ const Hero = () => {
     }
     
     setIsSubmitting(true);
+    setUploadProgress(20);
     
     try {
       if (uploadedFile) {
+        setUploadProgress(40);
         await sendToMax(formData, uploadedFile);
+        setUploadProgress(100);
         sendMetrikaGoal('hero_form_submit_with_file');
       } else {
         await sendToMax(formData);
@@ -261,8 +249,6 @@ const Hero = () => {
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      
-      // Показываем понятное сообщение об ошибке
       let errorMessage = '❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.';
       if (error instanceof Error) {
         if (error.message.includes('слишком большой')) {
@@ -272,10 +258,10 @@ const Hero = () => {
         }
       }
       setFileError(errorMessage);
-      
       sendMetrikaEvent('form_submit_error', { form: 'hero', error: String(error) });
     } finally {
       setIsSubmitting(false);
+      setUploadProgress(0);
     }
   };
 
@@ -300,7 +286,7 @@ const Hero = () => {
     setFileError(null);
     
     if (file) {
-      // Проверяем размер файла
+      // Проверяем размер файла для не-изображений
       if (file.size > MAX_FILE_SIZE && !file.type.startsWith('image/')) {
         setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
         e.target.value = '';
@@ -340,6 +326,7 @@ const Hero = () => {
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
     setFileError(null);
+    setUploadProgress(0);
     sendMetrikaGoal('open_hero_modal');
   };
 
@@ -622,7 +609,11 @@ const Hero = () => {
                 {isSubmitting ? (
                   <>
                     <div className="w-5 h-5 border-2 border-dark/30 border-t-dark rounded-full animate-spin" />
-                    <span>Отправка...</span>
+                    <span>
+                      {uploadProgress > 0 && uploadProgress < 100 
+                        ? `Загрузка... ${uploadProgress}%` 
+                        : 'Отправка...'}
+                    </span>
                   </>
                 ) : (
                   <>
