@@ -4,8 +4,8 @@ import { ArrowRight, Calendar, Clock, Shield, Truck, X, Upload } from 'lucide-re
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
-const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
-const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
+// Обе функции теперь используют один URL для MAX
+const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
 
 const Hero = () => {
   const navigate = useNavigate();
@@ -66,7 +66,6 @@ const Hero = () => {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
-    // Отправляем событие в Метрику - клик по кнопке "Смотреть портфолио"
     sendMetrikaGoal('click_portfolio_button');
     sendMetrikaEvent('navigation', { to: 'portfolio', from: 'hero_button' });
   };
@@ -82,9 +81,9 @@ const Hero = () => {
     });
   };
 
-  // Функция отправки текста (без файла)
-  const sendTextToTelegram = async (data: typeof formData) => {
-    const message = `
+  // 🔥 ОБНОВЛЕННАЯ ФУНКЦИЯ ОТПРАВКИ В MAX
+  const sendToMax = async (data: typeof formData, file?: File) => {
+    let message = `
 🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА (HERO блок)</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -96,68 +95,55 @@ const Hero = () => {
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
+    // Если есть файл, добавляем информацию о нём
+    if (file) {
+      // Преобразуем файл в base64 для отправки
+      const base64File = await fileToBase64(file);
+      
+      message += `
+📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
+<b>Тип файла:</b> ${file.type || 'неизвестен'}
+      `;
+      
+      // Отправляем с файлом (в MAX файлы отправляются как ссылки или base64)
+      // Для простоты, пока отправляем только информацию о файле
+      // В будущем можно добавить загрузку файла на хостинг и отправку ссылки
+    }
+
+    const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ text: message }),
     });
 
     const responseData = await response.json();
-    
     if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
+      throw new Error('Ошибка отправки в MAX');
     }
-
     return responseData;
   };
 
-  // Функция отправки с файлом
-  const sendFileToTelegram = async (data: typeof formData, file: File) => {
-    const caption = `
-🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА С ФАЙЛОМ (HERO блок)</b>
-━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>📍 Откуда:</b> Блок "Hero" (первый экран)
-
-👤 <b>Имя:</b> ${data.name || 'Не указано'}
-📞 <b>Телефон:</b> ${data.phone}
-
-📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
-
-⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caption', caption);
-    
-    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-      method: 'POST',
-      body: formData,
+  // Вспомогательная функция для преобразования файла в base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
     });
-
-    const responseData = await response.json();
-    
-    if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
-    }
-
-    return responseData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!isAgreed) {
-      // Отправляем событие о неудачной попытке (не согласился с политикой)
       sendMetrikaEvent('form_validation_error', { reason: 'privacy_not_agreed', form: 'hero' });
       alert('Необходимо согласиться с политикой конфиденциальности');
       return;
     }
     
-    // Валидация полей
     if (!formData.name.trim() || !formData.phone.trim()) {
       sendMetrikaEvent('form_validation_error', { reason: 'empty_fields', form: 'hero' });
       alert('Пожалуйста, заполните все обязательные поля');
@@ -168,12 +154,10 @@ const Hero = () => {
     
     try {
       if (uploadedFile) {
-        await sendFileToTelegram(formData, uploadedFile);
-        // Отправляем цель в Метрику - отправка формы с файлом
+        await sendToMax(formData, uploadedFile);
         sendMetrikaGoal('hero_form_submit_with_file');
       } else {
-        await sendTextToTelegram(formData);
-        // Отправляем цель в Метрику - отправка формы без файла
+        await sendToMax(formData);
         sendMetrikaGoal('hero_form_submit');
       }
       
@@ -193,7 +177,6 @@ const Hero = () => {
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      // Отправляем событие об ошибке
       sendMetrikaEvent('form_submit_error', { form: 'hero', error: String(error) });
       alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
@@ -208,14 +191,12 @@ const Hero = () => {
       [name]: value,
     });
     
-    // Отправляем событие о начале заполнения поля (только первый раз)
     if (!formData[name as keyof typeof formData] && value) {
       sendMetrikaEvent('form_field_filled', { field: name, form: 'hero' });
     }
   };
 
   const handleFocus = (fieldName: string) => {
-    // Отправляем событие о фокусе на поле
     sendMetrikaEvent('form_field_focus', { field: fieldName, form: 'hero' });
   };
 
@@ -224,7 +205,6 @@ const Hero = () => {
     if (file) {
       setUploadedFile(file);
       
-      // Отправляем событие о загрузке файла
       sendMetrikaEvent('file_uploaded', { 
         fileName: file.name,
         fileSize: file.size,
@@ -232,7 +212,6 @@ const Hero = () => {
         form: 'hero'
       });
       
-      // Если это изображение, создаем превью
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -248,7 +227,6 @@ const Hero = () => {
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
-    // Отправляем событие об удалении файла
     sendMetrikaEvent('file_removed', { form: 'hero' });
   };
 
@@ -256,12 +234,10 @@ const Hero = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
-    // Отправляем цель в Метрику - открытие модалки
     sendMetrikaGoal('open_hero_modal');
   };
 
   const closeModal = () => {
-    // Отправляем событие о закрытии модалки
     if (formData.name || formData.phone || uploadedFile) {
       sendMetrikaEvent('modal_closed_with_data', { form: 'hero' });
     } else {
