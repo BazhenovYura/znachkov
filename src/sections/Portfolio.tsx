@@ -4,9 +4,11 @@ import { useSwipeable } from 'react-swipeable';
 import { X, Minus, Plus, Upload, ZoomIn, ArrowLeft } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
-// Константы с URL ваших Яндекс Функций
-const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
-const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
+// Единая функция для MAX (как в Hero блоке)
+const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
+
+// Максимальный размер файла: 1 МБ (для сжатия)
+const MAX_FILE_SIZE = 1024 * 1024;
 
 interface PortfolioItem {
   id: number;
@@ -61,6 +63,69 @@ const portfolioItems: PortfolioItem[] = [
   },
 ];
 
+// Вспомогательная функция для преобразования файла в base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Функция сжатия изображения (как в Hero блоке)
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 800;
+        
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = (height * MAX_SIZE) / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = (width * MAX_SIZE) / height;
+            height = MAX_SIZE;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Не удалось сжать изображение'));
+            }
+          },
+          'image/jpeg',
+          0.7
+        );
+      };
+      reader.onerror = (error) => reject(error);
+    };
+  });
+};
+
 const Portfolio = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -74,6 +139,7 @@ const Portfolio = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   // Отслеживаем изменение размера окна
@@ -126,6 +192,7 @@ const Portfolio = () => {
     if (!selectedItem) {
       setUploadedFile(null);
       setFilePreview(null);
+      setFileError(null);
     }
   }, [selectedItem]);
 
@@ -133,7 +200,6 @@ const Portfolio = () => {
   const swipeHandlers = useSwipeable({
     onSwipedRight: () => {
       if (selectedItem) {
-        // Отправляем событие о закрытии свайпом
         if (formData.name || formData.phone || uploadedFile || formData.quantity > 1) {
           sendMetrikaEvent('modal_closed_with_data', { form: 'portfolio', method: 'swipe' });
         } else {
@@ -143,7 +209,6 @@ const Portfolio = () => {
       }
     },
     onSwiping: (eventData) => {
-      // Предотвращаем навигацию браузера при горизонтальном свайпе
       if (Math.abs(eventData.deltaX) > 20) {
         eventData.event.preventDefault();
       }
@@ -164,12 +229,12 @@ const Portfolio = () => {
     });
   };
 
-  // Функция отправки текста (без файла)
-  const sendTextToTelegram = async (data: typeof formData, item: PortfolioItem) => {
+  // Единая функция отправки в MAX (как в Hero блоке)
+  const sendToMax = async (data: typeof formData, item: PortfolioItem, file?: File) => {
     const baseUrl = window.location.origin;
     const imageUrl = `${baseUrl}${item.image}`;
 
-    const message = `
+    let message = `
 🛍️ <b>ЗАКАЗ ПОХОЖЕГО ЗНАЧКА</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -192,75 +257,55 @@ const Portfolio = () => {
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
+    const payload: any = { text: message };
+
+    // Если есть файл, преобразуем в base64 и добавляем в payload
+    if (file) {
+      let fileToSend = file;
+      
+      // Сжимаем если файл > 1 МБ и это изображение
+      if (file.size > MAX_FILE_SIZE && file.type.startsWith('image/')) {
+        try {
+          fileToSend = await compressImage(file);
+          console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+        } catch (error) {
+          console.error('Ошибка сжатия:', error);
+          throw new Error('Не удалось сжать изображение. Попробуйте загрузить файл поменьше.');
+        }
+      }
+      
+      const base64File = await fileToBase64(fileToSend);
+      payload.file = base64File;
+      payload.fileName = fileToSend.name;
+      payload.fileType = fileToSend.type || 'image/jpeg';
+      
+      // Добавляем в сообщение информацию о файле
+      message += `\n📎 <b>Прикрепленный файл:</b> ${fileToSend.name} (${(fileToSend.size / 1024).toFixed(1)} KB)`;
+      payload.text = message;
+    }
+
+    const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(payload),
     });
 
     const responseData = await response.json();
     
     if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
+      throw new Error('Ошибка отправки в MAX');
     }
-
-    return responseData;
-  };
-
-  // Функция отправки с файлом
-  const sendFileToTelegram = async (data: typeof formData, item: PortfolioItem, file: File) => {
-    const baseUrl = window.location.origin;
-    const imageUrl = `${baseUrl}${item.image}`;
-
-    const caption = `
-🛍️ <b>ЗАКАЗ ПОХОЖЕГО ЗНАЧКА (С ФАЙЛОМ)</b>
-━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>📍 Откуда:</b> Блок "Портфолио"
-
-📌 <b>Выбранный образец:</b>
-• Название: ${item.title}
-• Описание: ${item.description}
-• Материал: ${item.material}
-• ID: ${item.id}
-
-━━━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Клиент:</b>
-• Имя: ${data.name || 'Не указано'}
-• Телефон: ${data.phone}
-• Количество: ${data.quantity} шт.
-
-📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
-🖼️ <b>Фото образца:</b> ${imageUrl}
-
-⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caption', caption);
     
-    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const responseData = await response.json();
-    
-    if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
-    }
-
     return responseData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFileError(null);
     
     if (!isAgreed) {
-      // Отправляем событие о неудачной попытке (не согласился с политикой)
       sendMetrikaEvent('form_validation_error', { 
         reason: 'privacy_not_agreed', 
         form: 'portfolio',
@@ -270,7 +315,6 @@ const Portfolio = () => {
       return;
     }
     
-    // Валидация полей
     if (!formData.name.trim() || !formData.phone.trim()) {
       sendMetrikaEvent('form_validation_error', { 
         reason: 'empty_fields', 
@@ -285,16 +329,14 @@ const Portfolio = () => {
     
     try {
       if (uploadedFile) {
-        await sendFileToTelegram(formData, selectedItem!, uploadedFile);
-        // Отправляем цель в Метрику - отправка формы с файлом
+        await sendToMax(formData, selectedItem!, uploadedFile);
         sendMetrikaGoal('portfolio_form_submit_with_file', { 
           itemId: selectedItem?.id,
           itemTitle: selectedItem?.title,
           quantity: formData.quantity
         });
       } else {
-        await sendTextToTelegram(formData, selectedItem!);
-        // Отправляем цель в Метрику - отправка формы без файла
+        await sendToMax(formData, selectedItem!);
         sendMetrikaGoal('portfolio_form_submit', { 
           itemId: selectedItem?.id,
           itemTitle: selectedItem?.title,
@@ -304,7 +346,6 @@ const Portfolio = () => {
       
       setSelectedItem(null);
       
-      // Передаём секцию и ширину экрана
       navigate('/thanks', { 
         state: { 
           from: '/',
@@ -320,13 +361,18 @@ const Portfolio = () => {
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      // Отправляем событие об ошибке
+      let errorMessage = '❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.';
+      if (error instanceof Error) {
+        if (error.message.includes('слишком большой') || error.message.includes('сжать')) {
+          errorMessage = `❌ ${error.message}`;
+        }
+      }
+      setFileError(errorMessage);
       sendMetrikaEvent('form_submit_error', { 
         form: 'portfolio',
         itemId: selectedItem?.id,
         error: String(error) 
       });
-      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
     }
@@ -339,7 +385,6 @@ const Portfolio = () => {
       [name]: value,
     });
     
-    // Отправляем событие о начале заполнения поля (только первый раз)
     if (!formData[name as keyof typeof formData] && value) {
       sendMetrikaEvent('form_field_filled', { 
         field: name, 
@@ -350,7 +395,6 @@ const Portfolio = () => {
   };
 
   const handleFocus = (fieldName: string) => {
-    // Отправляем событие о фокусе на поле
     sendMetrikaEvent('form_field_focus', { 
       field: fieldName, 
       form: 'portfolio',
@@ -365,7 +409,6 @@ const Portfolio = () => {
       quantity: newQuantity
     }));
     
-    // Отправляем событие об изменении количества
     sendMetrikaEvent('quantity_changed', { 
       form: 'portfolio',
       itemId: selectedItem?.id,
@@ -382,7 +425,6 @@ const Portfolio = () => {
         ...prev,
         quantity: value
       }));
-      // Отправляем событие о ручном вводе количества
       sendMetrikaEvent('quantity_manually_entered', { 
         form: 'portfolio',
         itemId: selectedItem?.id,
@@ -398,10 +440,18 @@ const Portfolio = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setFileError(null);
+    
     if (file) {
+      // Проверяем размер файла для не-изображений
+      if (file.size > MAX_FILE_SIZE && !file.type.startsWith('image/')) {
+        setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
+        e.target.value = '';
+        return;
+      }
+      
       setUploadedFile(file);
       
-      // Отправляем событие о загрузке файла
       sendMetrikaEvent('file_uploaded', { 
         fileName: file.name,
         fileSize: file.size,
@@ -410,7 +460,6 @@ const Portfolio = () => {
         itemId: selectedItem?.id
       });
       
-      // Если это изображение, создаем превью
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -426,7 +475,7 @@ const Portfolio = () => {
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
-    // Отправляем событие об удалении файла
+    setFileError(null);
     sendMetrikaEvent('file_removed', { 
       form: 'portfolio',
       itemId: selectedItem?.id 
@@ -435,7 +484,6 @@ const Portfolio = () => {
 
   const handleItemClick = (item: PortfolioItem) => {
     setSelectedItem(item);
-    // Отправляем цель в Метрику - открытие модалки с конкретным значком
     sendMetrikaGoal('open_portfolio_modal', { 
       itemId: item.id, 
       itemTitle: item.title,
@@ -444,7 +492,6 @@ const Portfolio = () => {
   };
 
   const closeModal = () => {
-    // Отправляем событие о закрытии модалки
     if (formData.name || formData.phone || uploadedFile || formData.quantity > 1) {
       sendMetrikaEvent('modal_closed_with_data', { 
         form: 'portfolio',
@@ -501,14 +548,12 @@ const Portfolio = () => {
                 
                 <div className="absolute inset-0 bg-gradient-to-t from-dark/90 via-dark/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                 
-                {/* Описание всегда видно для всех размеров */}
                 <div className="absolute inset-0 flex flex-col justify-end p-4 sm:p-6 opacity-100">
                   <span className="text-gold text-xs sm:text-sm mb-1 sm:mb-2">{item.material}</span>
                   <h3 className="text-white font-serif text-base sm:text-xl mb-0.5 sm:mb-1">{item.title}</h3>
                   <p className="text-gray-400 text-xs sm:text-sm">{item.description}</p>
                 </div>
 
-                {/* Большой десктоп (>1600px) - текстовая кнопка в правом нижнем углу, появляется при наведении */}
                 {isLargeDesktop && (
                   <button
                     onClick={(e) => {
@@ -521,7 +566,6 @@ const Portfolio = () => {
                   </button>
                 )}
 
-                {/* Средний десктоп (768-1600px) - иконка лупы в правом верхнем углу, появляется при наведении */}
                 {isMediumDesktop && (
                   <button
                     onClick={(e) => {
@@ -535,7 +579,6 @@ const Portfolio = () => {
                   </button>
                 )}
 
-                {/* Мобильная версия (<768px) - иконка лупы всегда видна */}
                 {isMobile && (
                   <button
                     onClick={(e) => {
@@ -575,9 +618,7 @@ const Portfolio = () => {
               <X className="w-4 h-4 sm:w-5 sm:h-5" />
             </button>
             
-            {/* Модальное окно с фото и формой */}
             <div className={`grid ${isMobile ? 'grid-cols-1' : 'md:grid-cols-2'} max-h-[95vh] sm:max-h-[90vh] overflow-y-auto`}>
-              {/* Левая колонка - фото */}
               <div 
                 className={`w-full cursor-pointer ${!isMobile && 'md:sticky md:top-0 md:h-fit'}`}
                 onClick={closeModal}
@@ -589,7 +630,6 @@ const Portfolio = () => {
                 />
               </div>
               
-              {/* Правая колонка - описание и форма */}
               <div 
                 className={`${isMobile ? 'p-4' : 'p-6 lg:p-8'}`}
                 onClick={(e) => e.stopPropagation()}
@@ -610,7 +650,6 @@ const Portfolio = () => {
                   {selectedItem.description}
                 </p>
 
-                {/* Форма заказа */}
                 <form onSubmit={handleSubmit} className={`space-y-${isMobile ? '3' : '4'}`}>
                   <div>
                     <label className={`block text-gray-400 mb-1 ${
@@ -656,7 +695,6 @@ const Portfolio = () => {
                     />
                   </div>
 
-                  {/* Поле количества с кнопками + и - */}
                   <div>
                     <label className={`block text-gray-400 mb-1 ${
                       isMobile ? 'text-xs' : 'text-sm'
@@ -702,12 +740,11 @@ const Portfolio = () => {
                     </div>
                   </div>
 
-                  {/* Загрузка файла */}
                   <div>
                     <label className={`block text-gray-400 mb-1 ${
                       isMobile ? 'text-xs' : 'text-sm'
                     }`}>
-                      Прикрепить свой эскиз <span className="text-gray-600">(необязательно)</span>
+                      Прикрепить свой эскиз <span className="text-gray-600">(необязательно, до 1 МБ)</span>
                     </label>
                     
                     {!uploadedFile ? (
@@ -730,6 +767,9 @@ const Portfolio = () => {
                           <Upload className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
                           <span>Выберите файл</span>
                         </label>
+                        {fileError && (
+                          <p className="text-red-500 text-xs mt-1">{fileError}</p>
+                        )}
                       </div>
                     ) : (
                       <div className={`flex items-center gap-2 sm:gap-3 bg-dark border border-gray-700 rounded-lg ${
@@ -769,7 +809,6 @@ const Portfolio = () => {
                     )}
                   </div>
 
-                  {/* Чекбокс согласия */}
                   <div className="flex items-start gap-2 sm:gap-3">
                     <div className="relative flex items-center h-5 sm:h-6">
                       <input
@@ -806,6 +845,10 @@ const Portfolio = () => {
                     </label>
                   </div>
 
+                  {fileError && !uploadedFile && (
+                    <p className="text-red-500 text-sm text-center">{fileError}</p>
+                  )}
+
                   <button
                     type="submit"
                     disabled={isSubmitting}
@@ -827,7 +870,6 @@ const Portfolio = () => {
                     )}
                   </button>
 
-                  {/* Кнопка "Назад" под кнопкой отправки */}
                   <button
                     type="button"
                     onClick={closeModal}
