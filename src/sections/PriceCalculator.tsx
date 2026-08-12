@@ -7,12 +7,14 @@ import {
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
-// Константы с URL ваших Яндекс Функций
-const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
-const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
+// Единая функция для MAX
+const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
 
 // URL вашей прокси-функции для получения цен металлов
 const METAL_PRICES_PROXY_URL = 'https://functions.yandexcloud.net/d4eubr12aftt733bpe1e';
+
+// Максимальный размер файла: 5 МБ
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 // Коэффициенты расчета
 const GOLD_PURITY_FACTOR = 0.585;
@@ -26,6 +28,69 @@ const GOLD_DENSITY = 0.0134;
 const SILVER_DENSITY = 0.0105;
 const MODEL_3D_COST = 10000;
 const ADDITIONAL_PROCESSING_COST = 1500;
+
+// Вспомогательная функция для преобразования файла в base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Функция сжатия изображения
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 1200;
+        
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = (height * MAX_SIZE) / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = (width * MAX_SIZE) / height;
+            height = MAX_SIZE;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Не удалось сжать изображение'));
+            }
+          },
+          'image/jpeg',
+          0.8
+        );
+      };
+      reader.onerror = (error) => reject(error);
+    };
+  });
+};
 
 const PriceCalculator = () => {
   const navigate = useNavigate();
@@ -58,6 +123,7 @@ const PriceCalculator = () => {
   });
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [consentError, setConsentError] = useState('');
@@ -518,158 +584,8 @@ const PriceCalculator = () => {
     });
   };
 
-  const { weight, metalCostPerGram, totalCostPerGram, model3DCostWithVAT, additionalCostPerUnit } = calculatePrice();
-  const isGold = calculatorData.material === 'gold';
-  const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
-  const isPriceLoaded = metalPrices.gold !== null && metalPrices.silver !== null;
-
-  const getMaterialPriceDisplay = (material: 'gold' | 'silver') => {
-    const price = material === 'gold' ? metalPrices.gold : metalPrices.silver;
-    if (priceLoadError) return 'ошибка загрузки';
-    if (!price) return 'загрузка...';
-    return `${price.toLocaleString()} ₽/г`;
-  };
-
-  const ShapeVisualization = () => {
-    const displayWidth = calculatorData.width;
-    const displayHeight = calculatorData.height;
-    const ENLARGE_FACTOR = 1.1;
-    
-    const getShapeStyle = () => {
-      if (calculatorData.shape === 'circle') {
-        return {
-          borderRadius: '50%',
-          overflow: 'hidden' as const,
-        };
-      }
-      if (calculatorData.shape === 'rounded') {
-        return {
-          borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
-          overflow: 'hidden' as const,
-        };
-      }
-      return {
-        borderRadius: '0mm',
-        overflow: 'hidden' as const,
-      };
-    };
-    
-    const getShapeLabel = () => {
-      if (calculatorData.shape === 'circle') {
-        return `⌀${calculatorData.width} мм`;
-      }
-      return `${calculatorData.width}×${calculatorData.height} мм`;
-    };
-    
-    if (filePreview && uploadedFile?.type.startsWith('image/')) {
-      return (
-        <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
-          <div className="text-center mb-2">
-            <span className="text-gray-400 text-xs">Эскиз в габаритах значка</span>
-            <span className={`${theme.text} text-xs ml-2`}>{uploadedFile.name}</span>
-          </div>
-          
-          <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
-            <div
-              className="relative bg-dark"
-              style={{
-                width: `${displayWidth * ENLARGE_FACTOR}mm`,
-                height: `${displayHeight * ENLARGE_FACTOR}mm`,
-                ...getShapeStyle(),
-              }}
-            >
-              <img 
-                src={filePreview} 
-                alt="Загруженный эскиз"
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div
-                className={`absolute inset-0 border-2 ${theme.border} pointer-events-none`}
-                style={{
-                  borderRadius: getShapeStyle().borderRadius,
-                }}
-              />
-            </div>
-          </div>
-          <div className="text-center mt-2 text-gray-500 text-xs">
-            Размер значка: {calculatorData.width}×{calculatorData.height} мм
-          </div>
-          <div className="text-center text-gray-600 text-[10px] mt-1">
-            Эскиз автоматически вписан в габариты значка
-          </div>
-        </div>
-      );
-    }
-    
-    if (uploadedFile && !uploadedFile.type.startsWith('image/')) {
-      return (
-        <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
-          <div className="text-center mb-2">
-            <span className="text-gray-400 text-xs">Загруженный файл</span>
-            <span className={`${theme.text} text-xs ml-2`}>{uploadedFile.name}</span>
-          </div>
-          
-          <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
-            <div className="text-center">
-              <FileText className={`w-16 h-16 ${theme.text} mx-auto mb-2`} />
-              <p className="text-gray-400 text-sm">Файл загружен</p>
-              <p className="text-gray-500 text-xs mt-1">Размер: {(uploadedFile.size / 1024).toFixed(1)} KB</p>
-            </div>
-          </div>
-          <div className="text-center mt-2 text-gray-500 text-xs">
-            Размер значка: {calculatorData.width}×{calculatorData.height} мм
-          </div>
-          <div className="flex justify-center mt-2">
-            <div
-              className={`border-2 ${theme.border}/50`}
-              style={{
-                width: `${displayWidth * ENLARGE_FACTOR}mm`,
-                height: `${displayHeight * ENLARGE_FACTOR}mm`,
-                ...getShapeStyle(),
-              }}
-            >
-              <div className="w-full h-full flex items-center justify-center">
-                <span className={`${theme.text} text-[2mm] opacity-50`}>
-                  {getShapeLabel()}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    return (
-      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
-        <div className="text-center mb-2">
-          <span className="text-gray-400 text-xs">Визуализация значка</span>        
-        </div>
-        
-        <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
-          <div className="flex justify-center items-center">
-            <div
-              className={`bg-gradient-to-br ${theme.gradient} border-2 ${theme.border} ${theme.shadow} flex items-center justify-center`}
-              style={{
-                width: `${displayWidth * ENLARGE_FACTOR}mm`,
-                height: `${displayHeight * ENLARGE_FACTOR}mm`,
-                ...getShapeStyle(),
-              }}
-            >
-              <span className={`${theme.text} text-[2mm] opacity-70 whitespace-nowrap`}>
-                {getShapeLabel()}
-              </span>
-            </div>
-          </div>
-        </div>
-        <div className="text-center mt-2 text-gray-500 text-xs">
-          <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
-          <div className={`${theme.text} text-xs mt-1`}>Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
-        </div>
-      </div>
-    );
-  };
-
-  const sendTextToTelegram = async () => {
+  // Единая функция отправки в MAX
+  const sendToMax = async (file?: File) => {
     const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
     
     let processingList = [];
@@ -682,7 +598,11 @@ const PriceCalculator = () => {
       ? `• Доп. обработка: ${processingList.join(', ')}\n• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)`
       : '• Доп. обработка: не выбрана';
     
-    const message = `
+    const { weight, metalCostPerGram, totalCostPerGram, model3DCostWithVAT, additionalCostPerUnit } = calculatePrice();
+    const isGold = calculatorData.material === 'gold';
+    const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
+    
+    let message = `
 💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -712,70 +632,46 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
+    const payload: any = { text: message };
+
+    // Если есть файл, преобразуем в base64 и добавляем в payload
+    if (file) {
+      let fileToSend = file;
+      
+      // Сжимаем только изображения > 1 МБ
+      if (file.size > 1024 * 1024 && file.type.startsWith('image/')) {
+        try {
+          fileToSend = await compressImage(file);
+          console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+        } catch (error) {
+          console.error('Ошибка сжатия:', error);
+        }
+      }
+      
+      const base64File = await fileToBase64(fileToSend);
+      payload.file = base64File;
+      payload.fileName = fileToSend.name;
+      payload.fileType = fileToSend.type || 'application/octet-stream';
+      
+      // Добавляем в сообщение информацию о файле
+      message += `\n📎 <b>Прикрепленный эскиз:</b> ${fileToSend.name} (${(fileToSend.size / 1024).toFixed(1)} KB)`;
+      payload.text = message;
+    }
+
+    const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
     });
 
     const responseData = await response.json();
-    if (!responseData.ok) throw new Error('Ошибка отправки в Telegram');
-    return responseData;
-  };
-
-  const sendFileToTelegram = async (file: File) => {
-    const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
     
-    let processingList = [];
-    if (additionalProcessing.goldPlating) processingList.push('Золочение');
-    if (additionalProcessing.rhodium) processingList.push('Родирование');
-    if (additionalProcessing.blackening) processingList.push('Чернение');
-    if (additionalProcessing.enamel) processingList.push(`Эмаль (${additionalProcessing.enamelColors} цв.)`);
+    if (!responseData.ok) {
+      throw new Error('Ошибка отправки в MAX');
+    }
     
-    const processingText = processingList.length > 0 
-      ? `• Доп. обработка: ${processingList.join(', ')}\n• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)`
-      : '• Доп. обработка: не выбрана';
-    
-    const caption = `
-💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ С ЭСКИЗОМ</b>
-━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>📍 Откуда:</b> Страница калькулятора (${mode === 'manager' ? 'режим менеджера' : 'клиентский режим'})
-
-<b>📊 Параметры заказа:</b>
-• Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
-• Форма: ${shapeName}
-• Размер: ${calculatorData.width}×${calculatorData.height} мм
-• Количество: ${calculatorData.quantity} шт.
-• Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
-• Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
-${processingText}
-• Расчетная стоимость (с НДС 22%): ${estimatedPrice.toLocaleString()} ₽
-• Цена за штуку (с НДС 22%): ${pricePerUnit.toLocaleString()} ₽
-
-━━━━━━━━━━━━━━━━━━━━━━━
-<b>👤 Клиент:</b>
-• Имя: ${formData.name || 'Не указано'}
-• Телефон: ${formData.phone}
-• Email: ${formData.email || 'Не указан'}
-
-${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n` : ''}
-📎 <b>Прикрепленный эскиз:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
-
-⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
-
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('caption', caption);
-    
-    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-      method: 'POST',
-      body: fd,
-    });
-
-    const responseData = await response.json();
-    if (!responseData.ok) throw new Error('Ошибка отправки в Telegram');
     return responseData;
   };
 
@@ -783,6 +679,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     e.preventDefault();
     setSubmitError('');
     setConsentError('');
+    setFileError(null);
     
     if (!isAgreed) {
       setConsentError('Необходимо согласиться с политикой конфиденциальности');
@@ -800,10 +697,10 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     
     try {
       if (uploadedFile) {
-        await sendFileToTelegram(uploadedFile);
+        await sendToMax(uploadedFile);
         sendMetrikaGoal('calculator_form_submit_with_file');
       } else {
-        await sendTextToTelegram();
+        await sendToMax();
         sendMetrikaGoal('calculator_form_submit');
       }
       
@@ -854,9 +751,24 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setFileError(null);
+    
     if (file) {
+      // Проверяем размер файла
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 5 МБ`);
+        e.target.value = '';
+        return;
+      }
+      
       setUploadedFile(file);
-      sendMetrikaEvent('file_uploaded', { fileName: file.name, fileSize: file.size, fileType: file.type, form: 'calculator' });
+      sendMetrikaEvent('file_uploaded', { 
+        fileName: file.name, 
+        fileSize: file.size, 
+        fileType: file.type, 
+        form: 'calculator' 
+      });
+      
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => setFilePreview(reader.result as string);
@@ -870,6 +782,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
+    setFileError(null);
     sendMetrikaEvent('file_removed', { form: 'calculator' });
   };
 
@@ -1624,26 +1537,47 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   />
                 </div>
 
+                {/* Загрузка файла - поддерживает любые файлы */}
                 <div>
-                  <label className="block text-gray-400 text-sm mb-2">Прикрепить эскиз (необязательно)</label>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <label className="cursor-pointer px-4 py-2 bg-dark border border-gray-700 rounded-lg text-gray-300 hover:border-gold transition-colors flex items-center gap-2">
-                      <Upload className="w-4 h-4" />
-                      Выбрать файл
-                      <input type="file" onChange={handleFileChange} accept="image/*,.pdf" className="hidden" />
-                    </label>
-                    {uploadedFile && (
-                      <div className="flex items-center gap-2 bg-dark-light px-3 py-2 rounded-lg">
-                        <span className="text-sm text-gray-300">{uploadedFile.name}</span>
-                        <button type="button" onClick={removeFile} className="text-gray-500 hover:text-red-400">
-                          <X className="w-4 h-4" />
-                        </button>
+                  <label className="block text-gray-400 text-sm mb-2">
+                    Прикрепить эскиз <span className="text-gray-600">(необязательно, до 5 МБ)</span>
+                  </label>
+                  {!uploadedFile ? (
+                    <div className="relative">
+                      <label className="cursor-pointer flex items-center justify-center gap-2 w-full px-4 py-3 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors">
+                        <Upload className="w-5 h-5" />
+                        <span>Выберите файл (изображение, PDF, документ)</span>
+                        <input 
+                          type="file" 
+                          onChange={handleFileChange} 
+                          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar"
+                          className="hidden" 
+                        />
+                      </label>
+                      {fileError && (
+                        <p className="text-red-500 text-xs mt-1">{fileError}</p>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
+                      {filePreview ? (
+                        <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded-lg" />
+                      ) : (
+                        <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center">
+                          <FileText className="w-6 h-6 text-gold" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm truncate">{uploadedFile.name}</p>
+                        <p className="text-gray-500 text-xs">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
                       </div>
-                    )}
-                  </div>
-                  {filePreview && (
-                    <div className="mt-3">
-                      <img src={filePreview} alt="Preview" className="max-w-[200px] max-h-[200px] rounded-lg border border-gray-700" />
+                      <button
+                        type="button"
+                        onClick={removeFile}
+                        className="text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
                     </div>
                   )}
                 </div>
