@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Calendar, Clock, Shield, Truck, X, Upload } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
-// Константы с URL ваших Яндекс Функций
-// Обе функции теперь используют один URL для MAX
+// Константа с URL вашей Яндекс Функции для MAX
 const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
 
 const Hero = () => {
@@ -81,7 +80,17 @@ const Hero = () => {
     });
   };
 
-  // 🔥 ОБНОВЛЕННАЯ ФУНКЦИЯ ОТПРАВКИ В MAX
+  // Вспомогательная функция для преобразования файла в base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = (error) => reject(error);
+    });
+  };
+
+  // Функция отправки в MAX с поддержкой файлов
   const sendToMax = async (data: typeof formData, file?: File) => {
     let message = `
 🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА (HERO блок)</b>
@@ -95,19 +104,15 @@ const Hero = () => {
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    // Если есть файл, добавляем информацию о нём
+    // Формируем payload
+    const payload: any = { text: message };
+
+    // Если есть файл, преобразуем в base64 и добавляем в payload
     if (file) {
-      // Преобразуем файл в base64 для отправки
       const base64File = await fileToBase64(file);
-      
-      message += `
-📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
-<b>Тип файла:</b> ${file.type || 'неизвестен'}
-      `;
-      
-      // Отправляем с файлом (в MAX файлы отправляются как ссылки или base64)
-      // Для простоты, пока отправляем только информацию о файле
-      // В будущем можно добавить загрузку файла на хостинг и отправку ссылки
+      payload.file = base64File;
+      payload.fileName = file.name;
+      payload.fileSize = file.size;
     }
 
     const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
@@ -115,7 +120,7 @@ const Hero = () => {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ text: message }),
+      body: JSON.stringify(payload),
     });
 
     const responseData = await response.json();
@@ -123,16 +128,6 @@ const Hero = () => {
       throw new Error('Ошибка отправки в MAX');
     }
     return responseData;
-  };
-
-  // Вспомогательная функция для преобразования файла в base64
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
