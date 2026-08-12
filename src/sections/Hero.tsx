@@ -6,6 +6,9 @@ import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 // Константа с URL вашей Яндекс Функции для MAX
 const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
 
+// Максимальный размер файла: 1 МБ
+const MAX_FILE_SIZE = 1024 * 1024;
+
 const Hero = () => {
   const navigate = useNavigate();
   const heroRef = useRef<HTMLDivElement>(null);
@@ -20,6 +23,7 @@ const Hero = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -57,6 +61,7 @@ const Hero = () => {
     if (!isModalOpen) {
       setUploadedFile(null);
       setFilePreview(null);
+      setFileError(null);
     }
   }, [isModalOpen]);
 
@@ -90,6 +95,61 @@ const Hero = () => {
     });
   };
 
+  // Функция сжатия изображения
+  const compressImage = async (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_SIZE = 800; // Максимальный размер стороны
+          
+          let width = img.width;
+          let height = img.height;
+          
+          // Пропорционально уменьшаем изображение
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height = (height * MAX_SIZE) / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width = (width * MAX_SIZE) / height;
+              height = MAX_SIZE;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          // Конвертируем в JPEG с качеством 70%
+          canvas.toBlob(
+            (blob) => {
+              if (blob) {
+                const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                  type: 'image/jpeg',
+                });
+                resolve(compressedFile);
+              } else {
+                reject(new Error('Не удалось сжать изображение'));
+              }
+            },
+            'image/jpeg',
+            0.7 // Качество 70%
+          );
+        };
+        reader.onerror = (error) => reject(error);
+      };
+    });
+  };
+
   // Функция отправки в MAX с поддержкой файлов
   const sendToMax = async (data: typeof formData, file?: File) => {
     let message = `
@@ -107,12 +167,35 @@ const Hero = () => {
     // Формируем payload
     const payload: any = { text: message };
 
-    // Если есть файл, преобразуем в base64 и добавляем в payload
+    // Если есть файл, обрабатываем его
     if (file) {
-      const base64File = await fileToBase64(file);
+      let fileToSend = file;
+      
+      // Если файл > 1 МБ и это изображение, сжимаем его
+      if (file.size > MAX_FILE_SIZE) {
+        if (file.type.startsWith('image/')) {
+          try {
+            fileToSend = await compressImage(file);
+            console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+          } catch (error) {
+            console.error('Ошибка сжатия:', error);
+            throw new Error('Не удалось сжать изображение. Попробуйте загрузить файл поменьше.');
+          }
+        } else {
+          // Для не-изображений показываем ошибку
+          throw new Error(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
+        }
+      }
+      
+      // Проверяем размер после сжатия
+      if (fileToSend.size > MAX_FILE_SIZE) {
+        throw new Error(`Файл слишком большой (${(fileToSend.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
+      }
+      
+      const base64File = await fileToBase64(fileToSend);
       payload.file = base64File;
-      payload.fileName = file.name;
-      payload.fileSize = file.size;
+      payload.fileName = fileToSend.name;
+      payload.fileSize = fileToSend.size;
     }
 
     const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
@@ -123,6 +206,11 @@ const Hero = () => {
       body: JSON.stringify(payload),
     });
 
+    // Проверяем ответ
+    if (response.status === 413) {
+      throw new Error('Файл слишком большой для отправки. Попробуйте загрузить изображение меньшего размера.');
+    }
+
     const responseData = await response.json();
     if (!responseData.ok) {
       throw new Error('Ошибка отправки в MAX');
@@ -132,6 +220,7 @@ const Hero = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFileError(null);
     
     if (!isAgreed) {
       sendMetrikaEvent('form_validation_error', { reason: 'privacy_not_agreed', form: 'hero' });
@@ -172,8 +261,19 @@ const Hero = () => {
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
+      
+      // Показываем понятное сообщение об ошибке
+      let errorMessage = '❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.';
+      if (error instanceof Error) {
+        if (error.message.includes('слишком большой')) {
+          errorMessage = `❌ ${error.message}`;
+        } else if (error.message.includes('сжать')) {
+          errorMessage = '❌ Не удалось сжать изображение. Попробуйте загрузить файл поменьше.';
+        }
+      }
+      setFileError(errorMessage);
+      
       sendMetrikaEvent('form_submit_error', { form: 'hero', error: String(error) });
-      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
     }
@@ -197,7 +297,16 @@ const Hero = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setFileError(null);
+    
     if (file) {
+      // Проверяем размер файла
+      if (file.size > MAX_FILE_SIZE && !file.type.startsWith('image/')) {
+        setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
+        e.target.value = '';
+        return;
+      }
+      
       setUploadedFile(file);
       
       sendMetrikaEvent('file_uploaded', { 
@@ -222,6 +331,7 @@ const Hero = () => {
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
+    setFileError(null);
     sendMetrikaEvent('file_removed', { form: 'hero' });
   };
 
@@ -229,6 +339,7 @@ const Hero = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
+    setFileError(null);
     sendMetrikaGoal('open_hero_modal');
   };
 
@@ -416,7 +527,7 @@ const Hero = () => {
               {/* Загрузка файла */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
-                  Прикрепить свой эскиз <span className="text-gray-600">(необязательно)</span>
+                  Прикрепить свой эскиз <span className="text-gray-600">(необязательно, до 1 МБ)</span>
                 </label>
                 
                 {!uploadedFile ? (
@@ -435,6 +546,9 @@ const Hero = () => {
                       <Upload className="w-5 h-5" />
                       <span>Выберите файл</span>
                     </label>
+                    {fileError && (
+                      <p className="text-red-500 text-xs mt-1">{fileError}</p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
@@ -495,6 +609,10 @@ const Hero = () => {
                   {' '}и даю согласие на обработку персональных данных *
                 </label>
               </div>
+
+              {fileError && !uploadedFile && (
+                <p className="text-red-500 text-sm text-center">{fileError}</p>
+              )}
 
               <button
                 type="submit"
