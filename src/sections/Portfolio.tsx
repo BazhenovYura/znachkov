@@ -443,7 +443,7 @@ const Portfolio = () => {
     setFileError(null);
     
     if (file) {
-      // Проверяем размер файла для не-изображений
+      // Проверяем размер файла для не-изображений (хотя теперь только изображения)
       if (file.size > MAX_FILE_SIZE && !file.type.startsWith('image/')) {
         setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
         e.target.value = '';
@@ -740,6 +740,7 @@ const Portfolio = () => {
                     </div>
                   </div>
 
+                  {/* ЗАГРУЗКА ФАЙЛА - ИСПРАВЛЕНО */}
                   <div>
                     <label className={`block text-gray-400 mb-1 ${
                       isMobile ? 'text-xs' : 'text-sm'
@@ -751,7 +752,7 @@ const Portfolio = () => {
                       <div className="relative">
                         <input
                           type="file"
-                          accept="image/*,.pdf,.doc,.docx"
+                          accept="image/*"
                           onChange={handleFileChange}
                           className="hidden"
                           id="portfolio-file-upload"
@@ -765,7 +766,7 @@ const Portfolio = () => {
                           }`}
                         >
                           <Upload className={isMobile ? 'w-4 h-4' : 'w-5 h-5'} />
-                          <span>Выберите файл</span>
+                          <span>Выберите изображение</span>
                         </label>
                         {fileError && (
                           <p className="text-red-500 text-xs mt-1">{fileError}</p>
