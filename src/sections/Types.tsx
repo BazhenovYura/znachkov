@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { X, Upload } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
-// Константы с URL ваших Яндекс Функций
-const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
-const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
+// Единая функция для MAX (как в Hero и Portfolio блоках)
+const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
+
+// Максимальный размер файла: 1 МБ (для сжатия)
+const MAX_FILE_SIZE = 1024 * 1024;
 
 interface BadgeType {
   id: string;
@@ -75,6 +77,69 @@ const badgeTypes: BadgeType[] = [
   },
 ];
 
+// Вспомогательная функция для преобразования файла в base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Функция сжатия изображения (как в Hero блоке)
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 800;
+        
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = (height * MAX_SIZE) / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = (width * MAX_SIZE) / height;
+            height = MAX_SIZE;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Не удалось сжать изображение'));
+            }
+          },
+          'image/jpeg',
+          0.7
+        );
+      };
+      reader.onerror = (error) => reject(error);
+    };
+  });
+};
+
 const Types = () => {
   const navigate = useNavigate();
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -89,6 +154,7 @@ const Types = () => {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -124,6 +190,7 @@ const Types = () => {
     if (!isModalOpen) {
       setLogoFile(null);
       setLogoPreview(null);
+      setFileError(null);
     }
   }, [isModalOpen]);
 
@@ -138,11 +205,11 @@ const Types = () => {
     });
   };
 
-  // Функция отправки текста (без файла)
-  const sendTextToTelegram = async (data: typeof formData, type: BadgeType) => {
+  // Единая функция отправки в MAX (как в Hero и Portfolio блоках)
+  const sendToMax = async (data: typeof formData, type: BadgeType, file?: File) => {
     const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
 
-    const message = `
+    let message = `
 📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -162,73 +229,64 @@ ${featuresList}
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
+    const payload: any = { text: message };
+
+    // Если есть файл, преобразуем в base64 и добавляем в payload
+    if (file) {
+      let fileToSend = file;
+      
+      // Сжимаем если файл > 1 МБ и это изображение
+      if (file.size > MAX_FILE_SIZE && file.type.startsWith('image/')) {
+        try {
+          fileToSend = await compressImage(file);
+          console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+        } catch (error) {
+          console.error('Ошибка сжатия:', error);
+          throw new Error('Не удалось сжать изображение. Попробуйте загрузить файл поменьше.');
+        }
+      }
+      
+      const base64File = await fileToBase64(fileToSend);
+      payload.file = base64File;
+      payload.fileName = fileToSend.name;
+      payload.fileType = fileToSend.type || 'image/jpeg';
+      
+      // Добавляем в сообщение информацию о файле
+      message += `\n📎 <b>Прикрепленный логотип:</b> ${fileToSend.name} (${(fileToSend.size / 1024).toFixed(1)} KB)`;
+      payload.text = message;
+    }
+
+    const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(payload),
     });
 
     const responseData = await response.json();
     
     if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
+      throw new Error('Ошибка отправки в MAX');
     }
-
-    return responseData;
-  };
-
-  // Функция отправки с файлом
-  const sendFileToTelegram = async (data: typeof formData, type: BadgeType, file: File) => {
-    const featuresList = type.features.map(f => `▫️ ${f}`).join('\n');
-
-    const caption = `
-📌 <b>НОВАЯ ЗАЯВКА НА МАКЕТ С ЛОГОТИПОМ</b>
-━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>📍 Откуда:</b> Блок "Типы значков"
-
-🔹 <b>Выбранный формат:</b> ${type.name} (${type.size})
-📝 <b>Описание формата:</b> ${type.description}
-
-<b>Характеристики формата ${type.name}:</b>
-${featuresList}
-
-━━━━━━━━━━━━━━━━━━━━━━━
-👤 <b>Клиент:</b>
-• Имя: ${data.name || 'Не указано'}
-• Телефон: ${data.phone}
-
-📎 <b>Прикрепленный логотип:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
-
-⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caption', caption);
     
-    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const responseData = await response.json();
-    
-    if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
-    }
-
     return responseData;
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setFileError(null);
+    
     if (file) {
+      // Проверяем размер файла для не-изображений
+      if (file.size > MAX_FILE_SIZE && !file.type.startsWith('image/')) {
+        setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
+        e.target.value = '';
+        return;
+      }
+      
       setLogoFile(file);
       
-      // Отправляем событие о загрузке файла
       sendMetrikaEvent('file_uploaded', { 
         fileName: file.name,
         fileSize: file.size,
@@ -238,18 +296,22 @@ ${featuresList}
         typeName: selectedType?.name
       });
       
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setLogoPreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setLogoPreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setLogoPreview(null);
+      }
     }
   };
 
   const removeLogo = () => {
     setLogoFile(null);
     setLogoPreview(null);
-    // Отправляем событие об удалении файла
+    setFileError(null);
     sendMetrikaEvent('file_removed', { 
       form: 'types',
       typeId: selectedType?.id,
@@ -259,9 +321,9 @@ ${featuresList}
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFileError(null);
     
     if (!isAgreed) {
-      // Отправляем событие о неудачной попытке (не согласился с политикой)
       sendMetrikaEvent('form_validation_error', { 
         reason: 'privacy_not_agreed', 
         form: 'types',
@@ -272,7 +334,6 @@ ${featuresList}
       return;
     }
     
-    // Валидация полей
     if (!formData.name.trim() || !formData.phone.trim()) {
       sendMetrikaEvent('form_validation_error', { 
         reason: 'empty_fields', 
@@ -288,16 +349,14 @@ ${featuresList}
     
     try {
       if (logoFile) {
-        await sendFileToTelegram(formData, selectedType!, logoFile);
-        // Отправляем цель в Метрику - отправка формы с файлом
+        await sendToMax(formData, selectedType!, logoFile);
         sendMetrikaGoal('types_form_submit_with_logo', { 
           typeId: selectedType?.id,
           typeName: selectedType?.name,
           typeSize: selectedType?.size
         });
       } else {
-        await sendTextToTelegram(formData, selectedType!);
-        // Отправляем цель в Метрику - отправка формы без файла
+        await sendToMax(formData, selectedType!);
         sendMetrikaGoal('types_form_submit', { 
           typeId: selectedType?.id,
           typeName: selectedType?.name,
@@ -322,14 +381,19 @@ ${featuresList}
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      // Отправляем событие об ошибке
+      let errorMessage = '❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.';
+      if (error instanceof Error) {
+        if (error.message.includes('слишком большой') || error.message.includes('сжать')) {
+          errorMessage = `❌ ${error.message}`;
+        }
+      }
+      setFileError(errorMessage);
       sendMetrikaEvent('form_submit_error', { 
         form: 'types',
         typeId: selectedType?.id,
         typeName: selectedType?.name,
         error: String(error) 
       });
-      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
     }
@@ -342,7 +406,6 @@ ${featuresList}
       [name]: value,
     });
     
-    // Отправляем событие о начале заполнения поля (только первый раз)
     if (!formData[name as keyof typeof formData] && value) {
       sendMetrikaEvent('form_field_filled', { 
         field: name, 
@@ -354,7 +417,6 @@ ${featuresList}
   };
 
   const handleFocus = (fieldName: string) => {
-    // Отправляем событие о фокусе на поле
     sendMetrikaEvent('form_field_focus', { 
       field: fieldName, 
       form: 'types',
@@ -366,7 +428,7 @@ ${featuresList}
   const openModal = (type: BadgeType) => {
     setSelectedType(type);
     setIsModalOpen(true);
-    // Отправляем цель в Метрику - открытие модалки с конкретным типом
+    setFileError(null);
     sendMetrikaGoal('open_types_modal', { 
       typeId: type.id, 
       typeName: type.name,
@@ -375,7 +437,6 @@ ${featuresList}
   };
 
   const closeModal = () => {
-    // Отправляем событие о закрытии модалки
     if (formData.name || formData.phone || logoFile) {
       sendMetrikaEvent('modal_closed_with_data', { 
         form: 'types',
@@ -425,7 +486,6 @@ ${featuresList}
                   className="h-full p-6 lg:p-8 bg-dark-light rounded-lg border border-gray-800 hover:border-gold/50 transition-all duration-300 hover:-translate-y-2 hover:shadow-gold flex flex-col cursor-pointer"
                   onClick={() => openModal(type)}
                 >
-                  {/* Фото значка с прозрачным фоном */}
                   <div className="relative w-40 h-40 sm:w-44 sm:h-44 lg:w-48 lg:h-48 mx-auto mb-6">
                     <div className="absolute inset-0 bg-gold/10 rounded-full blur-2xl transform scale-75 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                     <img
@@ -460,7 +520,7 @@ ${featuresList}
 
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // Предотвращаем всплытие события
+                      e.stopPropagation();
                       openModal(type);
                     }}
                     className="w-full py-2 px-4 bg-gold/10 text-gold rounded-lg hover:bg-gold hover:text-dark transition-all duration-300 font-medium text-sm mt-auto"
@@ -546,7 +606,7 @@ ${featuresList}
 
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
-                  Загрузить свой логотип <span className="text-gray-600">(необязательно)</span>
+                  Загрузить свой логотип <span className="text-gray-600">(необязательно, до 1 МБ)</span>
                 </label>
                 
                 {!logoPreview ? (
@@ -565,6 +625,9 @@ ${featuresList}
                       <Upload className="w-5 h-5" />
                       <span>Выберите файл</span>
                     </label>
+                    {fileError && (
+                      <p className="text-red-500 text-xs mt-1">{fileError}</p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
@@ -622,6 +685,10 @@ ${featuresList}
                   {' '}и даю согласие на обработку персональных данных *
                 </label>
               </div>
+
+              {fileError && !logoFile && (
+                <p className="text-red-500 text-sm text-center">{fileError}</p>
+              )}
 
               <button
                 type="submit"
