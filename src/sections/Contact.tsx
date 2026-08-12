@@ -4,9 +4,74 @@ import { useNavigate } from 'react-router-dom';
 import { Phone, Mail, MapPin, Clock, Send, CheckCircle, AlertCircle, Upload, X } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
-// Константы с URL ваших Яндекс Функций
-const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
-const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
+// Единая функция для MAX
+const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
+
+// Максимальный размер файла: 5 МБ (для контактов можно больше)
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+// Вспомогательная функция для преобразования файла в base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Функция сжатия изображения (только для изображений > 1 МБ)
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 1200; // Чуть больше для контактов
+        
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = (height * MAX_SIZE) / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = (width * MAX_SIZE) / height;
+            height = MAX_SIZE;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Не удалось сжать изображение'));
+            }
+          },
+          'image/jpeg',
+          0.8 // Чуть лучше качество для контактов
+        );
+      };
+      reader.onerror = (error) => reject(error);
+    };
+  });
+};
 
 const Contact = () => {
   const navigate = useNavigate();
@@ -27,6 +92,7 @@ const Contact = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | ReactNode>('');
+  const [fileError, setFileError] = useState<string | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -55,14 +121,12 @@ const Contact = () => {
     });
     setSubmitError('');
     
-    // Отправляем событие о начале заполнения поля (только первый раз)
     if (!formData[name as keyof typeof formData] && value) {
       sendMetrikaEvent('form_field_filled', { field: name, form: 'contact' });
     }
   };
 
   const handleFocus = (fieldName: string) => {
-    // Отправляем событие о фокусе на поле
     sendMetrikaEvent('form_field_focus', { field: fieldName, form: 'contact' });
   };
 
@@ -76,10 +140,18 @@ const Contact = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setFileError(null);
+    
     if (file) {
+      // Проверяем размер файла
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 5 МБ`);
+        e.target.value = '';
+        return;
+      }
+      
       setUploadedFile(file);
       
-      // Отправляем событие о загрузке файла
       sendMetrikaEvent('file_uploaded', { 
         fileName: file.name,
         fileSize: file.size,
@@ -87,7 +159,7 @@ const Contact = () => {
         form: 'contact'
       });
       
-      // Если это изображение, создаем превью
+      // Создаем превью только для изображений
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -103,13 +175,13 @@ const Contact = () => {
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
-    // Отправляем событие об удалении файла
+    setFileError(null);
     sendMetrikaEvent('file_removed', { form: 'contact' });
   };
 
-  // Функция отправки текста (без файла)
-  const sendTextToTelegram = async (data: typeof formData) => {
-    const message = `
+  // Единая функция отправки в MAX
+  const sendToMax = async (data: typeof formData, file?: File) => {
+    let message = `
 🔥 <b>НОВАЯ ЗАЯВКА С САЙТА ЗНАЧКОВ.РФ</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -131,74 +203,57 @@ const Contact = () => {
 })}
     `;
 
-    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
+    const payload: any = { text: message };
+
+    // Если есть файл, преобразуем в base64 и добавляем в payload
+    if (file) {
+      let fileToSend = file;
+      
+      // Сжимаем только изображения > 1 МБ
+      if (file.size > 1024 * 1024 && file.type.startsWith('image/')) {
+        try {
+          fileToSend = await compressImage(file);
+          console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+        } catch (error) {
+          console.error('Ошибка сжатия:', error);
+          // Продолжаем с оригинальным файлом, если сжатие не удалось
+        }
+      }
+      
+      const base64File = await fileToBase64(fileToSend);
+      payload.file = base64File;
+      payload.fileName = fileToSend.name;
+      payload.fileType = fileToSend.type || 'application/octet-stream';
+      
+      // Добавляем в сообщение информацию о файле
+      message += `\n📎 <b>Прикрепленный файл:</b> ${fileToSend.name} (${(fileToSend.size / 1024).toFixed(1)} KB)`;
+      payload.text = message;
+    }
+
+    const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(payload),
     });
 
     const responseData = await response.json();
     
     if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
+      throw new Error('Ошибка отправки в MAX');
     }
-
-    return responseData;
-  };
-
-  // Функция отправки с файлом
-  const sendFileToTelegram = async (data: typeof formData, file: File) => {
-    const caption = `
-🔥 <b>НОВАЯ ЗАЯВКА С САЙТА ЗНАЧКОВ.РФ (С ФАЙЛОМ)</b>
-━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>📍 Откуда:</b> Блок "Контакты" (низ страницы)
-
-👤 <b>Имя:</b> ${data.name || 'Не указано'}
-🏢 <b>Компания:</b> ${data.company || 'Не указана'}
-📞 <b>Телефон:</b> ${data.phone}
-📧 <b>Email:</b> ${data.email || 'Не указан'}
-💬 <b>Комментарий:</b> ${data.comment || 'Без комментария'}
-
-📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
-
-⏰ <b>Время отправки (Екатеринбург):</b> ${new Date().toLocaleString('ru-RU', { 
-  timeZone: 'Asia/Yekaterinburg',
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit'
-})}
-    `;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caption', caption);
     
-    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const responseData = await response.json();
-    
-    if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
-    }
-
     return responseData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError('');
+    setFileError(null);
     
     if (!isAgreed) {
       setConsentError('Необходимо согласиться с политикой конфиденциальности');
-      // Отправляем событие о неудачной попытке
       sendMetrikaEvent('form_validation_error', { 
         reason: 'privacy_not_agreed', 
         form: 'contact' 
@@ -210,7 +265,6 @@ const Contact = () => {
       return;
     }
     
-    // Валидация полей
     if (!formData.name.trim() || !formData.phone.trim()) {
       sendMetrikaEvent('form_validation_error', { 
         reason: 'empty_fields', 
@@ -225,16 +279,14 @@ const Contact = () => {
     
     try {
       if (uploadedFile) {
-        await sendFileToTelegram(formData, uploadedFile);
-        // Отправляем цель в Метрику - отправка формы с файлом
+        await sendToMax(formData, uploadedFile);
         sendMetrikaGoal('contact_form_submit_with_file', {
           hasComment: !!formData.comment,
           hasCompany: !!formData.company,
           hasEmail: !!formData.email
         });
       } else {
-        await sendTextToTelegram(formData);
-        // Отправляем цель в Метрику - отправка формы без файла
+        await sendToMax(formData);
         sendMetrikaGoal('contact_form_submit', {
           hasComment: !!formData.comment,
           hasCompany: !!formData.company,
@@ -248,7 +300,6 @@ const Contact = () => {
       setFilePreview(null);
       setIsAgreed(false);
       
-      // Переход на страницу благодарности с передачей секции и ширины экрана
       navigate('/thanks', { 
         state: { 
           from: '/',
@@ -260,7 +311,6 @@ const Contact = () => {
       setTimeout(() => setIsSubmitted(false), 5000);
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      // Отправляем событие об ошибке
       sendMetrikaEvent('form_submit_error', { 
         form: 'contact', 
         error: String(error) 
@@ -468,17 +518,17 @@ const Contact = () => {
                 />
               </div>
 
-              {/* File Upload */}
+              {/* File Upload - поддерживает любые файлы */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
-                  Прикрепить файл <span className="text-gray-600">(необязательно)</span>
+                  Прикрепить файл <span className="text-gray-600">(необязательно, до 5 МБ)</span>
                 </label>
                 
                 {!uploadedFile ? (
                   <div className="relative">
                     <input
                       type="file"
-                      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                      accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar"
                       onChange={handleFileChange}
                       className="hidden"
                       id="contact-file-upload"
@@ -490,6 +540,9 @@ const Contact = () => {
                       <Upload className="w-5 h-5" />
                       <span>Выберите файл (изображение, PDF, документ)</span>
                     </label>
+                    {fileError && (
+                      <p className="text-red-500 text-xs mt-1">{fileError}</p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3 bg-dark-light border border-gray-800 rounded-lg">
@@ -547,7 +600,6 @@ const Contact = () => {
                   </label>
                 </div>
                 
-                {/* Consent Error Message */}
                 {consentError && (
                   <div className="flex items-center gap-2 p-3 bg-red-500/10 border border-red-500/30 rounded-lg animate-pulse">
                     <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
@@ -558,7 +610,6 @@ const Contact = () => {
                 )}
               </div>
 
-              {/* Error Message с альтернативными контактами */}
               {submitError && (
                 <div className="flex items-center gap-2 p-4 bg-red-500/10 border border-red-500/30 rounded-lg">
                   <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
@@ -586,7 +637,6 @@ const Contact = () => {
                 )}
               </button>
 
-              {/* Success Message */}
               {isSubmitted && (
                 <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/30 rounded-lg">
                   <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
