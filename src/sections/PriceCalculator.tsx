@@ -92,6 +92,146 @@ const compressImage = async (file: File): Promise<File> => {
   });
 };
 
+// Компонент визуализации формы
+const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme }: any) => {
+  const displayWidth = calculatorData.width;
+  const displayHeight = calculatorData.height;
+  const ENLARGE_FACTOR = 1.1;
+  
+  const getShapeStyle = () => {
+    if (calculatorData.shape === 'circle') {
+      return {
+        borderRadius: '50%',
+        overflow: 'hidden' as const,
+      };
+    }
+    if (calculatorData.shape === 'rounded') {
+      return {
+        borderRadius: `${Math.min(displayWidth, displayHeight) * 0.2}mm`,
+        overflow: 'hidden' as const,
+      };
+    }
+    return {
+      borderRadius: '0mm',
+      overflow: 'hidden' as const,
+    };
+  };
+  
+  const getShapeLabel = () => {
+    if (calculatorData.shape === 'circle') {
+      return `⌀${calculatorData.width} мм`;
+    }
+    return `${calculatorData.width}×${calculatorData.height} мм`;
+  };
+  
+  if (filePreview && uploadedFile?.type.startsWith('image/')) {
+    return (
+      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+        <div className="text-center mb-2">
+          <span className="text-gray-400 text-xs">Эскиз в габаритах значка</span>
+          <span className={`${theme.text} text-xs ml-2`}>{uploadedFile.name}</span>
+        </div>
+        
+        <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
+          <div
+            className="relative bg-dark"
+            style={{
+              width: `${displayWidth * ENLARGE_FACTOR}mm`,
+              height: `${displayHeight * ENLARGE_FACTOR}mm`,
+              ...getShapeStyle(),
+            }}
+          >
+            <img 
+              src={filePreview} 
+              alt="Загруженный эскиз"
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+            <div
+              className={`absolute inset-0 border-2 ${theme.border} pointer-events-none`}
+              style={{
+                borderRadius: getShapeStyle().borderRadius,
+              }}
+            />
+          </div>
+        </div>
+        <div className="text-center mt-2 text-gray-500 text-xs">
+          Размер значка: {calculatorData.width}×{calculatorData.height} мм
+        </div>
+        <div className="text-center text-gray-600 text-[10px] mt-1">
+          Эскиз автоматически вписан в габариты значка
+        </div>
+      </div>
+    );
+  }
+  
+  if (uploadedFile && !uploadedFile.type.startsWith('image/')) {
+    return (
+      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+        <div className="text-center mb-2">
+          <span className="text-gray-400 text-xs">Загруженный файл</span>
+          <span className={`${theme.text} text-xs ml-2`}>{uploadedFile.name}</span>
+        </div>
+        
+        <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
+          <div className="text-center">
+            <FileText className={`w-16 h-16 ${theme.text} mx-auto mb-2`} />
+            <p className="text-gray-400 text-sm">Файл загружен</p>
+            <p className="text-gray-500 text-xs mt-1">Размер: {(uploadedFile.size / 1024).toFixed(1)} KB</p>
+          </div>
+        </div>
+        <div className="text-center mt-2 text-gray-500 text-xs">
+          Размер значка: {calculatorData.width}×{calculatorData.height} мм
+        </div>
+        <div className="flex justify-center mt-2">
+          <div
+            className={`border-2 ${theme.border}/50`}
+            style={{
+              width: `${displayWidth * ENLARGE_FACTOR}mm`,
+              height: `${displayHeight * ENLARGE_FACTOR}mm`,
+              ...getShapeStyle(),
+            }}
+          >
+            <div className="w-full h-full flex items-center justify-center">
+              <span className={`${theme.text} text-[2mm] opacity-50`}>
+                {getShapeLabel()}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
+  return (
+    <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+      <div className="text-center mb-2">
+        <span className="text-gray-400 text-xs">Визуализация значка</span>        
+      </div>
+      
+      <div className="flex justify-center items-center min-h-[180px] bg-dark/50 rounded-lg p-4">
+        <div className="flex justify-center items-center">
+          <div
+            className={`bg-gradient-to-br ${theme.gradient} border-2 ${theme.border} ${theme.shadow} flex items-center justify-center`}
+            style={{
+              width: `${displayWidth * ENLARGE_FACTOR}mm`,
+              height: `${displayHeight * ENLARGE_FACTOR}mm`,
+              ...getShapeStyle(),
+            }}
+          >
+            <span className={`${theme.text} text-[2mm] opacity-70 whitespace-nowrap`}>
+              {getShapeLabel()}
+            </span>
+          </div>
+        </div>
+      </div>
+      <div className="text-center mt-2 text-gray-500 text-xs">
+        <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
+        <div className={`${theme.text} text-xs mt-1`}>Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
+      </div>
+    </div>
+  );
+};
+
 const PriceCalculator = () => {
   const navigate = useNavigate();
   const [copied, setCopied] = useState(false);
@@ -147,6 +287,14 @@ const PriceCalculator = () => {
     enamelColors: 1,
   });
 
+  // Функция для получения отображения цены материала
+  const getMaterialPriceDisplay = (material: 'gold' | 'silver') => {
+    const price = material === 'gold' ? metalPrices.gold : metalPrices.silver;
+    if (priceLoadError) return 'ошибка загрузки';
+    if (!price) return 'загрузка...';
+    return `${price.toLocaleString()} ₽/г`;
+  };
+
   const getThemeClasses = () => {
     const isGold = calculatorData.material === 'gold';
     return {
@@ -159,6 +307,9 @@ const PriceCalculator = () => {
       buttonTo: isGold ? 'to-yellow-600' : 'to-gray-500',
     };
   };
+  
+  // Проверка загружены ли цены
+  const isPriceLoaded = metalPrices.gold !== null && metalPrices.silver !== null;
   
   useEffect(() => {
     const savedMode = sessionStorage.getItem('calculator_mode');
@@ -370,6 +521,10 @@ const PriceCalculator = () => {
       additionalCostPerUnit: Math.round(additionalCostWithVAT),
     };
   };
+
+  // Получаем расчетные значения
+  const calculationResult = calculatePrice();
+  const { weight, metalCostPerGram, additionalCostPerUnit } = calculationResult;
 
   useEffect(() => {
     if (!metalPrices.gold || !metalPrices.silver) return;
@@ -598,7 +753,6 @@ const PriceCalculator = () => {
       ? `• Доп. обработка: ${processingList.join(', ')}\n• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)`
       : '• Доп. обработка: не выбрана';
     
-    const { weight, metalCostPerGram, totalCostPerGram, model3DCostWithVAT, additionalCostPerUnit } = calculatePrice();
     const isGold = calculatorData.material === 'gold';
     const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
     
@@ -616,8 +770,7 @@ const PriceCalculator = () => {
 • Количество: ${calculatorData.quantity} шт.
 • Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
 • Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
-• Итого себестоимость с работой: ${totalCostPerGram.toLocaleString()} ₽/г
-• Стоимость 3D-модели (с НДС): ${model3DCostWithVAT.toLocaleString()} ₽
+• Стоимость 3D-модели (с НДС): ${calculationResult.model3DCostWithVAT.toLocaleString()} ₽
 ${processingText}
 • Расчетная стоимость (с НДС 22%): ${estimatedPrice.toLocaleString()} ₽
 • Цена за штуку (с НДС 22%): ${pricePerUnit.toLocaleString()} ₽
@@ -1210,7 +1363,12 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             </div>
 
             <div className="mb-6">
-              <ShapeVisualization />
+              <ShapeVisualization 
+                calculatorData={calculatorData}
+                filePreview={filePreview}
+                uploadedFile={uploadedFile}
+                theme={theme}
+              />
             </div>
 
             <div className="mb-6">
@@ -1438,7 +1596,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     Стоимость материала: {metalCostPerGram.toLocaleString()} ₽/г
                   </p>
                   <p className="text-gray-500 text-xs mt-1">
-                    3D-модель (единоразово): {model3DCostWithVAT.toLocaleString()} ₽ с НДС
+                    3D-модель (единоразово): {calculationResult.model3DCostWithVAT.toLocaleString()} ₽ с НДС
                   </p>
                   {additionalCostPerUnit > 0 && (
                     <p className="text-gray-500 text-xs mt-1">
