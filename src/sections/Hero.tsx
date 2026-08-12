@@ -512,32 +512,32 @@ const Hero = () => {
               </div>
 
               {/* Загрузка файла */}
-              <div>
-                <label className="block text-gray-400 text-sm mb-2">
-                  Прикрепить свой эскиз <span className="text-gray-600">(необязательно, до 1 МБ)</span>
-                </label>
-                
-                {!uploadedFile ? (
-                  <div className="relative">
-                    <input
-                      type="file"
-                      accept="image/*,.pdf,.doc,.docx"
-                      onChange={handleFileChange}
-                      className="hidden"
-                      id="hero-file-upload"
-                    />
-                    <label
-                      htmlFor="hero-file-upload"
-                      className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
-                    >
-                      <Upload className="w-5 h-5" />
-                      <span>Выберите файл</span>
-                    </label>
-                    {fileError && (
-                      <p className="text-red-500 text-xs mt-1">{fileError}</p>
-                    )}
-                  </div>
-                ) : (
+<div>
+  <label className="block text-gray-400 text-sm mb-2">
+    Прикрепить свой эскиз <span className="text-gray-600">(необязательно, до 1 МБ)</span>
+  </label>
+  
+  {!uploadedFile ? (
+    <div className="relative">
+      <input
+        type="file"
+        accept="image/*"  // ← ИЗМЕНЕНО: только изображения
+        onChange={handleFileChange}
+        className="hidden"
+        id="hero-file-upload"
+      />
+      <label
+        htmlFor="hero-file-upload"
+        className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
+      >
+        <Upload className="w-5 h-5" />
+        <span>Выберите изображение</span>  {/* ← ИЗМЕНЕНО: текст */}
+      </label>
+      {fileError && (
+        <p className="text-red-500 text-xs mt-1">{fileError}</p>
+      )}
+    </div>
+  ) : (
                   <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
                     {filePreview ? (
                       <img
