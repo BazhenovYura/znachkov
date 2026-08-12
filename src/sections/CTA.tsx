@@ -3,9 +3,74 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Phone, X, Upload } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
-// Константы с URL ваших Яндекс Функций
-const YANDEX_TEXT_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
-const YANDEX_FILE_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ebhne62abdudhrv085';
+// Единая функция для MAX (как в Hero блоке)
+const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
+
+// Максимальный размер файла: 1 МБ (для сжатия)
+const MAX_FILE_SIZE = 1024 * 1024;
+
+// Вспомогательная функция для преобразования файла в base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+// Функция сжатия изображения (как в Hero блоке)
+const compressImage = async (file: File): Promise<File> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 800;
+        
+        let width = img.width;
+        let height = img.height;
+        
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = (height * MAX_SIZE) / width;
+            width = MAX_SIZE;
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = (width * MAX_SIZE) / height;
+            height = MAX_SIZE;
+          }
+        }
+        
+        canvas.width = width;
+        canvas.height = height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0, width, height);
+        
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), {
+                type: 'image/jpeg',
+              });
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Не удалось сжать изображение'));
+            }
+          },
+          'image/jpeg',
+          0.7
+        );
+      };
+      reader.onerror = (error) => reject(error);
+    };
+  });
+};
 
 const CTA = () => {
   const navigate = useNavigate();
@@ -21,6 +86,7 @@ const CTA = () => {
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isAgreed, setIsAgreed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [fileError, setFileError] = useState<string | null>(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -58,6 +124,7 @@ const CTA = () => {
     if (!isModalOpen) {
       setUploadedFile(null);
       setFilePreview(null);
+      setFileError(null);
     }
   }, [isModalOpen]);
 
@@ -72,9 +139,9 @@ const CTA = () => {
     });
   };
 
-  // Функция отправки текста (без файла)
-  const sendTextToTelegram = async (data: typeof formData) => {
-    const message = `
+  // Единая функция отправки в MAX (как в Hero блоке)
+  const sendToMax = async (data: typeof formData, file?: File) => {
+    let message = `
 🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА (CTA блок)</b>
 ━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -86,62 +153,55 @@ const CTA = () => {
 ⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
     `;
 
-    const response = await fetch(YANDEX_TEXT_FUNCTION_URL, {
+    const payload: any = { text: message };
+
+    // Если есть файл, преобразуем в base64 и добавляем в payload
+    if (file) {
+      let fileToSend = file;
+      
+      // Сжимаем если файл > 1 МБ и это изображение
+      if (file.size > MAX_FILE_SIZE && file.type.startsWith('image/')) {
+        try {
+          fileToSend = await compressImage(file);
+          console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+        } catch (error) {
+          console.error('Ошибка сжатия:', error);
+          throw new Error('Не удалось сжать изображение. Попробуйте загрузить файл поменьше.');
+        }
+      }
+      
+      const base64File = await fileToBase64(fileToSend);
+      payload.file = base64File;
+      payload.fileName = fileToSend.name;
+      payload.fileType = fileToSend.type || 'image/jpeg';
+      
+      // Добавляем в сообщение информацию о файле
+      message += `\n📎 <b>Прикрепленный файл:</b> ${fileToSend.name} (${(fileToSend.size / 1024).toFixed(1)} KB)`;
+      payload.text = message;
+    }
+
+    const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify(payload),
     });
 
     const responseData = await response.json();
     
     if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
+      throw new Error('Ошибка отправки в MAX');
     }
-
-    return responseData;
-  };
-
-  // Функция отправки с файлом
-  const sendFileToTelegram = async (data: typeof formData, file: File) => {
-    const caption = `
-🎨 <b>ЗАПРОС БЕСПЛАТНОГО МАКЕТА С ФАЙЛОМ (CTA блок)</b>
-━━━━━━━━━━━━━━━━━━━━━━━
-
-<b>📍 Откуда:</b> Блок "CTA" (специальное предложение)
-
-👤 <b>Имя:</b> ${data.name || 'Не указано'}
-📞 <b>Телефон:</b> ${data.phone}
-
-📎 <b>Прикрепленный файл:</b> ${file.name} (${(file.size / 1024).toFixed(1)} KB)
-
-⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
-
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('caption', caption);
     
-    const response = await fetch(YANDEX_FILE_FUNCTION_URL, {
-      method: 'POST',
-      body: formData,
-    });
-
-    const responseData = await response.json();
-    
-    if (!responseData.ok) {
-      throw new Error('Ошибка отправки в Telegram');
-    }
-
     return responseData;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFileError(null);
     
     if (!isAgreed) {
-      // Отправляем событие о неудачной попытке (не согласился с политикой)
       sendMetrikaEvent('form_validation_error', { 
         reason: 'privacy_not_agreed', 
         form: 'cta'
@@ -150,7 +210,6 @@ const CTA = () => {
       return;
     }
     
-    // Валидация полей
     if (!formData.name.trim() || !formData.phone.trim()) {
       sendMetrikaEvent('form_validation_error', { 
         reason: 'empty_fields', 
@@ -164,12 +223,10 @@ const CTA = () => {
     
     try {
       if (uploadedFile) {
-        await sendFileToTelegram(formData, uploadedFile);
-        // Отправляем цель в Метрику - отправка формы с файлом
+        await sendToMax(formData, uploadedFile);
         sendMetrikaGoal('cta_form_submit_with_file');
       } else {
-        await sendTextToTelegram(formData);
-        // Отправляем цель в Метрику - отправка формы без файла
+        await sendToMax(formData);
         sendMetrikaGoal('cta_form_submit');
       }
       
@@ -189,12 +246,17 @@ const CTA = () => {
       
     } catch (error) {
       console.error('Ошибка отправки:', error);
-      // Отправляем событие об ошибке
+      let errorMessage = '❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.';
+      if (error instanceof Error) {
+        if (error.message.includes('слишком большой') || error.message.includes('сжать')) {
+          errorMessage = `❌ ${error.message}`;
+        }
+      }
+      setFileError(errorMessage);
       sendMetrikaEvent('form_submit_error', { 
         form: 'cta', 
         error: String(error) 
       });
-      alert('❌ Ошибка отправки. Попробуйте позже или позвоните нам напрямую.');
     } finally {
       setIsSubmitting(false);
     }
@@ -207,23 +269,29 @@ const CTA = () => {
       [name]: value,
     });
     
-    // Отправляем событие о начале заполнения поля (только первый раз)
     if (!formData[name as keyof typeof formData] && value) {
       sendMetrikaEvent('form_field_filled', { field: name, form: 'cta' });
     }
   };
 
   const handleFocus = (fieldName: string) => {
-    // Отправляем событие о фокусе на поле
     sendMetrikaEvent('form_field_focus', { field: fieldName, form: 'cta' });
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    setFileError(null);
+    
     if (file) {
+      // Проверяем размер файла для не-изображений (хотя теперь только изображения)
+      if (file.size > MAX_FILE_SIZE && !file.type.startsWith('image/')) {
+        setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 1 МБ`);
+        e.target.value = '';
+        return;
+      }
+      
       setUploadedFile(file);
       
-      // Отправляем событие о загрузке файла
       sendMetrikaEvent('file_uploaded', { 
         fileName: file.name,
         fileSize: file.size,
@@ -231,7 +299,6 @@ const CTA = () => {
         form: 'cta'
       });
       
-      // Если это изображение, создаем превью
       if (file.type.startsWith('image/')) {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -247,7 +314,7 @@ const CTA = () => {
   const removeFile = () => {
     setUploadedFile(null);
     setFilePreview(null);
-    // Отправляем событие об удалении файла
+    setFileError(null);
     sendMetrikaEvent('file_removed', { form: 'cta' });
   };
 
@@ -255,12 +322,11 @@ const CTA = () => {
     setIsModalOpen(true);
     setFormData({ name: '', phone: '' });
     setIsAgreed(false);
-    // Отправляем цель в Метрику - открытие модалки
+    setFileError(null);
     sendMetrikaGoal('open_cta_modal');
   };
 
   const closeModal = () => {
-    // Отправляем событие о закрытии модалки
     if (formData.name || formData.phone || uploadedFile) {
       sendMetrikaEvent('modal_closed_with_data', { form: 'cta' });
     } else {
@@ -270,7 +336,6 @@ const CTA = () => {
   };
 
   const handlePhoneClick = () => {
-    // Отправляем событие в Метрику - клик по телефону
     sendMetrikaGoal('phone_click');
     console.log('📞 Клик по телефону в CTA блоке');
   };
@@ -398,17 +463,17 @@ const CTA = () => {
                 />
               </div>
 
-              {/* Загрузка файла */}
+              {/* Загрузка файла - ИСПРАВЛЕНО */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
-                  Прикрепить свой эскиз <span className="text-gray-600">(необязательно)</span>
+                  Прикрепить свой эскиз <span className="text-gray-600">(необязательно, до 1 МБ)</span>
                 </label>
                 
                 {!uploadedFile ? (
                   <div className="relative">
                     <input
                       type="file"
-                      accept="image/*,.pdf,.doc,.docx"
+                      accept="image/*"
                       onChange={handleFileChange}
                       className="hidden"
                       id="cta-file-upload"
@@ -418,8 +483,11 @@ const CTA = () => {
                       className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
                     >
                       <Upload className="w-5 h-5" />
-                      <span>Выберите файл</span>
+                      <span>Выберите изображение</span>
                     </label>
+                    {fileError && (
+                      <p className="text-red-500 text-xs mt-1">{fileError}</p>
+                    )}
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
@@ -480,6 +548,10 @@ const CTA = () => {
                   {' '}и даю согласие на обработку персональных данных *
                 </label>
               </div>
+
+              {fileError && !uploadedFile && (
+                <p className="text-red-500 text-sm text-center">{fileError}</p>
+              )}
 
               <button
                 type="submit"
