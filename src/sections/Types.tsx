@@ -623,7 +623,7 @@ ${featuresList}
                       className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors cursor-pointer"
                     >
                       <Upload className="w-5 h-5" />
-                      <span>Выберите файл</span>
+                      <span>Выберите изображение</span>
                     </label>
                     {fileError && (
                       <p className="text-red-500 text-xs mt-1">{fileError}</p>
