@@ -380,25 +380,15 @@ const PriceCalculator = () => {
     }
   }, []);
 
+  // ИЗМЕНЕНО: форма видна сразу для всех режимов
   useEffect(() => {
     if (!isLoadingMode) {
-      if (mode === 'client') {
-        setShowForm(true);
-        console.log('Клиентский режим: форма должна быть видна');
-      } else {
-        setShowForm(false);
-        console.log('Режим менеджера: форма скрыта до выбора параметров');
-      }
+      // Форма видна сразу для всех режимов
+      setShowForm(true);
+      console.log('Форма видна для всех режимов');
     }
   }, [mode, isLoadingMode]);
 
-  useEffect(() => {
-    if (mode === 'client' && !showForm && !isLoadingMode) {
-      console.log('Принудительный показ формы для клиента');
-      setShowForm(true);
-    }
-  }, [mode, showForm, isLoadingMode]);
-  
   const presets = {
     maxi: { width: 35, height: 30, shape: 'rectangle' as const, label: 'MAXI', complexity: 1.4 },
     midi: { width: 25, height: 22, shape: 'rectangle' as const, label: 'MIDI', complexity: 1.3 },
@@ -557,10 +547,6 @@ const PriceCalculator = () => {
         height: preset.height,
       }));
       sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
-    }
-    if (mode === 'manager' && !showForm) {
-      setShowForm(true);
-      sendMetrikaEvent('calculator_form_shown');
     }
   };
 
@@ -1620,172 +1606,171 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             </div>
           </div>
 
-          {showForm && (
-            <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 animate-fade-in-up backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+          {/* ФОРМА ВИДНА ВСЕГДА - убираем условие showForm */}
+          <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 animate-fade-in-up backdrop-blur-sm">
+            <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
+              <div>
+                <h2 className="font-serif text-2xl md:text-3xl text-white">
+                  Шаг 2. Получите точный расчет
+                </h2>
+                <p className="text-gray-400 text-sm mt-1">
+                  {mode === 'manager' 
+                    ? 'Заполните форму и получите персональное предложение со скидкой'
+                    : 'Оставьте контакты, и мы рассчитаем стоимость заказа'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2 bg-gold/10 px-4 py-2 rounded-full">
+                <Zap className="w-4 h-4 text-gold" />
+                <span className="text-gold text-sm">Скидка до 15%</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-5">
+              <div className="grid md:grid-cols-2 gap-5">
                 <div>
-                  <h2 className="font-serif text-2xl md:text-3xl text-white">
-                    Шаг 2. Получите точный расчет
-                  </h2>
-                  <p className="text-gray-400 text-sm mt-1">
-                    {mode === 'manager' 
-                      ? 'Заполните форму и получите персональное предложение со скидкой'
-                      : 'Оставьте контакты, и мы рассчитаем стоимость заказа'}
-                  </p>
+                  <label className="block text-gray-400 text-sm mb-2">Ваше имя *</label>
+                  <input
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    onFocus={() => handleFocus('name')}
+                    required
+                    className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                    placeholder="Иван Иванов"
+                  />
                 </div>
-                <div className="flex items-center gap-2 bg-gold/10 px-4 py-2 rounded-full">
-                  <Zap className="w-4 h-4 text-gold" />
-                  <span className="text-gold text-sm">Скидка до 15%</span>
+                <div>
+                  <label className="block text-gray-400 text-sm mb-2">Телефон *</label>
+                  <input
+                    type="tel"
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    onFocus={() => handleFocus('phone')}
+                    required
+                    className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                    placeholder="+7 (___) ___-__-__"
+                  />
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="grid md:grid-cols-2 gap-5">
-                  <div>
-                    <label className="block text-gray-400 text-sm mb-2">Ваше имя *</label>
-                    <input
-                      type="text"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleChange}
-                      onFocus={() => handleFocus('name')}
-                      required
-                      className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
-                      placeholder="Иван Иванов"
-                    />
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Email</label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  onFocus={() => handleFocus('email')}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                  placeholder="ivan@company.ru"
+                />
+              </div>
+
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">Комментарий</label>
+                <textarea
+                  name="comment"
+                  value={formData.comment}
+                  onChange={handleChange}
+                  onFocus={() => handleFocus('comment')}
+                  rows={3}
+                  className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
+                  placeholder="Ваши пожелания..."
+                />
+              </div>
+
+              {/* Загрузка файла - поддерживает любые файлы */}
+              <div>
+                <label className="block text-gray-400 text-sm mb-2">
+                  Прикрепить эскиз <span className="text-gray-600">(необязательно, до 5 МБ)</span>
+                </label>
+                {!uploadedFile ? (
+                  <div className="relative">
+                    <label className="cursor-pointer flex items-center justify-center gap-2 w-full px-4 py-3 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors">
+                      <Upload className="w-5 h-5" />
+                      <span>Выберите файл (изображение, PDF, документ)</span>
+                      <input 
+                        type="file" 
+                        onChange={handleFileChange} 
+                        accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar"
+                        className="hidden" 
+                      />
+                    </label>
+                    {fileError && (
+                      <p className="text-red-500 text-xs mt-1">{fileError}</p>
+                    )}
                   </div>
-                  <div>
-                    <label className="block text-gray-400 text-sm mb-2">Телефон *</label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      onFocus={() => handleFocus('phone')}
-                      required
-                      className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
-                      placeholder="+7 (___) ___-__-__"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Email</label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    onFocus={() => handleFocus('email')}
-                    className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
-                    placeholder="ivan@company.ru"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">Комментарий</label>
-                  <textarea
-                    name="comment"
-                    value={formData.comment}
-                    onChange={handleChange}
-                    onFocus={() => handleFocus('comment')}
-                    rows={3}
-                    className="w-full px-4 py-3 bg-dark border border-gray-700 rounded-lg text-white placeholder-gray-600 focus:border-gold focus:outline-none transition-colors"
-                    placeholder="Ваши пожелания..."
-                  />
-                </div>
-
-                {/* Загрузка файла - поддерживает любые файлы */}
-                <div>
-                  <label className="block text-gray-400 text-sm mb-2">
-                    Прикрепить эскиз <span className="text-gray-600">(необязательно, до 5 МБ)</span>
-                  </label>
-                  {!uploadedFile ? (
-                    <div className="relative">
-                      <label className="cursor-pointer flex items-center justify-center gap-2 w-full px-4 py-3 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors">
-                        <Upload className="w-5 h-5" />
-                        <span>Выберите файл (изображение, PDF, документ)</span>
-                        <input 
-                          type="file" 
-                          onChange={handleFileChange} 
-                          accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.rar"
-                          className="hidden" 
-                        />
-                      </label>
-                      {fileError && (
-                        <p className="text-red-500 text-xs mt-1">{fileError}</p>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
-                      {filePreview ? (
-                        <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded-lg" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center">
-                          <FileText className="w-6 h-6 text-gold" />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm truncate">{uploadedFile.name}</p>
-                        <p className="text-gray-500 text-xs">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
+                ) : (
+                  <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
+                    {filePreview ? (
+                      <img src={filePreview} alt="Preview" className="w-12 h-12 object-cover rounded-lg" />
+                    ) : (
+                      <div className="w-12 h-12 rounded-lg bg-gold/10 flex items-center justify-center">
+                        <FileText className="w-6 h-6 text-gold" />
                       </div>
-                      <button
-                        type="button"
-                        onClick={removeFile}
-                        className="text-gray-500 hover:text-red-500 transition-colors"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm truncate">{uploadedFile.name}</p>
+                      <p className="text-gray-500 text-xs">{(uploadedFile.size / 1024).toFixed(1)} KB</p>
                     </div>
-                  )}
-                </div>
+                    <button
+                      type="button"
+                      onClick={removeFile}
+                      className="text-gray-500 hover:text-red-500 transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                )}
+              </div>
 
-                <div className="flex items-start gap-3">
-                  <input
-                    type="checkbox"
-                    id="privacy"
-                    checked={isAgreed}
-                    onChange={(e) => setIsAgreed(e.target.checked)}
-                    className="mt-1 w-4 h-4 accent-gold"
-                  />
-                  <label htmlFor="privacy" className="text-gray-400 text-sm">
-                    Я согласен(на) на обработку персональных данных в соответствии с{' '}
-                    <a href="/privacy-policy" target="_blank" className="text-gold hover:underline">
-                      политикой конфиденциальности
-                    </a>
-                    {' '}*
-                  </label>
-                </div>
-                {consentError && <p className="text-red-500 text-sm">{consentError}</p>}
+              <div className="flex items-start gap-3">
+                <input
+                  type="checkbox"
+                  id="privacy"
+                  checked={isAgreed}
+                  onChange={(e) => setIsAgreed(e.target.checked)}
+                  className="mt-1 w-4 h-4 accent-gold"
+                />
+                <label htmlFor="privacy" className="text-gray-400 text-sm">
+                  Я согласен(на) на обработку персональных данных в соответствии с{' '}
+                  <a href="/privacy-policy" target="_blank" className="text-gold hover:underline">
+                    политикой конфиденциальности
+                  </a>
+                  {' '}*
+                </label>
+              </div>
+              {consentError && <p className="text-red-500 text-sm">{consentError}</p>}
 
-                {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
+              {submitError && <p className="text-red-500 text-sm">{submitError}</p>}
 
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className={`w-full py-4 bg-gradient-to-r ${theme.buttonFrom} ${theme.buttonTo} text-dark font-bold rounded-xl hover:shadow-gold transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50`}
-                >
-                  {isSubmitting ? (
-                    <>Отправка...</>
-                  ) : mode === 'manager' ? (
-                    <>
-                      <Send className="w-5 h-5" />
-                      Получить точный расчет
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-5 h-5" />
-                      Отправить заявку на расчет
-                    </>
-                  )}
-                </button>
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className={`w-full py-4 bg-gradient-to-r ${theme.buttonFrom} ${theme.buttonTo} text-dark font-bold rounded-xl hover:shadow-gold transition-all duration-300 flex items-center justify-center gap-2 disabled:opacity-50`}
+              >
+                {isSubmitting ? (
+                  <>Отправка...</>
+                ) : mode === 'manager' ? (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Получить точный расчет
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5" />
+                    Отправить заявку на расчет
+                  </>
+                )}
+              </button>
 
-                <p className="text-center text-gray-500 text-xs">
-                  Нажимая на кнопку, вы соглашаетесь с условиями обработки данных
-                </p>
-              </form>
-            </div>
-          )}
+              <p className="text-center text-gray-500 text-xs">
+                Нажимая на кнопку, вы соглашаетесь с условиями обработки данных
+              </p>
+            </form>
+          </div>
         </div>
       </div>
 
