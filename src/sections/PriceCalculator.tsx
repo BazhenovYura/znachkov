@@ -1475,7 +1475,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Дополнительная обработка</label>
               <div className="bg-dark/30 rounded-xl p-4 border border-gray-800">
-                <p className="text-gray-500 text-xs mb-3">Выберите варианты дополнительной обработки. Стоимость: 1 500 ₽/шт (без НДС)</p>
+                <p className="text-gray-500 text-xs mb-3">Выберите варианты дополнительной обработки. (необязательно)</p>
                 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   <label className={`flex items-center gap-2 p-3 rounded-lg border transition-all duration-300 cursor-pointer ${
