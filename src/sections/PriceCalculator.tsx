@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, 
   Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw,
-  Square, Circle, FileText
+  Square, Circle, FileText, Copy
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -228,6 +228,127 @@ const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme }
         <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
         <div className={`${theme.text} text-xs mt-1`}>Смасштабируйте страницу для точности размеров, приложив линейку к экрану</div>
       </div>
+    </div>
+  );
+};
+
+// Компонент для отображения готового текста менеджеру
+const ManagerReadyText = ({ 
+  text, 
+  onCopy, 
+  copied,
+  theme 
+}: { 
+  text: string; 
+  onCopy: () => void; 
+  copied: boolean;
+  theme: any;
+}) => {
+  return (
+    <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 animate-fade-in-up backdrop-blur-sm">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-4">
+        <div>
+          <h3 className="font-serif text-xl md:text-2xl text-white">
+            📋 Готовый ответ для клиента
+          </h3>
+          <p className="text-gray-400 text-sm mt-1">
+            Скопируйте текст и отправьте клиенту в мессенджер
+          </p>
+        </div>
+        <button
+          onClick={onCopy}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all duration-300 ${
+            copied 
+              ? 'bg-green-500/20 border border-green-500/50 text-green-400' 
+              : `bg-gradient-to-r ${theme.buttonFrom} ${theme.buttonTo} text-dark font-medium`
+          }`}
+        >
+          {copied ? (
+            <>
+              <Check className="w-4 h-4" />
+              Скопировано!
+            </>
+          ) : (
+            <>
+              <Copy className="w-4 h-4" />
+              Скопировать текст
+            </>
+          )}
+        </button>
+      </div>
+      
+      <div className="bg-dark/50 rounded-xl p-4 md:p-6 border border-gray-700/50 whitespace-pre-wrap font-mono text-sm text-gray-300 leading-relaxed max-h-[600px] overflow-y-auto">
+        {text}
+      </div>
+    </div>
+  );
+};
+
+// Компонент технической информации для менеджера
+const ManagerTechInfo = ({ 
+  weight, 
+  metalCostPerGram, 
+  model3DCostWithVAT,
+  additionalCostPerUnit,
+  estimatedPrice,
+  pricePerUnit,
+  priceWithCardDiscount,
+  testSamplePrice,
+  testSampleWithCardDiscount,
+  timestamp,
+  theme
+}: any) => {
+  return (
+    <div className="bg-dark-light/30 border border-gray-800/50 rounded-xl p-4 md:p-6 animate-fade-in-up">
+      <details className="group">
+        <summary className="flex items-center gap-2 cursor-pointer text-gray-400 hover:text-gray-300 transition-colors">
+          <span className="text-sm font-medium">📊 Технические данные для менеджера</span>
+          <span className="text-xs text-gray-600 group-open:rotate-180 transition-transform">▼</span>
+        </summary>
+        <div className="mt-4 pt-4 border-t border-gray-800/50 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+          <div>
+            <span className="text-gray-500 text-xs">Вес значка</span>
+            <p className="text-white font-medium">{weight} г</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs">Стоимость материала</span>
+            <p className="text-white font-medium">{metalCostPerGram.toLocaleString()} ₽/г (с НДС)</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs">3D-модель</span>
+            <p className="text-white font-medium">{MODEL_3D_COST.toLocaleString()} ₽ (без НДС)</p>
+            <p className="text-gray-500 text-xs">{model3DCostWithVAT.toLocaleString()} ₽ (с НДС)</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs">Стоимость обработки</span>
+            <p className="text-white font-medium">{additionalCostPerUnit.toLocaleString()} ₽/шт</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs">Партия (с НДС)</span>
+            <p className="text-white font-medium">{estimatedPrice.toLocaleString()} ₽</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs">Партия (скидка 20%)</span>
+            <p className="text-green-400 font-medium">{priceWithCardDiscount.toLocaleString()} ₽</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs">За 1 шт (с НДС)</span>
+            <p className="text-white font-medium">{pricePerUnit.toLocaleString()} ₽</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs">Тестовый образец (с НДС)</span>
+            <p className="text-white font-medium">{testSamplePrice.toLocaleString()} ₽</p>
+          </div>
+          <div>
+            <span className="text-gray-500 text-xs">Тестовый образец (скидка 20%)</span>
+            <p className="text-green-400 font-medium">{testSampleWithCardDiscount.toLocaleString()} ₽</p>
+          </div>
+          <div className="col-span-2 md:col-span-3">
+            <span className="text-gray-500 text-xs">Дата расчёта</span>
+            <p className="text-gray-400 text-sm">{timestamp}</p>
+          </div>
+        </div>
+      </details>
     </div>
   );
 };
@@ -514,7 +635,7 @@ const PriceCalculator = () => {
 
   // Получаем расчетные значения
   const calculationResult = calculatePrice();
-  const { weight, metalCostPerGram, additionalCostPerUnit } = calculationResult;
+  const { weight, metalCostPerGram, additionalCostPerUnit, model3DCostWithVAT } = calculationResult;
 
   useEffect(() => {
     if (!metalPrices.gold || !metalPrices.silver) return;
@@ -536,182 +657,78 @@ const PriceCalculator = () => {
     sendMetrikaEvent('calculator_page_view');
   }, []);
 
-  const handlePresetSelect = (presetKey: string) => {
-    const preset = presets[presetKey as keyof typeof presets];
-    if (preset) {
-      setCalculatorData(prev => ({
-        ...prev,
-        type: presetKey,
-        shape: preset.shape,
-        width: preset.width,
-        height: preset.height,
-      }));
-      sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
-    }
-  };
-
-  const handleCustomMode = () => {
-    setCalculatorData(prev => ({
-      ...prev,
-      type: 'custom',
-    }));
-    sendMetrikaEvent('calculator_param_change', { param: 'mode', value: 'custom' });
-  };
-
-  const handleShapeSelect = (shape: 'rectangle' | 'rounded' | 'circle') => {
-    setCalculatorData(prev => {
-      if (shape === 'circle') {
-        const minSize = Math.min(prev.width, prev.height);
-        return {
-          ...prev,
-          type: 'custom',
-          shape,
-          width: minSize,
-          height: minSize,
-        };
-      }
-      return {
-        ...prev,
-        type: 'custom',
-        shape,
-      };
-    });
-    sendMetrikaEvent('calculator_param_change', { param: 'shape', value: shape });
-  };
-
-  const handleWidthChange = (value: number) => {
-    let newValue = Math.max(5, Math.min(50, value));
-    if (calculatorData.shape === 'circle') {
-      setCalculatorData(prev => ({
-        ...prev,
-        type: 'custom',
-        width: newValue,
-        height: newValue,
-      }));
-    } else {
-      setCalculatorData(prev => ({
-        ...prev,
-        type: 'custom',
-        width: newValue,
-      }));
-    }
-    sendMetrikaEvent('calculator_param_change', { param: 'width', value: newValue });
-  };
-
-  const handleHeightChange = (value: number) => {
-    const newValue = Math.max(5, Math.min(50, value));
-    if (calculatorData.shape === 'circle') {
-      setCalculatorData(prev => ({
-        ...prev,
-        type: 'custom',
-        width: newValue,
-        height: newValue,
-      }));
-    } else {
-      setCalculatorData(prev => ({
-        ...prev,
-        type: 'custom',
-        height: newValue,
-      }));
-    }
-    sendMetrikaEvent('calculator_param_change', { param: 'height', value: newValue });
-  };
-
-  const handleMaterialSelect = (materialId: string) => {
-    setCalculatorData(prev => ({ ...prev, material: materialId }));
-    sendMetrikaEvent('calculator_param_change', { param: 'material', value: materialId });
-  };
-
-  const quantityPresets = [5, 10, 20, 30, 50, 100, 500];
-  
-  const handleQuantityPreset = (quantity: number) => {
-    if (mode === 'client' && quantity < 2) {
-      quantity = 2;
-    }
-    setCalculatorData(prev => ({ ...prev, quantity }));
-    sendMetrikaEvent('calculator_quantity_change', { quantity });
-  };
-
-  const handleQuantityChange = (delta: number) => {
-    const minQuantity = mode === 'manager' ? 1 : 2;
-    const newQuantity = Math.max(minQuantity, Math.min(10000, calculatorData.quantity + delta));
-    setCalculatorData(prev => ({ ...prev, quantity: newQuantity }));
-    sendMetrikaEvent('calculator_quantity_change', { quantity: newQuantity });
-  };
-
-  const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = parseInt(e.target.value);
-    const minQuantity = mode === 'manager' ? 1 : 2;
-    if (isNaN(value)) value = minQuantity;
-    value = Math.max(minQuantity, Math.min(10000, value));
-    setCalculatorData(prev => ({ ...prev, quantity: value }));
-    sendMetrikaEvent('calculator_quantity_manual', { quantity: value });
-  };
-
-  const handleQuantityMin = () => {
-    const minQuantity = mode === 'manager' ? 1 : 2;
-    setCalculatorData(prev => ({ ...prev, quantity: minQuantity }));
-    sendMetrikaEvent('calculator_quantity_change', { quantity: minQuantity });
-  };
-
-  const handleProcessingToggle = (type: 'goldPlating' | 'rhodium' | 'blackening' | 'enamel') => {
-    setAdditionalProcessing(prev => ({
-      ...prev,
-      [type]: !prev[type],
-    }));
-  };
-
-  const handleEnamelColorsChange = (delta: number) => {
-    setAdditionalProcessing(prev => ({
-      ...prev,
-      enamelColors: Math.max(1, Math.min(5, prev.enamelColors + delta)),
-    }));
-  };
-
-  const handleClientModeClick = () => {
-    setShowLoginModal(true);
-    setLogin('');
-    setPassword('');
-    setLoginError('');
-  };
-
-  const handleLogin = () => {
-    const ADMIN_LOGIN = 'Админ';
-    const ADMIN_PASSWORD = '142536';
+  // --- ФОРМИРОВАНИЕ ГОТОВОГО ТЕКСТА ДЛЯ КЛИЕНТА ---
+  const getClientReadyText = () => {
+    const isGold = calculatorData.material === 'gold';
+    const metalName = isGold ? 'золото 585 пробы' : 'серебро 925 пробы';
     
-    if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD) {
-      setMode('manager');
-      setShowLoginModal(false);
-      setLogin('');
-      setPassword('');
-      setLoginError('');
-      sessionStorage.setItem('calculator_mode', 'manager');
-      setCalculatorData(prev => ({ ...prev, quantity: 1 }));
-    } else {
-      setLoginError('Неверный логин или пароль');
-    }
-  };
-
-  const refreshPrices = () => {
-    fetchMetalPrices();
-    sendMetrikaEvent('calculator_refresh_prices');
-  };
-
-  const copyShareLink = () => {
-    const params = new URLSearchParams();
-    params.set('type', calculatorData.type);
-    params.set('material', calculatorData.material);
-    params.set('quantity', String(calculatorData.quantity));
-    params.set('shape', calculatorData.shape);
-    params.set('width', String(calculatorData.width));
-    params.set('height', String(calculatorData.height));
-    params.set('mode', mode);
+    const shapeNames: Record<string, string> = {
+      circle: 'круглый',
+      rounded: 'со скруглёнными углами',
+      rectangle: 'прямоугольный'
+    };
+    const shapeName = shapeNames[calculatorData.shape] || 'прямоугольный';
     
-    const shareUrl = `${window.location.origin}/#/price-calculator?${params.toString()}`;
-    navigator.clipboard.writeText(shareUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-    sendMetrikaEvent('calculator_share_link');
+    let sizeText = '';
+    if (calculatorData.shape === 'circle') {
+      sizeText = `диаметр ${calculatorData.width} мм`;
+    } else {
+      sizeText = `${calculatorData.width}×${calculatorData.height} мм`;
+    }
+    
+    // Дополнительная обработка
+    let processingParts = [];
+    if (additionalProcessing.goldPlating) processingParts.push('золочение');
+    if (additionalProcessing.rhodium) processingParts.push('родирование');
+    if (additionalProcessing.blackening) processingParts.push('чернение');
+    if (additionalProcessing.enamel) processingParts.push(`эмаль (${additionalProcessing.enamelColors} цв.)`);
+    
+    const processingText = processingParts.length > 0 
+      ? `🔹 Дополнительно: ${processingParts.join(', ')}` 
+      : '🔹 Дополнительно: без обработки';
+    
+    // Стоимость 3D-модели
+    const modelCost = MODEL_3D_COST;
+    
+    // Тестовый образец
+    const testSamplePrice = Math.round(pricePerUnit + modelCost / calculatorData.quantity);
+    const priceWithCardDiscount = Math.round(estimatedPrice * 0.8);
+    const pricePerUnitWithCardDiscount = Math.round(pricePerUnit * 0.8);
+    const testSampleWithCardDiscount = Math.round(testSamplePrice * 0.8);
+    
+    // Формируем текст
+    return {
+      clientText: `
+✅ Добрый день! Предварительный расчёт Вашего заказа готов.
+
+🔹 Материал: ${metalName}
+🔹 Размер: ${sizeText}, толщина 1 мм
+🔹 Вес значка: ~${weight} г
+🔹 Количество: ${calculatorData.quantity} значков
+🔹 Дополнительно: 3D-модель (${modelCost.toLocaleString()} ₽, разово)
+${processingText}
+🔹 Срочность: не требуется (стандартный срок — 46 дней)
+
+📦 Стоимость всей партии: **${estimatedPrice.toLocaleString()} ₽**
+💰 Цена за 1 значок: **${pricePerUnit.toLocaleString()} ₽**
+
+💳 **При оплате по номеру карты** — скидка 20%:
+- Партия: **${priceWithCardDiscount.toLocaleString()} ₽**
+- За 1 шт: **${pricePerUnitWithCardDiscount.toLocaleString()} ₽**
+
+🧪 Тестовый образец (1 шт) — **${testSamplePrice.toLocaleString()} ₽** / при оплате по карте **${testSampleWithCardDiscount.toLocaleString()} ₽**
+
+ℹ️ Необходимо согласовать дизайн перед запуском.
+
+📞 Индивидуальные вопросы:  
+📞 +7 922 747-44-74  
+✉️ @BazhenovYuri
+      `.trim(),
+      testSamplePrice,
+      priceWithCardDiscount,
+      pricePerUnitWithCardDiscount,
+      testSampleWithCardDiscount
+    };
   };
 
   const getEkaterinburgTime = () => {
@@ -727,57 +744,43 @@ const PriceCalculator = () => {
 
   // Единая функция отправки в MAX
   const sendToMax = async (file?: File) => {
-    const shapeName = calculatorData.shape === 'circle' ? 'Круглая' : (calculatorData.shape === 'rounded' ? 'Скругленные углы' : 'Прямые углы');
+    const clientData = getClientReadyText();
+    const clientText = clientData.clientText;
     
-    let processingList = [];
-    if (additionalProcessing.goldPlating) processingList.push('Золочение');
-    if (additionalProcessing.rhodium) processingList.push('Родирование');
-    if (additionalProcessing.blackening) processingList.push('Чернение');
-    if (additionalProcessing.enamel) processingList.push(`Эмаль (${additionalProcessing.enamelColors} цв.)`);
+    const timestamp = getEkaterinburgTime();
     
-    const processingText = processingList.length > 0 
-      ? `• Доп. обработка: ${processingList.join(', ')}\n• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)`
-      : '• Доп. обработка: не выбрана';
-    
-    const isGold = calculatorData.material === 'gold';
-    const currentMetalPrice = isGold ? metalPrices.gold : metalPrices.silver;
-    
-    let message = `
-💰 <b>ЗАПРОС ТОЧНОГО РАСЧЕТА СТОИМОСТИ</b>
+    // Формируем техническую информацию для менеджера (добавляем в конец сообщения, но отделяем)
+    const techInfo = `
 ━━━━━━━━━━━━━━━━━━━━━━━
+📊 Технические данные (для менеджера):
+• Вес значка: ${weight} г
+• Стоимость материала: ${metalCostPerGram.toLocaleString()} ₽/г (с НДС)
+• 3D-модель: ${MODEL_3D_COST.toLocaleString()} ₽ (без НДС) / ${model3DCostWithVAT.toLocaleString()} ₽ (с НДС)
+• Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт
+• Дата расчёта: ${timestamp}
+• Режим: ${mode === 'manager' ? 'менеджер' : 'клиент'}
+    `.trim();
 
-<b>📍 Откуда:</b> Страница калькулятора (${mode === 'manager' ? 'режим менеджера' : 'клиентский режим'})
+    // Отправляем в MAX полный текст (клиентский + технический)
+    const fullMessage = `${clientText}\n\n${techInfo}`;
 
-<b>📊 Параметры заказа:</b>
-• Тип: ${isGold ? 'Золото 585' : 'Серебро 925'}
-• Форма: ${shapeName}
-• Размер: ${calculatorData.width}×${calculatorData.height} мм
-• Вес значка: ~${weight} г
-• Количество: ${calculatorData.quantity} шт.
-• Актуальная цена металла: ${currentMetalPrice?.toLocaleString() || 'не загружена'} ₽/г
-• Себестоимость металла: ${metalCostPerGram.toLocaleString()} ₽/г
-• Стоимость 3D-модели (с НДС): ${calculationResult.model3DCostWithVAT.toLocaleString()} ₽
-${processingText}
-• Расчетная стоимость (с НДС 22%): ${estimatedPrice.toLocaleString()} ₽
-• Цена за штуку (с НДС 22%): ${pricePerUnit.toLocaleString()} ₽
+    const payload: any = { 
+      text: fullMessage,
+      meta: {
+        mode: mode,
+        material: calculatorData.material,
+        quantity: calculatorData.quantity,
+        estimatedPrice: estimatedPrice,
+        pricePerUnit: pricePerUnit,
+        weight: weight,
+        metalCostPerGram: metalCostPerGram,
+        timestamp: timestamp
+      }
+    };
 
-━━━━━━━━━━━━━━━━━━━━━━━
-<b>👤 Клиент:</b>
-• Имя: ${formData.name || 'Не указано'}
-• Телефон: ${formData.phone}
-• Email: ${formData.email || 'Не указан'}
-
-${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n` : ''}
-⏰ <b>Время отправки (Екатеринбург):</b> ${getEkaterinburgTime()}
-    `;
-
-    const payload: any = { text: message };
-
-    // Если есть файл, преобразуем в base64 и добавляем в payload
+    // Если есть файл, прикрепляем
     if (file) {
       let fileToSend = file;
-      
-      // Сжимаем только изображения > 1 МБ
       if (file.size > 1024 * 1024 && file.type.startsWith('image/')) {
         try {
           fileToSend = await compressImage(file);
@@ -786,32 +789,19 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           console.error('Ошибка сжатия:', error);
         }
       }
-      
       const base64File = await fileToBase64(fileToSend);
       payload.file = base64File;
       payload.fileName = fileToSend.name;
       payload.fileType = fileToSend.type || 'application/octet-stream';
-      
-      // Добавляем в сообщение информацию о файле
-      message += `\n📎 <b>Прикрепленный эскиз:</b> ${fileToSend.name} (${(fileToSend.size / 1024).toFixed(1)} KB)`;
-      payload.text = message;
     }
 
     const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
     });
 
-    const responseData = await response.json();
-    
-    if (!responseData.ok) {
-      throw new Error('Ошибка отправки в MAX');
-    }
-    
-    return responseData;
+    return await response.json();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -893,7 +883,6 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     setFileError(null);
     
     if (file) {
-      // Проверяем размер файла
       if (file.size > MAX_FILE_SIZE) {
         setFileError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 5 МБ`);
         e.target.value = '';
@@ -923,6 +912,14 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
     setFilePreview(null);
     setFileError(null);
     sendMetrikaEvent('file_removed', { form: 'calculator' });
+  };
+
+  const copyClientText = () => {
+    const { clientText } = getClientReadyText();
+    navigator.clipboard.writeText(clientText);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+    sendMetrikaEvent('calculator_copy_text');
   };
 
   useEffect(() => {
@@ -956,6 +953,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
   }
 
   const theme = getThemeClasses();
+  const clientData = getClientReadyText();
 
   return (
     <div className="min-h-screen bg-dark pt-32 pb-20">
@@ -973,7 +971,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         )}
         {mode === 'client' && (
           <div 
-            onClick={handleClientModeClick}
+            onClick={() => setShowLoginModal(true)}
             className="fixed bottom-4 right-4 z-50 bg-gold/10 border border-gold/30 rounded-full px-3 py-1 text-xs text-gold cursor-pointer hover:bg-gold/20 transition-colors"
           >
             🔒
@@ -985,7 +983,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             <Calculator className={`w-4 h-4 ${theme.text}`} />
             <span className={`${theme.text} text-sm`}>Калькулятор стоимости</span>
             <button
-              onClick={refreshPrices}
+              onClick={fetchMetalPrices}
               disabled={isLoadingPrice}
               className="ml-2 p-1 hover:bg-gold/20 rounded-full transition-colors"
               title="Обновить цены на металлы"
@@ -1072,7 +1070,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
           <div className="max-w-4xl mx-auto mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl text-center">
             <p className="text-red-400 text-sm">
               ⚠️ Не удалось загрузить актуальные цены на металлы. Пожалуйста, попробуйте обновить страницу позже или 
-              <button onClick={refreshPrices} className="text-gold hover:underline ml-1">нажмите здесь</button>, чтобы повторить попытку.
+              <button onClick={fetchMetalPrices} className="text-gold hover:underline ml-1">нажмите здесь</button>, чтобы повторить попытку.
             </p>
           </div>
         )}
@@ -1089,7 +1087,10 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => handleMaterialSelect('gold')}
+                    onClick={() => {
+                      setCalculatorData(prev => ({ ...prev, material: 'gold' }));
+                      sendMetrikaEvent('calculator_param_change', { param: 'material', value: 'gold' });
+                    }}
                     className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                       calculatorData.material === 'gold'
                         ? `bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 ${theme.border} ${theme.shadow}`
@@ -1101,7 +1102,10 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleMaterialSelect('silver')}
+                    onClick={() => {
+                      setCalculatorData(prev => ({ ...prev, material: 'silver' }));
+                      sendMetrikaEvent('calculator_param_change', { param: 'material', value: 'silver' });
+                    }}
                     className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                       calculatorData.material === 'silver'
                         ? `bg-gradient-to-r from-gray-400/20 to-gray-600/20 ${theme.border} ${theme.shadow}`
@@ -1119,7 +1123,10 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => handleMaterialSelect('gold')}
+                    onClick={() => {
+                      setCalculatorData(prev => ({ ...prev, material: 'gold' }));
+                      sendMetrikaEvent('calculator_param_change', { param: 'material', value: 'gold' });
+                    }}
                     className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                       calculatorData.material === 'gold'
                         ? 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-gold/50'
@@ -1131,7 +1138,10 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleMaterialSelect('silver')}
+                    onClick={() => {
+                      setCalculatorData(prev => ({ ...prev, material: 'silver' }));
+                      sendMetrikaEvent('calculator_param_change', { param: 'material', value: 'silver' });
+                    }}
                     className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                       calculatorData.material === 'silver'
                         ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/20 border-silver/50'
@@ -1582,7 +1592,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                     Стоимость материала: {metalCostPerGram.toLocaleString()} ₽/г
                   </p>
                   <p className="text-gray-500 text-xs mt-1">
-                    3D-модель (единоразово): {calculationResult.model3DCostWithVAT.toLocaleString()} ₽ с НДС
+                    3D-модель (единоразово): {model3DCostWithVAT.toLocaleString()} ₽ с НДС
                   </p>
                   {additionalCostPerUnit > 0 && (
                     <p className="text-gray-500 text-xs mt-1">
@@ -1606,7 +1616,33 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
             </div>
           </div>
 
-          {/* ФОРМА ВИДНА ВСЕГДА - убираем условие showForm */}
+          {/* --- БЛОК ДЛЯ МЕНЕДЖЕРА: ГОТОВЫЙ ТЕКСТ И ТЕХНИЧЕСКАЯ ИНФОРМАЦИЯ --- */}
+          {mode === 'manager' && isPriceLoaded && (
+            <>
+              <ManagerReadyText 
+                text={clientData.clientText}
+                onCopy={copyClientText}
+                copied={copied}
+                theme={theme}
+              />
+              
+              <ManagerTechInfo 
+                weight={weight}
+                metalCostPerGram={metalCostPerGram}
+                model3DCostWithVAT={model3DCostWithVAT}
+                additionalCostPerUnit={additionalCostPerUnit}
+                estimatedPrice={estimatedPrice}
+                pricePerUnit={pricePerUnit}
+                priceWithCardDiscount={clientData.priceWithCardDiscount}
+                testSamplePrice={clientData.testSamplePrice}
+                testSampleWithCardDiscount={clientData.testSampleWithCardDiscount}
+                timestamp={getEkaterinburgTime()}
+                theme={theme}
+              />
+            </>
+          )}
+
+          {/* ФОРМА ВИДНА ВСЕГДА */}
           <div className="bg-dark-light/50 border border-gray-800 rounded-2xl p-6 md:p-8 animate-fade-in-up backdrop-blur-sm">
             <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
               <div>
@@ -1681,7 +1717,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
                 />
               </div>
 
-              {/* Загрузка файла - поддерживает любые файлы */}
+              {/* Загрузка файла */}
               <div>
                 <label className="block text-gray-400 text-sm mb-2">
                   Прикрепить эскиз <span className="text-gray-600">(необязательно, до 5 МБ)</span>
@@ -1774,6 +1810,7 @@ ${formData.comment ? `💬 <b>Комментарий:</b> ${formData.comment}\n`
         </div>
       </div>
 
+      {/* Модальное окно входа менеджера */}
       {showLoginModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-dark-light border border-gray-800 rounded-2xl p-8 max-w-md w-full mx-4 animate-fade-in-up">
