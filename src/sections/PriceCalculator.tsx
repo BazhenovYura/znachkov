@@ -867,8 +867,8 @@ const PriceCalculator = () => {
     if (additionalProcessing.enamel) processingParts.push(`эмаль (${additionalProcessing.enamelColors} цв.)`);
     
     const processingText = processingParts.length > 0 
-      ? `🔹 Дополнительно: ${processingParts.join(', ')}` 
-      : '🔹 Дополнительно: без обработки';       
+      ? `Дополнительно: ${processingParts.join(', ')}` 
+      : 'Дополнительно: без обработки';       
     
     // Скидка 20% при оплате по карте
     const priceWithCardDiscount = Math.round(estimatedPrice * 0.8);
@@ -916,7 +916,7 @@ ${processingText}
 Если не работаете с НДС, то при оплате по номеру карты стоимость будет ниже:
 Партия: ${priceWithCardDiscount.toLocaleString()} ₽
 За 1 шт: ${pricePerUnitWithCardDiscount.toLocaleString()} ₽
-${calculatorData.quantity > 1 ? `\n🧪 Тестовый образец (1 шт) - ${testSampleText}` : ''}
+${calculatorData.quantity > 1 ? `\nТестовый образец (1 шт) - ${testSampleText}` : ''}
 
 Необходимо согласовать дизайн перед запуском.
 
