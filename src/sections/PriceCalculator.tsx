@@ -905,7 +905,7 @@ return {
 Материал: ${metalName}
 Размер: ${sizeText}, толщина 1 мм
 Вес значка: ~${weight} г
-Количество: ${calculatorData.quantity} значков
+Количество: ${calculatorData.quantity}
 Дополнительно: 3D-модель
 ${processingText}
 Срочность: не требуется (стандартный срок 30-45 дней)
