@@ -930,6 +930,7 @@ BazhenovYuri.t.me
   pricePerUnitWithCardDiscount,
   testSampleWithCardDiscount
 };
+    };
   const getEkaterinburgTime = () => {
     return new Date().toLocaleString('ru-RU', { 
       timeZone: 'Asia/Yekaterinburg',
