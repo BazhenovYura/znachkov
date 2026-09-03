@@ -825,22 +825,15 @@ const PriceCalculator = () => {
 
   // --- ФОРМИРОВАНИЕ ГОТОВОГО ТЕКСТА ДЛЯ КЛИЕНТА ---
   const getClientReadyText = () => {
-    const isGold = calculatorData.material === 'gold';
-    const metalName = isGold ? 'золото 585 пробы' : 'серебро 925 пробы';
-    
-    const shapeNames: Record<string, string> = {
-      circle: 'круглый',
-      rounded: 'со скруглёнными углами',
-      rectangle: 'прямоугольный'
-    };
-    const shapeName = shapeNames[calculatorData.shape] || 'прямоугольный';
-    
-    let sizeText = '';
-    if (calculatorData.shape === 'circle') {
-      sizeText = `диаметр ${calculatorData.width} мм`;
-    } else {
-      sizeText = `${calculatorData.width}×${calculatorData.height} мм`;
-    }
+  const isGold = calculatorData.material === 'gold';
+  const metalName = isGold ? 'золото 585 пробы' : 'серебро 925 пробы';
+  
+  let sizeText = '';
+  if (calculatorData.shape === 'circle') {
+    sizeText = `диаметр ${calculatorData.width} мм`;
+  } else {
+    sizeText = `${calculatorData.width}×${calculatorData.height} мм`;
+  }
     
     // Дополнительная обработка
     let processingParts = [];
