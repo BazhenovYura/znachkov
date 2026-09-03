@@ -296,7 +296,6 @@ const ManagerTechInfo = ({
   testSamplePrice,
   testSampleWithCardDiscount,
   timestamp,
-  theme
 }: any) => {
   return (
     <div className="bg-dark-light/30 border border-gray-800/50 rounded-xl p-4 md:p-6 animate-fade-in-up">
@@ -522,6 +521,8 @@ const PriceCalculator = () => {
     circle_large: { width: 35, height: 35, shape: 'circle' as const, label: 'Круглый L', complexity: 1.35 },
   };
 
+  const quantityPresets = [5, 10, 20, 30, 50, 100, 500];
+
   const fetchMetalPrices = async () => {
     setIsLoadingPrice(true);
     setPriceLoadError(false);
@@ -656,6 +657,171 @@ const PriceCalculator = () => {
     window.scrollTo(0, 0);
     sendMetrikaEvent('calculator_page_view');
   }, []);
+
+  // --- ОБРАБОТЧИКИ ---
+  const handlePresetSelect = (presetKey: string) => {
+    const preset = presets[presetKey as keyof typeof presets];
+    if (preset) {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: presetKey,
+        shape: preset.shape,
+        width: preset.width,
+        height: preset.height,
+      }));
+      sendMetrikaEvent('calculator_param_change', { param: 'preset', value: presetKey });
+    }
+  };
+
+  const handleCustomMode = () => {
+    setCalculatorData(prev => ({
+      ...prev,
+      type: 'custom',
+    }));
+    sendMetrikaEvent('calculator_param_change', { param: 'mode', value: 'custom' });
+  };
+
+  const handleShapeSelect = (shape: 'rectangle' | 'rounded' | 'circle') => {
+    setCalculatorData(prev => {
+      if (shape === 'circle') {
+        const minSize = Math.min(prev.width, prev.height);
+        return {
+          ...prev,
+          type: 'custom',
+          shape,
+          width: minSize,
+          height: minSize,
+        };
+      }
+      return {
+        ...prev,
+        type: 'custom',
+        shape,
+      };
+    });
+    sendMetrikaEvent('calculator_param_change', { param: 'shape', value: shape });
+  };
+
+  const handleWidthChange = (value: number) => {
+    let newValue = Math.max(5, Math.min(50, value));
+    if (calculatorData.shape === 'circle') {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: 'custom',
+        width: newValue,
+        height: newValue,
+      }));
+    } else {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: 'custom',
+        width: newValue,
+      }));
+    }
+    sendMetrikaEvent('calculator_param_change', { param: 'width', value: newValue });
+  };
+
+  const handleHeightChange = (value: number) => {
+    const newValue = Math.max(5, Math.min(50, value));
+    if (calculatorData.shape === 'circle') {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: 'custom',
+        width: newValue,
+        height: newValue,
+      }));
+    } else {
+      setCalculatorData(prev => ({
+        ...prev,
+        type: 'custom',
+        height: newValue,
+      }));
+    }
+    sendMetrikaEvent('calculator_param_change', { param: 'height', value: newValue });
+  };
+
+  const handleMaterialSelect = (materialId: string) => {
+    setCalculatorData(prev => ({ ...prev, material: materialId }));
+    sendMetrikaEvent('calculator_param_change', { param: 'material', value: materialId });
+  };
+
+  const handleQuantityPreset = (quantity: number) => {
+    if (mode === 'client' && quantity < 2) {
+      quantity = 2;
+    }
+    setCalculatorData(prev => ({ ...prev, quantity }));
+    sendMetrikaEvent('calculator_quantity_change', { quantity });
+  };
+
+  const handleQuantityChange = (delta: number) => {
+    const minQuantity = mode === 'manager' ? 1 : 2;
+    const newQuantity = Math.max(minQuantity, Math.min(10000, calculatorData.quantity + delta));
+    setCalculatorData(prev => ({ ...prev, quantity: newQuantity }));
+    sendMetrikaEvent('calculator_quantity_change', { quantity: newQuantity });
+  };
+
+  const handleQuantityInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = parseInt(e.target.value);
+    const minQuantity = mode === 'manager' ? 1 : 2;
+    if (isNaN(value)) value = minQuantity;
+    value = Math.max(minQuantity, Math.min(10000, value));
+    setCalculatorData(prev => ({ ...prev, quantity: value }));
+    sendMetrikaEvent('calculator_quantity_manual', { quantity: value });
+  };
+
+  const handleQuantityMin = () => {
+    const minQuantity = mode === 'manager' ? 1 : 2;
+    setCalculatorData(prev => ({ ...prev, quantity: minQuantity }));
+    sendMetrikaEvent('calculator_quantity_change', { quantity: minQuantity });
+  };
+
+  const handleProcessingToggle = (type: 'goldPlating' | 'rhodium' | 'blackening' | 'enamel') => {
+    setAdditionalProcessing(prev => ({
+      ...prev,
+      [type]: !prev[type],
+    }));
+  };
+
+  const handleEnamelColorsChange = (delta: number) => {
+    setAdditionalProcessing(prev => ({
+      ...prev,
+      enamelColors: Math.max(1, Math.min(5, prev.enamelColors + delta)),
+    }));
+  };
+
+  const handleLogin = () => {
+    const ADMIN_LOGIN = 'Админ';
+    const ADMIN_PASSWORD = '142536';
+    
+    if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD) {
+      setMode('manager');
+      setShowLoginModal(false);
+      setLogin('');
+      setPassword('');
+      setLoginError('');
+      sessionStorage.setItem('calculator_mode', 'manager');
+      setCalculatorData(prev => ({ ...prev, quantity: 1 }));
+    } else {
+      setLoginError('Неверный логин или пароль');
+    }
+  };
+
+  const copyShareLink = () => {
+    const params = new URLSearchParams();
+    params.set('type', calculatorData.type);
+    params.set('material', calculatorData.material);
+    params.set('quantity', String(calculatorData.quantity));
+    params.set('shape', calculatorData.shape);
+    params.set('width', String(calculatorData.width));
+    params.set('height', String(calculatorData.height));
+    params.set('mode', mode);
+    
+    const shareUrl = `${window.location.origin}/#/price-calculator?${params.toString()}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+    sendMetrikaEvent('calculator_share_link');
+  };
 
   // --- ФОРМИРОВАНИЕ ГОТОВОГО ТЕКСТА ДЛЯ КЛИЕНТА ---
   const getClientReadyText = () => {
@@ -1087,10 +1253,7 @@ ${processingText}
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setCalculatorData(prev => ({ ...prev, material: 'gold' }));
-                      sendMetrikaEvent('calculator_param_change', { param: 'material', value: 'gold' });
-                    }}
+                    onClick={() => handleMaterialSelect('gold')}
                     className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                       calculatorData.material === 'gold'
                         ? `bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 ${theme.border} ${theme.shadow}`
@@ -1102,10 +1265,7 @@ ${processingText}
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setCalculatorData(prev => ({ ...prev, material: 'silver' }));
-                      sendMetrikaEvent('calculator_param_change', { param: 'material', value: 'silver' });
-                    }}
+                    onClick={() => handleMaterialSelect('silver')}
                     className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                       calculatorData.material === 'silver'
                         ? `bg-gradient-to-r from-gray-400/20 to-gray-600/20 ${theme.border} ${theme.shadow}`
@@ -1123,10 +1283,7 @@ ${processingText}
                 <div className="flex gap-4">
                   <button
                     type="button"
-                    onClick={() => {
-                      setCalculatorData(prev => ({ ...prev, material: 'gold' }));
-                      sendMetrikaEvent('calculator_param_change', { param: 'material', value: 'gold' });
-                    }}
+                    onClick={() => handleMaterialSelect('gold')}
                     className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                       calculatorData.material === 'gold'
                         ? 'bg-gradient-to-r from-yellow-600/20 to-yellow-800/20 border-gold/50'
@@ -1138,10 +1295,7 @@ ${processingText}
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setCalculatorData(prev => ({ ...prev, material: 'silver' }));
-                      sendMetrikaEvent('calculator_param_change', { param: 'material', value: 'silver' });
-                    }}
+                    onClick={() => handleMaterialSelect('silver')}
                     className={`flex-1 p-4 rounded-xl border transition-all duration-300 text-center ${
                       calculatorData.material === 'silver'
                         ? 'bg-gradient-to-r from-gray-400/20 to-gray-600/20 border-silver/50'
@@ -1637,7 +1791,6 @@ ${processingText}
                 testSamplePrice={clientData.testSamplePrice}
                 testSampleWithCardDiscount={clientData.testSampleWithCardDiscount}
                 timestamp={getEkaterinburgTime()}
-                theme={theme}
               />
             </>
           )}
