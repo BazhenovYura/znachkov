@@ -898,8 +898,8 @@ const PriceCalculator = () => {
     }
     
     // Формируем текст
-    return {
-      clientText: `
+return {
+  clientText: `
 ✅ Добрый день! Предварительный расчёт Вашего заказа готов.
 
 🔹 Материал: ${metalName}
@@ -916,22 +916,19 @@ ${processingText}
 💳 Если не работаете с НДС, то при оплате по номеру карты стоимость будет ниже:
 - Партия: ${priceWithCardDiscount.toLocaleString()} ₽
 - За 1 шт: ${pricePerUnitWithCardDiscount.toLocaleString()} ₽
-
-🧪 Тестовый образец (1 шт) - ${testSampleText}
+${calculatorData.quantity > 1 ? `\n🧪 Тестовый образец (1 шт) - ${testSampleText}` : ''}
 
 ℹ️ Необходимо согласовать дизайн перед запуском.
 
 📞 Индивидуальные вопросы:
 📞 +7 922 747-44-74
 ✉️ @BazhenovYuri
-      `.trim(),
-      testSamplePrice,
-      priceWithCardDiscount,
-      pricePerUnitWithCardDiscount,
-      testSampleWithCardDiscount
-    };
-  };
-
+  `.trim(),
+  testSamplePrice,
+  priceWithCardDiscount,
+  pricePerUnitWithCardDiscount,
+  testSampleWithCardDiscount
+};
   const getEkaterinburgTime = () => {
     return new Date().toLocaleString('ru-RU', { 
       timeZone: 'Asia/Yekaterinburg',
