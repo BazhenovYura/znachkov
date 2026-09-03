@@ -868,10 +868,7 @@ const PriceCalculator = () => {
     
     const processingText = processingParts.length > 0 
       ? `🔹 Дополнительно: ${processingParts.join(', ')}` 
-      : '🔹 Дополнительно: без обработки';
-    
-    // Стоимость 3D-модели
-    const modelCost = MODEL_3D_COST;
+      : '🔹 Дополнительно: без обработки';       
     
     // Скидка 20% при оплате по карте
     const priceWithCardDiscount = Math.round(estimatedPrice * 0.8);
