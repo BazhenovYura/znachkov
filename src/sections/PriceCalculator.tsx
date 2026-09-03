@@ -902,27 +902,28 @@ return {
   clientText: `
 ✅ Добрый день! Предварительный расчёт Вашего заказа готов.
 
-🔹 Материал: ${metalName}
-🔹 Размер: ${sizeText}, толщина 1 мм
-🔹 Вес значка: ~${weight} г
-🔹 Количество: ${calculatorData.quantity} значков
-🔹 Дополнительно: 3D-модель
+Материал: ${metalName}
+Размер: ${sizeText}, толщина 1 мм
+Вес значка: ~${weight} г
+Количество: ${calculatorData.quantity} значков
+Дополнительно: 3D-модель
 ${processingText}
-🔹 Срочность: не требуется (стандартный срок - 30-45 дней)
+Срочность: не требуется (стандартный срок 30-45 дней)
 
-📦 Стоимость всей партии: ${estimatedPrice.toLocaleString()} ₽ (с НДС)
-💰 Цена за 1 значок: ${pricePerUnit.toLocaleString()} ₽ (с НДС)
+Стоимость всей партии: ${estimatedPrice.toLocaleString()} ₽ (с НДС)
+Цена за 1 значок: ${pricePerUnit.toLocaleString()} ₽ (с НДС)
 
-💳 Если не работаете с НДС, то при оплате по номеру карты стоимость будет ниже:
-- Партия: ${priceWithCardDiscount.toLocaleString()} ₽
-- За 1 шт: ${pricePerUnitWithCardDiscount.toLocaleString()} ₽
+Если не работаете с НДС, то при оплате по номеру карты стоимость будет ниже:
+Партия: ${priceWithCardDiscount.toLocaleString()} ₽
+За 1 шт: ${pricePerUnitWithCardDiscount.toLocaleString()} ₽
 ${calculatorData.quantity > 1 ? `\n🧪 Тестовый образец (1 шт) - ${testSampleText}` : ''}
 
-ℹ️ Необходимо согласовать дизайн перед запуском.
+Необходимо согласовать дизайн перед запуском.
 
-📞 Индивидуальные вопросы:
-📞 +7 922 747-44-74
-✉️ @BazhenovYuri
+С уважением, Юрий
++7 922 717-00-70 (Мах)
+BazhenovYuri.t.me
+ЗНАЧКОВ.РФ
   `.trim(),
   testSamplePrice,
   priceWithCardDiscount,
