@@ -868,7 +868,7 @@ const PriceCalculator = () => {
     
     const processingText = processingParts.length > 0 
       ? `Дополнительно: ${processingParts.join(', ')}` 
-      : 'Дополнительно: без обработки';       
+      : '';       
     
     // Скидка 20% при оплате по карте
     const priceWithCardDiscount = Math.round(estimatedPrice * 0.8);
@@ -900,7 +900,7 @@ const PriceCalculator = () => {
     // Формируем текст
 return {
   clientText: `
-✅ Добрый день! Предварительный расчёт Вашего заказа готов.
+Добрый день! Предварительный расчёт Вашего заказа готов.
 
 Материал: ${metalName}
 Размер: ${sizeText}, толщина 1 мм
