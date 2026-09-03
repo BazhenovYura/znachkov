@@ -867,7 +867,7 @@ const PriceCalculator = () => {
     if (additionalProcessing.enamel) processingParts.push(`эмаль (${additionalProcessing.enamelColors} цв.)`);
     
     const processingText = processingParts.length > 0 
-      ? `Дополнительно: ${processingParts.join(', ')}` 
+      ? `Доп.обработка: ${processingParts.join(', ')}` 
       : '';       
     
     // Скидка 20% при оплате по карте
@@ -906,7 +906,7 @@ return {
 Размер: ${sizeText}, толщина 1 мм
 Вес значка: ~${weight} г
 Количество: ${calculatorData.quantity}
-Дополнительно: 3D-модель
+Доп.работа: 3D-модель
 ${processingText}
 Срочность: не требуется (стандартный срок 30-45 дней)
 
