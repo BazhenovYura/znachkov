@@ -336,11 +336,11 @@ const ManagerTechInfo = ({
           </div>
           <div>
             <span className="text-gray-500 text-xs">Тестовый образец (с НДС)</span>
-            <p className="text-white font-medium">{testSamplePrice.toLocaleString()} ₽</p>
+            <p className="text-white font-medium">{testSamplePrice > 0 ? testSamplePrice.toLocaleString() : '—'}</p>
           </div>
           <div>
             <span className="text-gray-500 text-xs">Тестовый образец (скидка 20%)</span>
-            <p className="text-green-400 font-medium">{testSampleWithCardDiscount.toLocaleString()} ₽</p>
+            <p className="text-green-400 font-medium">{testSampleWithCardDiscount > 0 ? testSampleWithCardDiscount.toLocaleString() : '—'}</p>
           </div>
           <div className="col-span-2 md:col-span-3">
             <span className="text-gray-500 text-xs">Дата расчёта</span>
@@ -508,6 +508,21 @@ const PriceCalculator = () => {
       console.log('Форма видна для всех режимов');
     }
   }, [mode, isLoadingMode]);
+
+  // Отслеживание изменения режима
+  useEffect(() => {
+    console.log(`🔄 Режим изменился: ${mode}`);
+    console.log(`📌 Текущий режим: ${mode === 'manager' ? '🔓 Менеджер' : '🔒 Клиент'}`);
+    console.log(`📌 sessionStorage: ${sessionStorage.getItem('calculator_mode')}`);
+    
+    if (mode === 'manager') {
+      console.log('✅ ДОСТУПНЫ БЛОКИ ДЛЯ МЕНЕДЖЕРА:');
+      console.log('  - 📋 Готовый ответ для клиента');
+      console.log('  - 📊 Технические данные');
+    } else {
+      console.log('❌ БЛОКИ ДЛЯ МЕНЕДЖЕРА СКРЫТЫ');
+    }
+  }, [mode]);
 
   const presets = {
     maxi: { width: 35, height: 30, shape: 'rectangle' as const, label: 'MAXI', complexity: 1.4 },
@@ -793,7 +808,12 @@ const PriceCalculator = () => {
     const ADMIN_LOGIN = 'Админ';
     const ADMIN_PASSWORD = '142536';
     
+    console.log('🔐 Попытка входа в режим менеджера...');
+    console.log('Введённый логин:', login);
+    console.log('Введённый пароль:', '***');
+    
     if (login === ADMIN_LOGIN && password === ADMIN_PASSWORD) {
+      console.log('✅ Вход успешен! Переключение в режим менеджера');
       setMode('manager');
       setShowLoginModal(false);
       setLogin('');
@@ -801,7 +821,11 @@ const PriceCalculator = () => {
       setLoginError('');
       sessionStorage.setItem('calculator_mode', 'manager');
       setCalculatorData(prev => ({ ...prev, quantity: 1 }));
+      console.log('🔓 Режим менеджера АКТИВИРОВАН');
+      console.log('📌 sessionStorage calculator_mode:', sessionStorage.getItem('calculator_mode'));
+      console.log('📌 Текущий mode:', 'manager');
     } else {
+      console.log('❌ Ошибка входа: неверный логин или пароль');
       setLoginError('Неверный логин или пароль');
     }
   };
@@ -825,15 +849,15 @@ const PriceCalculator = () => {
 
   // --- ФОРМИРОВАНИЕ ГОТОВОГО ТЕКСТА ДЛЯ КЛИЕНТА ---
   const getClientReadyText = () => {
-  const isGold = calculatorData.material === 'gold';
-  const metalName = isGold ? 'золото 585 пробы' : 'серебро 925 пробы';
-  
-  let sizeText = '';
-  if (calculatorData.shape === 'circle') {
-    sizeText = `диаметр ${calculatorData.width} мм`;
-  } else {
-    sizeText = `${calculatorData.width}×${calculatorData.height} мм`;
-  }
+    const isGold = calculatorData.material === 'gold';
+    const metalName = isGold ? 'золото 585 пробы' : 'серебро 925 пробы';
+    
+    let sizeText = '';
+    if (calculatorData.shape === 'circle') {
+      sizeText = `диаметр ${calculatorData.width} мм`;
+    } else {
+      sizeText = `${calculatorData.width}×${calculatorData.height} мм`;
+    }
     
     // Дополнительная обработка
     let processingParts = [];
@@ -849,11 +873,32 @@ const PriceCalculator = () => {
     // Стоимость 3D-модели
     const modelCost = MODEL_3D_COST;
     
-    // Тестовый образец
-    const testSamplePrice = Math.round(pricePerUnit + modelCost / calculatorData.quantity);
+    // Скидка 20% при оплате по карте
     const priceWithCardDiscount = Math.round(estimatedPrice * 0.8);
     const pricePerUnitWithCardDiscount = Math.round(pricePerUnit * 0.8);
-    const testSampleWithCardDiscount = Math.round(testSamplePrice * 0.8);
+    
+    // Тестовый образец
+    let testSampleText = '';
+    let testSamplePrice = 0;
+    let testSampleWithCardDiscount = 0;
+    
+    if (calculatorData.quantity === 1) {
+      testSampleText = '— (партия = 1 шт, тестовый образец не требуется)';
+    } else {
+      // Цена 1 шт БЕЗ 3D-модели (уже с НДС)
+      const pricePerUnitWithoutModel = pricePerUnit;
+      
+      // 3D-модель с НДС
+      const model3DCostWithVAT = MODEL_3D_COST * VAT_SELL_FACTOR; // 10 000 × 1.22 = 12 200 ₽
+      
+      // Тестовый образец = цена 1 шт (без 3D) + 3D-модель с НДС
+      testSamplePrice = Math.round(pricePerUnitWithoutModel + model3DCostWithVAT);
+      
+      // Со скидкой 20% при оплате по карте
+      testSampleWithCardDiscount = Math.round(testSamplePrice * 0.8);
+      
+      testSampleText = `${testSamplePrice.toLocaleString()} ₽ (с НДС) / ${testSampleWithCardDiscount.toLocaleString()} ₽ (при оплате по номеру карты)`;
+    }
     
     // Формируем текст
     return {
@@ -864,23 +909,23 @@ const PriceCalculator = () => {
 🔹 Размер: ${sizeText}, толщина 1 мм
 🔹 Вес значка: ~${weight} г
 🔹 Количество: ${calculatorData.quantity} значков
-🔹 Дополнительно: 3D-модель (${modelCost.toLocaleString()} ₽, разово)
+🔹 Дополнительно: 3D-модель
 ${processingText}
-🔹 Срочность: не требуется (стандартный срок — 46 дней)
+🔹 Срочность: не требуется (стандартный срок - 30-45 дней)
 
-📦 Стоимость всей партии: **${estimatedPrice.toLocaleString()} ₽**
-💰 Цена за 1 значок: **${pricePerUnit.toLocaleString()} ₽**
+📦 Стоимость всей партии: ${estimatedPrice.toLocaleString()} ₽ (с НДС)
+💰 Цена за 1 значок: ${pricePerUnit.toLocaleString()} ₽ (с НДС)
 
-💳 **При оплате по номеру карты** — скидка 20%:
-- Партия: **${priceWithCardDiscount.toLocaleString()} ₽**
-- За 1 шт: **${pricePerUnitWithCardDiscount.toLocaleString()} ₽**
+💳 Если не работаете с НДС, то при оплате по номеру карты стоимость будет ниже:
+- Партия: ${priceWithCardDiscount.toLocaleString()} ₽
+- За 1 шт: ${pricePerUnitWithCardDiscount.toLocaleString()} ₽
 
-🧪 Тестовый образец (1 шт) — **${testSamplePrice.toLocaleString()} ₽** / при оплате по карте **${testSampleWithCardDiscount.toLocaleString()} ₽**
+🧪 Тестовый образец (1 шт) - ${testSampleText}
 
 ℹ️ Необходимо согласовать дизайн перед запуском.
 
-📞 Индивидуальные вопросы:  
-📞 +7 922 747-44-74  
+📞 Индивидуальные вопросы:
+📞 +7 922 747-44-74
 ✉️ @BazhenovYuri
       `.trim(),
       testSamplePrice,
@@ -1764,7 +1809,7 @@ ${processingText}
           </div>
 
           {/* --- БЛОК ДЛЯ МЕНЕДЖЕРА: ГОТОВЫЙ ТЕКСТ И ТЕХНИЧЕСКАЯ ИНФОРМАЦИЯ --- */}
-          {mode === 'manager' && isPriceLoaded && (
+          {mode === 'manager' && isPriceLoaded && estimatedPrice > 0 && (
             <>
               <ManagerReadyText 
                 text={clientData.clientText}
