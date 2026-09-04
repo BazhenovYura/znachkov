@@ -104,13 +104,13 @@ const loadImageToCanvas = (url: string): Promise<HTMLImageElement> => {
 };
 
 // Компонент визуализации формы
-const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme, contourType, contourMask, contourArea, actualWidth, actualHeight, thickness }: any) => {
+const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme, contourMask, contourArea, actualWidth, actualHeight, thickness }: any) => {
   const displayWidth = calculatorData.width;
   const displayHeight = calculatorData.height;
   const ENLARGE_FACTOR = 1.1;
   
   const getShapeStyle = () => {
-    if (contourType === 'custom' && contourMask) {
+    if (calculatorData.shape === 'custom' && contourMask) {
       return {
         borderRadius: '0%',
         overflow: 'hidden' as const,
@@ -135,7 +135,7 @@ const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme, 
   };
   
   const getShapeLabel = () => {
-    if (contourType === 'custom' && contourArea) {
+    if (calculatorData.shape === 'custom' && contourArea) {
       return `Площадь: ${contourArea.toFixed(2)} мм²`;
     }
     if (calculatorData.shape === 'circle') {
@@ -145,7 +145,7 @@ const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme, 
   };
   
   // Если есть маска криволинейного контура
-  if (contourType === 'custom' && contourMask) {
+  if (calculatorData.shape === 'custom' && contourMask) {
     return (
       <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
         <div className="text-center mb-2">
@@ -503,7 +503,6 @@ const PriceCalculator = () => {
   });
 
   // --- НОВЫЕ СОСТОЯНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА ---
-  const [contourType, setContourType] = useState<'rectangle' | 'circle' | 'custom'>('rectangle');
   const [uploadedContourImage, setUploadedContourImage] = useState<File | null>(null);
   const [contourImagePreview, setContourImagePreview] = useState<string | null>(null);
   const [contourArea, setContourArea] = useState<number | null>(null);
@@ -887,7 +886,7 @@ const PriceCalculator = () => {
     let currentThickness = 1;
     
     // Если менеджер и выбран криволинейный контур с рассчитанной площадью
-    if (mode === 'manager' && contourType === 'custom' && contourArea !== null) {
+    if (mode === 'manager' && calculatorData.shape === 'custom' && contourArea !== null) {
       area = contourArea;
       currentThickness = thickness;
     } else if (calculatorData.shape === 'circle') {
@@ -945,7 +944,7 @@ const PriceCalculator = () => {
     
     setEstimatedPrice(totalPrice);
     setPricePerUnit(pricePerUnit);
-  }, [calculatorData, metalPrices, additionalProcessing, contourArea, thickness, contourType]);
+  }, [calculatorData, metalPrices, additionalProcessing, contourArea, thickness]);
 
   useEffect(() => {
     fetchMetalPrices();
@@ -1133,7 +1132,7 @@ const PriceCalculator = () => {
     const metalName = isGold ? 'золото 585 пробы' : 'серебро 925 пробы';
     
     let sizeText = '';
-    if (contourType === 'custom' && actualWidth && actualHeight) {
+    if (calculatorData.shape === 'custom' && actualWidth && actualHeight) {
       sizeText = `криволинейный контур (вписан в ${calculatorData.width}×${calculatorData.height} мм, факт. ${actualWidth.toFixed(1)}×${actualHeight.toFixed(1)} мм)`;
     } else if (calculatorData.shape === 'circle') {
       sizeText = `диаметр ${calculatorData.width} мм`;
@@ -1235,7 +1234,7 @@ BazhenovYuri.t.me
     
     // Формируем техническую информацию для менеджера
     let contourInfo = '';
-    if (contourType === 'custom' && contourArea !== null) {
+    if (calculatorData.shape === 'custom' && contourArea !== null) {
       contourInfo = `
 • Тип контура: криволинейный
 • Площадь фигуры: ${contourArea.toFixed(2)} мм²
@@ -1275,7 +1274,7 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
         weight: weight,
         metalCostPerGram: metalCostPerGram,
         timestamp: timestamp,
-        contour: contourType === 'custom' ? {
+        contour: calculatorData.shape === 'custom' ? {
           type: 'custom',
           area: contourArea,
           actualWidth: actualWidth,
@@ -1341,7 +1340,7 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
       let fileToSend = uploadedFile;
       
       // Если менеджер использовал криволинейный контур, и есть маска
-      if (contourType === 'custom' && contourMask) {
+      if (calculatorData.shape === 'custom' && contourMask) {
         // Если есть основной файл, отправляем его, а маску добавляем в meta
         if (!uploadedFile) {
           // Если нет основного файла, преобразуем маску в файл
@@ -1366,7 +1365,7 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
         quantity: calculatorData.quantity,
         estimatedPrice: estimatedPrice,
         mode: mode,
-        contourType: contourType,
+        shape: calculatorData.shape,
       });
       
       navigate('/thanks', { 
@@ -1672,174 +1671,6 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
               </div>
             )}
 
-            {/* --- ВЫБОР ТИПА КОНТУРА (ТОЛЬКО ДЛЯ МЕНЕДЖЕРА) --- */}
-            {mode === 'manager' && (
-              <div className="mb-6">
-                <label className="block text-gray-400 text-sm mb-3">Тип контура</label>
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setContourType('rectangle');
-                      setContourArea(null);
-                      setContourMask(null);
-                      setActualWidth(null);
-                      setActualHeight(null);
-                      setUploadedContourImage(null);
-                      setContourImagePreview(null);
-                    }}
-                    className={`p-3 rounded-xl border transition-all duration-300 text-center ${
-                      contourType === 'rectangle'
-                        ? `${theme.bgLight} ${theme.border}`
-                        : 'bg-dark border-gray-700 hover:border-gold/50'
-                    }`}
-                  >
-                    <Square className={`w-5 h-5 mx-auto ${contourType === 'rectangle' ? theme.text : 'text-gray-400'}`} />
-                    <span className="text-xs block mt-1">Прямоугольный</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setContourType('circle');
-                      setContourArea(null);
-                      setContourMask(null);
-                      setActualWidth(null);
-                      setActualHeight(null);
-                      setUploadedContourImage(null);
-                      setContourImagePreview(null);
-                    }}
-                    className={`p-3 rounded-xl border transition-all duration-300 text-center ${
-                      contourType === 'circle'
-                        ? `${theme.bgLight} ${theme.border}`
-                        : 'bg-dark border-gray-700 hover:border-gold/50'
-                    }`}
-                  >
-                    <Circle className={`w-5 h-5 mx-auto ${contourType === 'circle' ? theme.text : 'text-gray-400'}`} />
-                    <span className="text-xs block mt-1">Круглый</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setContourType('custom');
-                      setContourArea(null);
-                      setContourMask(null);
-                      setActualWidth(null);
-                      setActualHeight(null);
-                    }}
-                    className={`p-3 rounded-xl border transition-all duration-300 text-center ${
-                      contourType === 'custom'
-                        ? `${theme.bgLight} ${theme.border}`
-                        : 'bg-dark border-gray-700 hover:border-gold/50'
-                    }`}
-                  >
-                    <ImageIcon className={`w-5 h-5 mx-auto ${contourType === 'custom' ? theme.text : 'text-gray-400'}`} />
-                    <span className="text-xs block mt-1">Криволинейный</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {/* --- ЗАГРУЗКА ИЗОБРАЖЕНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА --- */}
-            {contourType === 'custom' && mode === 'manager' && (
-              <div className="mb-6 p-4 bg-dark/30 rounded-xl border border-gray-800">
-                <label className="block text-gray-400 text-sm mb-3">
-                  Загрузите изображение для расчёта площади (PNG с прозрачностью)
-                </label>
-                
-                {!uploadedContourImage ? (
-                  <label className="cursor-pointer flex items-center justify-center gap-2 w-full px-4 py-6 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors">
-                    <Upload className="w-6 h-6" />
-                    <span>Выберите изображение</span>
-                    <input
-                      type="file"
-                      accept="image/png,image/webp,image/jpeg"
-                      onChange={handleContourImageUpload}
-                      className="hidden"
-                    />
-                  </label>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
-                      <img src={contourImagePreview || ''} alt="Контур" className="w-16 h-16 object-cover rounded-lg" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white text-sm truncate">{uploadedContourImage.name}</p>
-                        <p className="text-gray-500 text-xs">{(uploadedContourImage.size / 1024).toFixed(1)} KB</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUploadedContourImage(null);
-                          setContourImagePreview(null);
-                          setContourArea(null);
-                          setContourMask(null);
-                          setActualWidth(null);
-                          setActualHeight(null);
-                          setContourError(null);
-                        }}
-                        className="text-gray-500 hover:text-red-500 transition-colors"
-                      >
-                        <X className="w-5 h-5" />
-                      </button>
-                    </div>
-                    
-                    <button
-                      type="button"
-                      onClick={processContourImage}
-                      disabled={isProcessingContour}
-                      className="w-full py-2 bg-gold/20 border border-gold/50 rounded-lg text-gold hover:bg-gold/30 transition-colors disabled:opacity-50"
-                    >
-                      {isProcessingContour ? 'Обработка...' : 'Рассчитать площадь фигуры'}
-                    </button>
-                    
-                    {contourError && (
-                      <p className="text-red-500 text-sm">{contourError}</p>
-                    )}
-                    
-                    {contourArea !== null && (
-                      <div className="bg-dark/50 rounded-lg p-4 border border-green-500/30">
-                        <p className="text-green-400 text-sm font-medium">Площадь фигуры: {contourArea.toFixed(2)} мм²</p>
-                        <p className="text-gray-400 text-sm">
-                          Фактические размеры: {actualWidth?.toFixed(1)} × {actualHeight?.toFixed(1)} мм
-                        </p>
-                        <p className="text-gray-400 text-sm">
-                          Вес при толщине {thickness} мм: {(contourArea * thickness * (calculatorData.material === 'gold' ? GOLD_DENSITY : SILVER_DENSITY)).toFixed(3)} г
-                        </p>
-                      </div>
-                    )}
-                    
-                    {contourMask && (
-                      <div className="bg-dark/50 rounded-lg p-4 border border-gray-700">
-                        <p className="text-gray-400 text-xs mb-2">Распознанный контур:</p>
-                        <img src={contourMask} alt="Контур" className="max-w-full max-h-[200px] mx-auto" />
-                      </div>
-                    )}
-                    
-                    {/* Толщина */}
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-gray-400">Толщина значка, мм</span>
-                        <span className={theme.text}>{thickness} мм</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="0.5"
-                        max="3"
-                        step="0.1"
-                        value={thickness}
-                        onChange={(e) => setThickness(parseFloat(e.target.value))}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>0.5</span>
-                        <span>1.5</span>
-                        <span>3.0</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Готовые форматы</label>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -1950,9 +1781,9 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                 </button>
               </div>
               
-              {calculatorData.type === 'custom' && contourType !== 'custom' && (
+              {calculatorData.type === 'custom' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-4 gap-3">
                     <button
                       type="button"
                       onClick={() => handleShapeSelect('rectangle')}
@@ -1977,7 +1808,7 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                       <div className="w-5 h-5 relative">
                         <Square className={`w-5 h-5 absolute ${calculatorData.shape === 'rounded' ? theme.text : 'text-gray-400'}`} style={{ borderRadius: '4px' }} />
                       </div>
-                      <span className="text-xs">Скругленные углы</span>
+                      <span className="text-xs">Скругленные</span>
                     </button>
                     <button
                       type="button"
@@ -1990,6 +1821,25 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                     >
                       <Circle className={`w-5 h-5 ${calculatorData.shape === 'circle' ? theme.text : 'text-gray-400'}`} />
                       <span className="text-xs">Круг</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCalculatorData(prev => ({
+                          ...prev,
+                          type: 'custom',
+                          shape: 'custom' as any,
+                        }));
+                        sendMetrikaEvent('calculator_param_change', { param: 'shape', value: 'custom' });
+                      }}
+                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+                        calculatorData.shape === 'custom'
+                          ? `${theme.bgLight} ${theme.border}`
+                          : 'bg-dark border-gray-700 hover:border-gold/50'
+                      }`}
+                    >
+                      <ImageIcon className={`w-5 h-5 ${calculatorData.shape === 'custom' ? theme.text : 'text-gray-400'}`} />
+                      <span className="text-xs">Криволинейный</span>
                     </button>
                   </div>
 
@@ -2016,7 +1866,7 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                     </div>
                   </div>
 
-                  {calculatorData.shape !== 'circle' && (
+                  {calculatorData.shape !== 'circle' && calculatorData.shape !== 'custom' && (
                     <div>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-400">Высота, мм</span>
@@ -2038,40 +1888,157 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-              
-              {/* Для криволинейного контура показываем только габариты без ползунков формы */}
-              {calculatorData.type === 'custom' && contourType === 'custom' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-1">Ширина (габарит), мм</label>
-                      <input
-                        type="number"
-                        min="5"
-                        max="50"
-                        value={calculatorData.width}
-                        onChange={(e) => handleWidthChange(parseInt(e.target.value) || 5)}
-                        className="w-full px-4 py-2 bg-dark border border-gray-700 rounded-lg text-white focus:border-gold focus:outline-none transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-gray-400 text-sm mb-1">Высота (габарит), мм</label>
-                      <input
-                        type="number"
-                        min="5"
-                        max="50"
-                        value={calculatorData.height}
-                        onChange={(e) => handleHeightChange(parseInt(e.target.value) || 5)}
-                        className="w-full px-4 py-2 bg-dark border border-gray-700 rounded-lg text-white focus:border-gold focus:outline-none transition-colors"
-                      />
-                    </div>
-                  </div>
-                  <p className="text-gray-500 text-xs">Изображение будет вписано пропорционально в указанные габариты</p>
+                  
+                  {/* Для криволинейного контура показываем оба ползунка для габаритов */}
+                  {calculatorData.shape === 'custom' && (
+                    <>
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-gray-400">Ширина (габарит), мм</span>
+                          <span className={theme.text}>{calculatorData.width} мм</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="5"
+                          max="50"
+                          step="1"
+                          value={calculatorData.width}
+                          onChange={(e) => handleWidthChange(parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>5</span>
+                          <span>30</span>
+                          <span>50</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-sm mb-2">
+                          <span className="text-gray-400">Высота (габарит), мм</span>
+                          <span className={theme.text}>{calculatorData.height} мм</span>
+                        </div>
+                        <input
+                          type="range"
+                          min="5"
+                          max="50"
+                          step="1"
+                          value={calculatorData.height}
+                          onChange={(e) => handleHeightChange(parseInt(e.target.value))}
+                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+                        />
+                        <div className="flex justify-between text-xs text-gray-500 mt-1">
+                          <span>5</span>
+                          <span>30</span>
+                          <span>50</span>
+                        </div>
+                      </div>
+                      <p className="text-gray-500 text-xs">Изображение будет вписано пропорционально в указанные габариты</p>
+                    </>
+                  )}
                 </div>
               )}
             </div>
+
+            {/* --- ЗАГРУЗКА ИЗОБРАЖЕНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА (ТОЛЬКО ДЛЯ МЕНЕДЖЕРА) --- */}
+            {mode === 'manager' && calculatorData.shape === 'custom' && (
+              <div className="mb-6 p-4 bg-dark/30 rounded-xl border border-gray-800">
+                <label className="block text-gray-400 text-sm mb-3">
+                  Загрузите изображение для криволинейного контура (PNG с прозрачностью)
+                </label>
+                
+                {!uploadedContourImage ? (
+                  <label className="cursor-pointer flex items-center justify-center gap-2 w-full px-4 py-6 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors">
+                    <Upload className="w-6 h-6" />
+                    <span>Выберите изображение</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/webp,image/jpeg"
+                      onChange={handleContourImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
+                      <img src={contourImagePreview || ''} alt="Контур" className="w-16 h-16 object-cover rounded-lg" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm truncate">{uploadedContourImage.name}</p>
+                        <p className="text-gray-500 text-xs">{(uploadedContourImage.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadedContourImage(null);
+                          setContourImagePreview(null);
+                          setContourArea(null);
+                          setContourMask(null);
+                          setActualWidth(null);
+                          setActualHeight(null);
+                          setContourError(null);
+                        }}
+                        className="text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={processContourImage}
+                      disabled={isProcessingContour}
+                      className="w-full py-2 bg-gold/20 border border-gold/50 rounded-lg text-gold hover:bg-gold/30 transition-colors disabled:opacity-50"
+                    >
+                      {isProcessingContour ? 'Обработка...' : 'Рассчитать площадь фигуры'}
+                    </button>
+                    
+                    {contourError && (
+                      <p className="text-red-500 text-sm">{contourError}</p>
+                    )}
+                    
+                    {contourArea !== null && (
+                      <div className="bg-dark/50 rounded-lg p-4 border border-green-500/30">
+                        <p className="text-green-400 text-sm font-medium">Площадь фигуры: {contourArea.toFixed(2)} мм²</p>
+                        <p className="text-gray-400 text-sm">
+                          Фактические размеры: {actualWidth?.toFixed(1)} × {actualHeight?.toFixed(1)} мм
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          Вес при толщине {thickness} мм: {(contourArea * thickness * (calculatorData.material === 'gold' ? GOLD_DENSITY : SILVER_DENSITY)).toFixed(3)} г
+                        </p>
+                      </div>
+                    )}
+                    
+                    {contourMask && (
+                      <div className="bg-dark/50 rounded-lg p-4 border border-gray-700">
+                        <p className="text-gray-400 text-xs mb-2">Распознанный контур:</p>
+                        <img src={contourMask} alt="Контур" className="max-w-full max-h-[200px] mx-auto" />
+                      </div>
+                    )}
+                    
+                    {/* Толщина */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-gray-400">Толщина значка, мм</span>
+                        <span className={theme.text}>{thickness} мм</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="3"
+                        step="0.1"
+                        value={thickness}
+                        onChange={(e) => setThickness(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>0.5</span>
+                        <span>1.5</span>
+                        <span>3.0</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className="mb-6">
               <ShapeVisualization 
@@ -2079,7 +2046,6 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                 filePreview={filePreview}
                 uploadedFile={uploadedFile}
                 theme={theme}
-                contourType={contourType}
                 contourMask={contourMask}
                 contourArea={contourArea}
                 actualWidth={actualWidth}
