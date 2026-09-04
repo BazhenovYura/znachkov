@@ -942,15 +942,15 @@ BazhenovYuri.t.me
     });
   };
 
-  // Единая функция отправки в MAX
-  const sendToMax = async (file?: File) => {
-    const clientData = getClientReadyText();
-    const clientText = clientData.clientText;
-    
-    const timestamp = getEkaterinburgTime();
-    
-    // Формируем техническую информацию для менеджера (добавляем в конец сообщения, но отделяем)
-    const techInfo = `
+ // Единая функция отправки в MAX
+const sendToMax = async (file?: File) => {
+  const clientData = getClientReadyText();
+  const clientText = clientData.clientText;
+  
+  const timestamp = getEkaterinburgTime();
+  
+  // Формируем техническую информацию для менеджера (добавляем в конец сообщения, но отделяем)
+  const techInfo = `
 ━━━━━━━━━━━━━━━━━━━━━━━
 📊 Технические данные (для менеджера):
 • Вес значка: ${weight} г
@@ -959,50 +959,62 @@ BazhenovYuri.t.me
 • Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт
 • Дата расчёта: ${timestamp}
 • Режим: ${mode === 'manager' ? 'менеджер' : 'клиент'}
-    `.trim();
 
-    // Отправляем в MAX полный текст (клиентский + технический)
-    const fullMessage = `${clientText}\n\n${techInfo}`;
+👤 Данные клиента:
+• Имя: ${formData.name || 'Не указано'}
+• Телефон: ${formData.phone || 'Не указан'}
+• Email: ${formData.email || 'Не указан'}
+${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
+  `.trim();
 
-    const payload: any = { 
-      text: fullMessage,
-      meta: {
-        mode: mode,
-        material: calculatorData.material,
-        quantity: calculatorData.quantity,
-        estimatedPrice: estimatedPrice,
-        pricePerUnit: pricePerUnit,
-        weight: weight,
-        metalCostPerGram: metalCostPerGram,
-        timestamp: timestamp
+  // Отправляем в MAX полный текст (клиентский + технический)
+  const fullMessage = `${clientText}\n\n${techInfo}`;
+
+  const payload: any = { 
+    text: fullMessage,
+    meta: {
+      mode: mode,
+      material: calculatorData.material,
+      quantity: calculatorData.quantity,
+      estimatedPrice: estimatedPrice,
+      pricePerUnit: pricePerUnit,
+      weight: weight,
+      metalCostPerGram: metalCostPerGram,
+      timestamp: timestamp,
+      client: {
+        name: formData.name,
+        phone: formData.phone,
+        email: formData.email,
+        comment: formData.comment
       }
-    };
-
-    // Если есть файл, прикрепляем
-    if (file) {
-      let fileToSend = file;
-      if (file.size > 1024 * 1024 && file.type.startsWith('image/')) {
-        try {
-          fileToSend = await compressImage(file);
-          console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
-        } catch (error) {
-          console.error('Ошибка сжатия:', error);
-        }
-      }
-      const base64File = await fileToBase64(fileToSend);
-      payload.file = base64File;
-      payload.fileName = fileToSend.name;
-      payload.fileType = fileToSend.type || 'application/octet-stream';
     }
-
-    const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    return await response.json();
   };
+
+  // Если есть файл, прикрепляем
+  if (file) {
+    let fileToSend = file;
+    if (file.size > 1024 * 1024 && file.type.startsWith('image/')) {
+      try {
+        fileToSend = await compressImage(file);
+        console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+      } catch (error) {
+        console.error('Ошибка сжатия:', error);
+      }
+    }
+    const base64File = await fileToBase64(fileToSend);
+    payload.file = base64File;
+    payload.fileName = fileToSend.name;
+    payload.fileType = fileToSend.type || 'application/octet-stream';
+  }
+
+  const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  return await response.json();
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
