@@ -6,6 +6,7 @@ import {
   Square, Circle, FileText, Copy, Image as ImageIcon
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
+import { removeBackground } from '@imgly/background-removal';
 
 // Единая функция для MAX
 const YANDEX_MAX_FUNCTION_URL = 'https://functions.yandexcloud.net/d4ekq3u1mf711pskoaop';
@@ -776,87 +777,84 @@ const PriceCalculator = () => {
   };
 
   // --- ОБРАБОТКА ИЗОБРАЖЕНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА ---
-  const processContourImage = async () => {
-    if (!uploadedContourImage) return;
+const processContourImage = async () => {
+  if (!uploadedContourImage) return;
+  
+  setIsProcessingContour(true);
+  setContourError(null);
+  
+  try {
+    console.log('🔄 Начинаем удаление фона...');
+    console.log('📁 Файл:', uploadedContourImage.name, uploadedContourImage.size, 'bytes');
     
-    setIsProcessingContour(true);
-    setContourError(null);
+    // Настройки для removeBackground
+    const config = {
+      output: {
+        format: 'image/png' as const,
+      },
+      progress: (key: string, current: number, total: number) => {
+        console.log(`Обработка: ${key} ${current}/${total}`);
+      },
+      // Путь к файлам модели (папка public/models/background-removal/)
+      publicPath: '/models/background-removal/',
+      // Используем CPU для стабильности
+      device: 'cpu' as const,
+    };
     
-    try {
-      // Загружаем изображение
-      const img = await loadImageToCanvas(contourImagePreview!);
-      
-      // Создаём canvas для анализа
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) throw new Error('Не удалось создать canvas');
-      
-      // Рисуем изображение
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      
-      // Создаём маску на основе альфа-канала (для PNG с прозрачностью)
-      const maskData = ctx.createImageData(canvas.width, canvas.height);
-      const data = imageData.data;
-      const mask = maskData.data;
-      
-      for (let i = 0; i < data.length; i += 4) {
-        const alpha = data[i + 3];
-        // Если пиксель непрозрачный (> 128), делаем его белым
-        if (alpha > 128) {
-          mask[i] = 255;
-          mask[i + 1] = 255;
-          mask[i + 2] = 255;
-          mask[i + 3] = 255;
-        } else {
-          mask[i] = 0;
-          mask[i + 1] = 0;
-          mask[i + 2] = 0;
-          mask[i + 3] = 0;
-        }
-      }
-      
-      // Создаём маску как изображение
-      const maskCanvas = document.createElement('canvas');
-      maskCanvas.width = canvas.width;
-      maskCanvas.height = canvas.height;
-      const maskCtx = maskCanvas.getContext('2d');
-      if (!maskCtx) throw new Error('Не удалось создать canvas для маски');
-      maskCtx.putImageData(maskData, 0, 0);
-      
-      const maskUrl = maskCanvas.toDataURL('image/png');
-      setContourMask(maskUrl);
-      
-      // Рассчитываем площадь
-      const { areaMm2, actualWidth: actW, actualHeight: actH } = calculateContourArea(
-        imageData,
-        calculatorData.width,
-        calculatorData.height
-      );
-      
-      setContourArea(areaMm2);
-      setActualWidth(actW);
-      setActualHeight(actH);
-      
-      console.log(`📐 Площадь фигуры: ${areaMm2.toFixed(2)} мм²`);
-      console.log(`📏 Фактические размеры: ${actW.toFixed(1)}×${actH.toFixed(1)} мм`);
-      
-      sendMetrikaEvent('contour_calculated', {
-        area: areaMm2,
-        actualWidth: actW,
-        actualHeight: actH,
-        thickness: thickness,
-      });
-      
-    } catch (error) {
-      console.error('❌ Ошибка обработки изображения:', error);
-      setContourError(error instanceof Error ? error.message : 'Неизвестная ошибка');
-    } finally {
-      setIsProcessingContour(false);
-    }
-  };
+    console.log('🔄 Удаление фона через @imgly/background-removal...');
+    
+    // Удаляем фон
+    const blob = await removeBackground(uploadedContourImage, config);
+    
+    console.log('✅ Фон удалён, размер результата:', blob.size, 'bytes');
+    
+    // Создаём URL для результата
+    const resultUrl = URL.createObjectURL(blob);
+    setContourMask(resultUrl);
+    
+    // Загружаем изображение на canvas для анализа
+    const img = await loadImageToCanvas(resultUrl);
+    
+    console.log('📐 Размер изображения:', img.width, 'x', img.height);
+    
+    // Создаём canvas для анализа пикселей
+    const canvas = document.createElement('canvas');
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) throw new Error('Не удалось создать canvas');
+    
+    ctx.drawImage(img, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    
+    // Рассчитываем площадь
+    const { areaMm2, actualWidth: actW, actualHeight: actH } = calculateContourArea(
+      imageData,
+      calculatorData.width,
+      calculatorData.height
+    );
+    
+    setContourArea(areaMm2);
+    setActualWidth(actW);
+    setActualHeight(actH);
+    
+    console.log(`📐 Площадь фигуры: ${areaMm2.toFixed(2)} мм²`);
+    console.log(`📏 Фактические размеры: ${actW.toFixed(1)}×${actH.toFixed(1)} мм`);
+    
+    sendMetrikaEvent('contour_calculated', {
+      area: areaMm2,
+      actualWidth: actW,
+      actualHeight: actH,
+      thickness: thickness,
+    });
+    
+  } catch (error) {
+    console.error('❌ Ошибка обработки изображения:', error);
+    setContourError(error instanceof Error ? error.message : 'Неизвестная ошибка при удалении фона. Попробуйте другое изображение.');
+  } finally {
+    setIsProcessingContour(false);
+  }
+};
 
   const calculatePrice = () => {
     const isGold = calculatorData.material === 'gold';
