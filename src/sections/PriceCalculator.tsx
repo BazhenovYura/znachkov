@@ -1783,7 +1783,7 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
               
               {calculatorData.type === 'custom' && (
                 <div className="space-y-4">
-                  <div className="grid grid-cols-4 gap-3">
+                  <div className="grid grid-cols-3 gap-3">
                     <button
                       type="button"
                       onClick={() => handleShapeSelect('rectangle')}
@@ -1822,25 +1822,29 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                       <Circle className={`w-5 h-5 ${calculatorData.shape === 'circle' ? theme.text : 'text-gray-400'}`} />
                       <span className="text-xs">Круг</span>
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setCalculatorData(prev => ({
-                          ...prev,
-                          type: 'custom',
-                          shape: 'custom' as any,
-                        }));
-                        sendMetrikaEvent('calculator_param_change', { param: 'shape', value: 'custom' });
-                      }}
-                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
-                        calculatorData.shape === 'custom'
-                          ? `${theme.bgLight} ${theme.border}`
-                          : 'bg-dark border-gray-700 hover:border-gold/50'
-                      }`}
-                    >
-                      <ImageIcon className={`w-5 h-5 ${calculatorData.shape === 'custom' ? theme.text : 'text-gray-400'}`} />
-                      <span className="text-xs">Криволинейный</span>
-                    </button>
+                    
+                    {/* Кнопка "Криволинейный" — видна ТОЛЬКО менеджеру */}
+                    {mode === 'manager' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCalculatorData(prev => ({
+                            ...prev,
+                            type: 'custom',
+                            shape: 'custom' as any,
+                          }));
+                          sendMetrikaEvent('calculator_param_change', { param: 'shape', value: 'custom' });
+                        }}
+                        className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+                          calculatorData.shape === 'custom'
+                            ? `${theme.bgLight} ${theme.border}`
+                            : 'bg-dark border-gray-700 hover:border-gold/50'
+                        }`}
+                      >
+                        <ImageIcon className={`w-5 h-5 ${calculatorData.shape === 'custom' ? theme.text : 'text-gray-400'}`} />
+                        <span className="text-xs">Криволинейный</span>
+                      </button>
+                    )}
                   </div>
 
                   <div>
