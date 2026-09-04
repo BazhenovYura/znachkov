@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { 
   Send, Upload, X, Calculator, Gift, TrendingUp, 
   Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw,
-  Square, Circle, FileText, Copy
+  Square, Circle, FileText, Copy, Image as ImageIcon
 } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
@@ -92,13 +92,30 @@ const compressImage = async (file: File): Promise<File> => {
   });
 };
 
+// --- ФУНКЦИЯ ЗАГРУЗКИ ИЗОБРАЖЕНИЯ НА CANVAS ---
+const loadImageToCanvas = (url: string): Promise<HTMLImageElement> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = url;
+  });
+};
+
 // Компонент визуализации формы
-const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme }: any) => {
+const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme, contourType, contourMask, contourArea, actualWidth, actualHeight, thickness }: any) => {
   const displayWidth = calculatorData.width;
   const displayHeight = calculatorData.height;
   const ENLARGE_FACTOR = 1.1;
   
   const getShapeStyle = () => {
+    if (contourType === 'custom' && contourMask) {
+      return {
+        borderRadius: '0%',
+        overflow: 'hidden' as const,
+      };
+    }
     if (calculatorData.shape === 'circle') {
       return {
         borderRadius: '50%',
@@ -118,12 +135,70 @@ const ShapeVisualization = ({ calculatorData, filePreview, uploadedFile, theme }
   };
   
   const getShapeLabel = () => {
+    if (contourType === 'custom' && contourArea) {
+      return `Площадь: ${contourArea.toFixed(2)} мм²`;
+    }
     if (calculatorData.shape === 'circle') {
       return `⌀${calculatorData.width} мм`;
     }
     return `${calculatorData.width}×${calculatorData.height} мм`;
   };
   
+  // Если есть маска криволинейного контура
+  if (contourType === 'custom' && contourMask) {
+    return (
+      <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
+        <div className="text-center mb-2">
+          <span className="text-gray-400 text-xs">Криволинейный контур</span>
+          {actualWidth && actualHeight && (
+            <span className="text-gray-500 text-xs ml-2">
+              Факт. размер: {actualWidth.toFixed(1)}×{actualHeight.toFixed(1)} мм
+            </span>
+          )}
+          {contourArea && (
+            <span className="text-gold text-xs ml-2">
+              Площадь: {contourArea.toFixed(2)} мм²
+            </span>
+          )}
+          {thickness && (
+            <span className="text-gray-500 text-xs ml-2">
+              Толщина: {thickness} мм
+            </span>
+          )}
+        </div>
+        
+        <div className="flex justify-center items-center min-h-[200px] bg-dark/50 rounded-lg p-4">
+          <div
+            className="relative bg-dark"
+            style={{
+              width: `${displayWidth * ENLARGE_FACTOR}mm`,
+              height: `${displayHeight * ENLARGE_FACTOR}mm`,
+              overflow: 'hidden',
+            }}
+          >
+            <img 
+              src={contourMask} 
+              alt="Криволинейный контур"
+              className="absolute inset-0 w-full h-full object-contain"
+            />
+            <div
+              className={`absolute inset-0 border-2 ${theme.border} pointer-events-none`}
+            />
+          </div>
+        </div>
+        <div className="text-center mt-2 text-gray-500 text-xs">
+          <div>Расчетный размер: {calculatorData.width}×{calculatorData.height} мм</div>
+          {actualWidth && actualHeight && (
+            <div className="text-gray-400 text-xs">
+              Фигура вписана пропорционально: {actualWidth.toFixed(1)}×{actualHeight.toFixed(1)} мм
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+  
+  // Остальная визуализация (как была)
   if (filePreview && uploadedFile?.type.startsWith('image/')) {
     return (
       <div className="bg-dark-light/50 rounded-xl p-4 border border-gray-800">
@@ -296,6 +371,10 @@ const ManagerTechInfo = ({
   testSamplePrice,
   testSampleWithCardDiscount,
   timestamp,
+  contourArea,
+  actualWidth,
+  actualHeight,
+  thickness,
 }: any) => {
   return (
     <div className="bg-dark-light/30 border border-gray-800/50 rounded-xl p-4 md:p-6 animate-fade-in-up">
@@ -342,6 +421,22 @@ const ManagerTechInfo = ({
             <span className="text-gray-500 text-xs">Тестовый образец (скидка 20%)</span>
             <p className="text-green-400 font-medium">{testSampleWithCardDiscount > 0 ? testSampleWithCardDiscount.toLocaleString() : '—'}</p>
           </div>
+          {contourArea && (
+            <>
+              <div>
+                <span className="text-gray-500 text-xs">Площадь фигуры</span>
+                <p className="text-white font-medium">{contourArea.toFixed(2)} мм²</p>
+              </div>
+              <div>
+                <span className="text-gray-500 text-xs">Фактические размеры</span>
+                <p className="text-white font-medium">{actualWidth?.toFixed(1)}×{actualHeight?.toFixed(1)} мм</p>
+              </div>
+              <div>
+                <span className="text-gray-500 text-xs">Толщина</span>
+                <p className="text-white font-medium">{thickness} мм</p>
+              </div>
+            </>
+          )}
           <div className="col-span-2 md:col-span-3">
             <span className="text-gray-500 text-xs">Дата расчёта</span>
             <p className="text-gray-400 text-sm">{timestamp}</p>
@@ -406,6 +501,18 @@ const PriceCalculator = () => {
     enamel: false,
     enamelColors: 1,
   });
+
+  // --- НОВЫЕ СОСТОЯНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА ---
+  const [contourType, setContourType] = useState<'rectangle' | 'circle' | 'custom'>('rectangle');
+  const [uploadedContourImage, setUploadedContourImage] = useState<File | null>(null);
+  const [contourImagePreview, setContourImagePreview] = useState<string | null>(null);
+  const [contourArea, setContourArea] = useState<number | null>(null);
+  const [contourMask, setContourMask] = useState<string | null>(null);
+  const [isProcessingContour, setIsProcessingContour] = useState(false);
+  const [thickness, setThickness] = useState(1);
+  const [actualWidth, setActualWidth] = useState<number | null>(null);
+  const [actualHeight, setActualHeight] = useState<number | null>(null);
+  const [contourError, setContourError] = useState<string | null>(null);
 
   // Функция для получения отображения цены материала
   const getMaterialPriceDisplay = (material: 'gold' | 'silver') => {
@@ -586,6 +693,172 @@ const PriceCalculator = () => {
     return 1.0;
   };
 
+  // --- ФУНКЦИЯ РАСЧЁТА ПЛОЩАДИ КРИВОЛИНЕЙНОГО КОНТУРА ---
+  const calculateContourArea = (imageData: ImageData, widthMm: number, heightMm: number) => {
+    const data = imageData.data;
+    let opaquePixels = 0;
+    let minX = imageData.width;
+    let maxX = 0;
+    let minY = imageData.height;
+    let maxY = 0;
+    
+    // Считаем непрозрачные пиксели и находим границы фигуры
+    for (let y = 0; y < imageData.height; y++) {
+      for (let x = 0; x < imageData.width; x++) {
+        const idx = (y * imageData.width + x) * 4;
+        const alpha = data[idx + 3];
+        if (alpha > 128) {
+          opaquePixels++;
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+          if (y < minY) minY = y;
+          if (y > maxY) maxY = y;
+        }
+      }
+    }
+    
+    if (opaquePixels === 0) {
+      throw new Error('Не удалось распознать фигуру на изображении. Убедитесь, что изображение имеет прозрачный фон.');
+    }
+    
+    const totalPixels = imageData.width * imageData.height;
+    const ratio = opaquePixels / totalPixels;
+    
+    // Площадь в мм²
+    const areaMm2 = widthMm * heightMm * ratio;
+    
+    // Реальные размеры фигуры (пропорционально)
+    const figureWidthPx = maxX - minX + 1;
+    const figureHeightPx = maxY - minY + 1;
+    const pxToMmX = widthMm / imageData.width;
+    const pxToMmY = heightMm / imageData.height;
+    
+    const actualW = figureWidthPx * pxToMmX;
+    const actualH = figureHeightPx * pxToMmY;
+    
+    return {
+      areaMm2,
+      actualWidth: actualW,
+      actualHeight: actualH,
+    };
+  };
+
+  // --- ОБРАБОТЧИК ЗАГРУЗКИ ИЗОБРАЖЕНИЯ ДЛЯ КОНТУРА ---
+  const handleContourImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    // Проверка размера
+    if (file.size > MAX_FILE_SIZE) {
+      setContourError(`Файл слишком большой (${(file.size / 1024 / 1024).toFixed(1)} МБ). Максимальный размер: 5 МБ`);
+      return;
+    }
+    
+    setUploadedContourImage(file);
+    setContourError(null);
+    
+    // Создаём превью
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setContourImagePreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    
+    // Сбрасываем предыдущие результаты
+    setContourArea(null);
+    setContourMask(null);
+    setActualWidth(null);
+    setActualHeight(null);
+    
+    sendMetrikaEvent('contour_image_uploaded', {
+      fileName: file.name,
+      fileSize: file.size,
+    });
+  };
+
+  // --- ОБРАБОТКА ИЗОБРАЖЕНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА ---
+  const processContourImage = async () => {
+    if (!uploadedContourImage) return;
+    
+    setIsProcessingContour(true);
+    setContourError(null);
+    
+    try {
+      // Загружаем изображение
+      const img = await loadImageToCanvas(contourImagePreview!);
+      
+      // Создаём canvas для анализа
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Не удалось создать canvas');
+      
+      // Рисуем изображение
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Создаём маску на основе альфа-канала (для PNG с прозрачностью)
+      const maskData = ctx.createImageData(canvas.width, canvas.height);
+      const data = imageData.data;
+      const mask = maskData.data;
+      
+      for (let i = 0; i < data.length; i += 4) {
+        const alpha = data[i + 3];
+        // Если пиксель непрозрачный (> 128), делаем его белым
+        if (alpha > 128) {
+          mask[i] = 255;
+          mask[i + 1] = 255;
+          mask[i + 2] = 255;
+          mask[i + 3] = 255;
+        } else {
+          mask[i] = 0;
+          mask[i + 1] = 0;
+          mask[i + 2] = 0;
+          mask[i + 3] = 0;
+        }
+      }
+      
+      // Создаём маску как изображение
+      const maskCanvas = document.createElement('canvas');
+      maskCanvas.width = canvas.width;
+      maskCanvas.height = canvas.height;
+      const maskCtx = maskCanvas.getContext('2d');
+      if (!maskCtx) throw new Error('Не удалось создать canvas для маски');
+      maskCtx.putImageData(maskData, 0, 0);
+      
+      const maskUrl = maskCanvas.toDataURL('image/png');
+      setContourMask(maskUrl);
+      
+      // Рассчитываем площадь
+      const { areaMm2, actualWidth: actW, actualHeight: actH } = calculateContourArea(
+        imageData,
+        calculatorData.width,
+        calculatorData.height
+      );
+      
+      setContourArea(areaMm2);
+      setActualWidth(actW);
+      setActualHeight(actH);
+      
+      console.log(`📐 Площадь фигуры: ${areaMm2.toFixed(2)} мм²`);
+      console.log(`📏 Фактические размеры: ${actW.toFixed(1)}×${actH.toFixed(1)} мм`);
+      
+      sendMetrikaEvent('contour_calculated', {
+        area: areaMm2,
+        actualWidth: actW,
+        actualHeight: actH,
+        thickness: thickness,
+      });
+      
+    } catch (error) {
+      console.error('❌ Ошибка обработки изображения:', error);
+      setContourError(error instanceof Error ? error.message : 'Неизвестная ошибка');
+    } finally {
+      setIsProcessingContour(false);
+    }
+  };
+
   const calculatePrice = () => {
     const isGold = calculatorData.material === 'gold';
     const metalPrice = isGold ? metalPrices.gold : metalPrices.silver;
@@ -609,15 +882,22 @@ const PriceCalculator = () => {
     const metalCostWithVAT = metalPrice * purityFactor * LOSS_FACTOR * VAT_BUY_FACTOR;
     const totalCostPerGram = metalCostWithVAT + laborCost;
     
+    // --- РАСЧЁТ ПЛОЩАДИ С УЧЁТОМ ТИПА КОНТУРА ---
     let area: number;
-    if (calculatorData.shape === 'circle') {
+    let currentThickness = 1;
+    
+    // Если менеджер и выбран криволинейный контур с рассчитанной площадью
+    if (mode === 'manager' && contourType === 'custom' && contourArea !== null) {
+      area = contourArea;
+      currentThickness = thickness;
+    } else if (calculatorData.shape === 'circle') {
       const radius = calculatorData.width / 2;
       area = Math.PI * radius * radius;
     } else {
       area = calculatorData.width * calculatorData.height;
     }
     
-    const volume = area * 1;
+    const volume = area * currentThickness;
     const weight = volume * density;
     
     const pricePerItemBeforeVAT = totalCostPerGram * weight * getCurrentComplexity();
@@ -665,7 +945,7 @@ const PriceCalculator = () => {
     
     setEstimatedPrice(totalPrice);
     setPricePerUnit(pricePerUnit);
-  }, [calculatorData, metalPrices, additionalProcessing]);
+  }, [calculatorData, metalPrices, additionalProcessing, contourArea, thickness, contourType]);
 
   useEffect(() => {
     fetchMetalPrices();
@@ -853,7 +1133,9 @@ const PriceCalculator = () => {
     const metalName = isGold ? 'золото 585 пробы' : 'серебро 925 пробы';
     
     let sizeText = '';
-    if (calculatorData.shape === 'circle') {
+    if (contourType === 'custom' && actualWidth && actualHeight) {
+      sizeText = `криволинейный контур (вписан в ${calculatorData.width}×${calculatorData.height} мм, факт. ${actualWidth.toFixed(1)}×${actualHeight.toFixed(1)} мм)`;
+    } else if (calculatorData.shape === 'circle') {
       sizeText = `диаметр ${calculatorData.width} мм`;
     } else {
       sizeText = `${calculatorData.width}×${calculatorData.height} мм`;
@@ -868,7 +1150,7 @@ const PriceCalculator = () => {
     
     const processingText = processingParts.length > 0 
       ? `Доп.обработка: ${processingParts.join(', ')}` 
-      : '';       
+      : '';
     
     // Скидка 20% при оплате по карте
     const priceWithCardDiscount = Math.round(estimatedPrice * 0.8);
@@ -898,12 +1180,13 @@ const PriceCalculator = () => {
     }
     
     // Формируем текст
-return {
-  clientText: `
+    return {
+      clientText: `
 Добрый день! Предварительный расчёт Вашего заказа готов.
 
 Материал: ${metalName}
-Размер: ${sizeText}, толщина 1 мм
+Размер: ${sizeText}
+${contourArea ? `Площадь фигуры: ${contourArea.toFixed(2)} мм²` : ''}
 Вес значка: ~${weight} г
 Количество: ${calculatorData.quantity}
 Доп.работа: 3D-модель
@@ -924,13 +1207,14 @@ ${calculatorData.quantity > 1 ? `\nТестовый образец (1 шт) - ${
 +7 922 717-00-70 (Мах)
 BazhenovYuri.t.me
 ЗНАЧКОВ.РФ
-  `.trim(),
-  testSamplePrice,
-  priceWithCardDiscount,
-  pricePerUnitWithCardDiscount,
-  testSampleWithCardDiscount
-};
+      `.trim(),
+      testSamplePrice,
+      priceWithCardDiscount,
+      pricePerUnitWithCardDiscount,
+      testSampleWithCardDiscount
     };
+  };
+
   const getEkaterinburgTime = () => {
     return new Date().toLocaleString('ru-RU', { 
       timeZone: 'Asia/Yekaterinburg',
@@ -942,21 +1226,31 @@ BazhenovYuri.t.me
     });
   };
 
- // Единая функция отправки в MAX
-const sendToMax = async (file?: File) => {
-  const clientData = getClientReadyText();
-  const clientText = clientData.clientText;
-  
-  const timestamp = getEkaterinburgTime();
-  
-  // Формируем техническую информацию для менеджера (добавляем в конец сообщения, но отделяем)
-  const techInfo = `
+  // Единая функция отправки в MAX
+  const sendToMax = async (file?: File) => {
+    const clientData = getClientReadyText();
+    const clientText = clientData.clientText;
+    
+    const timestamp = getEkaterinburgTime();
+    
+    // Формируем техническую информацию для менеджера
+    let contourInfo = '';
+    if (contourType === 'custom' && contourArea !== null) {
+      contourInfo = `
+• Тип контура: криволинейный
+• Площадь фигуры: ${contourArea.toFixed(2)} мм²
+• Фактические размеры: ${actualWidth?.toFixed(1)}×${actualHeight?.toFixed(1)} мм
+• Толщина: ${thickness} мм`;
+    }
+    
+    const techInfo = `
 ━━━━━━━━━━━━━━━━━━━━━━━
 📊 Технические данные (для менеджера):
 • Вес значка: ${weight} г
 • Стоимость материала: ${metalCostPerGram.toLocaleString()} ₽/г (с НДС)
 • 3D-модель: ${MODEL_3D_COST.toLocaleString()} ₽ (без НДС) / ${model3DCostWithVAT.toLocaleString()} ₽ (с НДС)
 • Стоимость обработки: ${additionalCostPerUnit.toLocaleString()} ₽/шт
+${contourInfo}
 • Дата расчёта: ${timestamp}
 • Режим: ${mode === 'manager' ? 'менеджер' : 'клиент'}
 
@@ -965,56 +1259,63 @@ const sendToMax = async (file?: File) => {
 • Телефон: ${formData.phone || 'Не указан'}
 • Email: ${formData.email || 'Не указан'}
 ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
-  `.trim();
+    `.trim();
 
-  // Отправляем в MAX полный текст (клиентский + технический)
-  const fullMessage = `${clientText}\n\n${techInfo}`;
+    // Отправляем в MAX полный текст (клиентский + технический)
+    const fullMessage = `${clientText}\n\n${techInfo}`;
 
-  const payload: any = { 
-    text: fullMessage,
-    meta: {
-      mode: mode,
-      material: calculatorData.material,
-      quantity: calculatorData.quantity,
-      estimatedPrice: estimatedPrice,
-      pricePerUnit: pricePerUnit,
-      weight: weight,
-      metalCostPerGram: metalCostPerGram,
-      timestamp: timestamp,
-      client: {
-        name: formData.name,
-        phone: formData.phone,
-        email: formData.email,
-        comment: formData.comment
+    const payload: any = { 
+      text: fullMessage,
+      meta: {
+        mode: mode,
+        material: calculatorData.material,
+        quantity: calculatorData.quantity,
+        estimatedPrice: estimatedPrice,
+        pricePerUnit: pricePerUnit,
+        weight: weight,
+        metalCostPerGram: metalCostPerGram,
+        timestamp: timestamp,
+        contour: contourType === 'custom' ? {
+          type: 'custom',
+          area: contourArea,
+          actualWidth: actualWidth,
+          actualHeight: actualHeight,
+          thickness: thickness,
+        } : null,
+        client: {
+          name: formData.name,
+          phone: formData.phone,
+          email: formData.email,
+          comment: formData.comment
+        }
       }
+    };
+
+    // Если есть файл, прикрепляем
+    if (file) {
+      let fileToSend = file;
+      if (file.size > 1024 * 1024 && file.type.startsWith('image/')) {
+        try {
+          fileToSend = await compressImage(file);
+          console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
+        } catch (error) {
+          console.error('Ошибка сжатия:', error);
+        }
+      }
+      const base64File = await fileToBase64(fileToSend);
+      payload.file = base64File;
+      payload.fileName = fileToSend.name;
+      payload.fileType = fileToSend.type || 'application/octet-stream';
     }
+
+    const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    return await response.json();
   };
-
-  // Если есть файл, прикрепляем
-  if (file) {
-    let fileToSend = file;
-    if (file.size > 1024 * 1024 && file.type.startsWith('image/')) {
-      try {
-        fileToSend = await compressImage(file);
-        console.log(`✅ Изображение сжато: ${(fileToSend.size / 1024).toFixed(1)} KB (было ${(file.size / 1024).toFixed(1)} KB)`);
-      } catch (error) {
-        console.error('Ошибка сжатия:', error);
-      }
-    }
-    const base64File = await fileToBase64(fileToSend);
-    payload.file = base64File;
-    payload.fileName = fileToSend.name;
-    payload.fileType = fileToSend.type || 'application/octet-stream';
-  }
-
-  const response = await fetch(YANDEX_MAX_FUNCTION_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-
-  return await response.json();
-};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1037,8 +1338,22 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
     setIsSubmitting(true);
     
     try {
-      if (uploadedFile) {
-        await sendToMax(uploadedFile);
+      let fileToSend = uploadedFile;
+      
+      // Если менеджер использовал криволинейный контур, и есть маска
+      if (contourType === 'custom' && contourMask) {
+        // Если есть основной файл, отправляем его, а маску добавляем в meta
+        if (!uploadedFile) {
+          // Если нет основного файла, преобразуем маску в файл
+          const response = await fetch(contourMask);
+          const blob = await response.blob();
+          const maskFile = new File([blob], 'contour-mask.png', { type: 'image/png' });
+          fileToSend = maskFile;
+        }
+      }
+      
+      if (fileToSend) {
+        await sendToMax(fileToSend);
         sendMetrikaGoal('calculator_form_submit_with_file');
       } else {
         await sendToMax();
@@ -1050,7 +1365,8 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
         material: calculatorData.material,
         quantity: calculatorData.quantity,
         estimatedPrice: estimatedPrice,
-        mode: mode
+        mode: mode,
+        contourType: contourType,
       });
       
       navigate('/thanks', { 
@@ -1356,6 +1672,174 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
               </div>
             )}
 
+            {/* --- ВЫБОР ТИПА КОНТУРА (ТОЛЬКО ДЛЯ МЕНЕДЖЕРА) --- */}
+            {mode === 'manager' && (
+              <div className="mb-6">
+                <label className="block text-gray-400 text-sm mb-3">Тип контура</label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContourType('rectangle');
+                      setContourArea(null);
+                      setContourMask(null);
+                      setActualWidth(null);
+                      setActualHeight(null);
+                      setUploadedContourImage(null);
+                      setContourImagePreview(null);
+                    }}
+                    className={`p-3 rounded-xl border transition-all duration-300 text-center ${
+                      contourType === 'rectangle'
+                        ? `${theme.bgLight} ${theme.border}`
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <Square className={`w-5 h-5 mx-auto ${contourType === 'rectangle' ? theme.text : 'text-gray-400'}`} />
+                    <span className="text-xs block mt-1">Прямоугольный</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContourType('circle');
+                      setContourArea(null);
+                      setContourMask(null);
+                      setActualWidth(null);
+                      setActualHeight(null);
+                      setUploadedContourImage(null);
+                      setContourImagePreview(null);
+                    }}
+                    className={`p-3 rounded-xl border transition-all duration-300 text-center ${
+                      contourType === 'circle'
+                        ? `${theme.bgLight} ${theme.border}`
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <Circle className={`w-5 h-5 mx-auto ${contourType === 'circle' ? theme.text : 'text-gray-400'}`} />
+                    <span className="text-xs block mt-1">Круглый</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setContourType('custom');
+                      setContourArea(null);
+                      setContourMask(null);
+                      setActualWidth(null);
+                      setActualHeight(null);
+                    }}
+                    className={`p-3 rounded-xl border transition-all duration-300 text-center ${
+                      contourType === 'custom'
+                        ? `${theme.bgLight} ${theme.border}`
+                        : 'bg-dark border-gray-700 hover:border-gold/50'
+                    }`}
+                  >
+                    <ImageIcon className={`w-5 h-5 mx-auto ${contourType === 'custom' ? theme.text : 'text-gray-400'}`} />
+                    <span className="text-xs block mt-1">Криволинейный</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* --- ЗАГРУЗКА ИЗОБРАЖЕНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА --- */}
+            {contourType === 'custom' && mode === 'manager' && (
+              <div className="mb-6 p-4 bg-dark/30 rounded-xl border border-gray-800">
+                <label className="block text-gray-400 text-sm mb-3">
+                  Загрузите изображение для расчёта площади (PNG с прозрачностью)
+                </label>
+                
+                {!uploadedContourImage ? (
+                  <label className="cursor-pointer flex items-center justify-center gap-2 w-full px-4 py-6 bg-dark border border-gray-700 border-dashed rounded-lg text-gray-400 hover:text-gold hover:border-gold transition-colors">
+                    <Upload className="w-6 h-6" />
+                    <span>Выберите изображение</span>
+                    <input
+                      type="file"
+                      accept="image/png,image/webp,image/jpeg"
+                      onChange={handleContourImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 p-3 bg-dark border border-gray-700 rounded-lg">
+                      <img src={contourImagePreview || ''} alt="Контур" className="w-16 h-16 object-cover rounded-lg" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm truncate">{uploadedContourImage.name}</p>
+                        <p className="text-gray-500 text-xs">{(uploadedContourImage.size / 1024).toFixed(1)} KB</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUploadedContourImage(null);
+                          setContourImagePreview(null);
+                          setContourArea(null);
+                          setContourMask(null);
+                          setActualWidth(null);
+                          setActualHeight(null);
+                          setContourError(null);
+                        }}
+                        className="text-gray-500 hover:text-red-500 transition-colors"
+                      >
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                    
+                    <button
+                      type="button"
+                      onClick={processContourImage}
+                      disabled={isProcessingContour}
+                      className="w-full py-2 bg-gold/20 border border-gold/50 rounded-lg text-gold hover:bg-gold/30 transition-colors disabled:opacity-50"
+                    >
+                      {isProcessingContour ? 'Обработка...' : 'Рассчитать площадь фигуры'}
+                    </button>
+                    
+                    {contourError && (
+                      <p className="text-red-500 text-sm">{contourError}</p>
+                    )}
+                    
+                    {contourArea !== null && (
+                      <div className="bg-dark/50 rounded-lg p-4 border border-green-500/30">
+                        <p className="text-green-400 text-sm font-medium">Площадь фигуры: {contourArea.toFixed(2)} мм²</p>
+                        <p className="text-gray-400 text-sm">
+                          Фактические размеры: {actualWidth?.toFixed(1)} × {actualHeight?.toFixed(1)} мм
+                        </p>
+                        <p className="text-gray-400 text-sm">
+                          Вес при толщине {thickness} мм: {(contourArea * thickness * (calculatorData.material === 'gold' ? GOLD_DENSITY : SILVER_DENSITY)).toFixed(3)} г
+                        </p>
+                      </div>
+                    )}
+                    
+                    {contourMask && (
+                      <div className="bg-dark/50 rounded-lg p-4 border border-gray-700">
+                        <p className="text-gray-400 text-xs mb-2">Распознанный контур:</p>
+                        <img src={contourMask} alt="Контур" className="max-w-full max-h-[200px] mx-auto" />
+                      </div>
+                    )}
+                    
+                    {/* Толщина */}
+                    <div>
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-gray-400">Толщина значка, мм</span>
+                        <span className={theme.text}>{thickness} мм</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="0.5"
+                        max="3"
+                        step="0.1"
+                        value={thickness}
+                        onChange={(e) => setThickness(parseFloat(e.target.value))}
+                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+                      />
+                      <div className="flex justify-between text-xs text-gray-500 mt-1">
+                        <span>0.5</span>
+                        <span>1.5</span>
+                        <span>3.0</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="mb-6">
               <label className="block text-gray-400 text-sm mb-3">Готовые форматы</label>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -1466,7 +1950,7 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                 </button>
               </div>
               
-              {calculatorData.type === 'custom' && (
+              {calculatorData.type === 'custom' && contourType !== 'custom' && (
                 <div className="space-y-4">
                   <div className="grid grid-cols-3 gap-3">
                     <button
@@ -1556,6 +2040,37 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                   )}
                 </div>
               )}
+              
+              {/* Для криволинейного контура показываем только габариты без ползунков формы */}
+              {calculatorData.type === 'custom' && contourType === 'custom' && (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Ширина (габарит), мм</label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="50"
+                        value={calculatorData.width}
+                        onChange={(e) => handleWidthChange(parseInt(e.target.value) || 5)}
+                        className="w-full px-4 py-2 bg-dark border border-gray-700 rounded-lg text-white focus:border-gold focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-gray-400 text-sm mb-1">Высота (габарит), мм</label>
+                      <input
+                        type="number"
+                        min="5"
+                        max="50"
+                        value={calculatorData.height}
+                        onChange={(e) => handleHeightChange(parseInt(e.target.value) || 5)}
+                        className="w-full px-4 py-2 bg-dark border border-gray-700 rounded-lg text-white focus:border-gold focus:outline-none transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <p className="text-gray-500 text-xs">Изображение будет вписано пропорционально в указанные габариты</p>
+                </div>
+              )}
             </div>
 
             <div className="mb-6">
@@ -1564,6 +2079,12 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                 filePreview={filePreview}
                 uploadedFile={uploadedFile}
                 theme={theme}
+                contourType={contourType}
+                contourMask={contourMask}
+                contourArea={contourArea}
+                actualWidth={actualWidth}
+                actualHeight={actualHeight}
+                thickness={thickness}
               />
             </div>
 
@@ -1799,6 +2320,11 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                       Доп. обработка: {additionalCostPerUnit.toLocaleString()} ₽/шт (с НДС)
                     </p>
                   )}
+                  {contourArea && (
+                    <p className="text-gray-500 text-xs mt-1">
+                      Площадь фигуры: {contourArea.toFixed(2)} мм² | Толщина: {thickness} мм
+                    </p>
+                  )}
                   <p className="text-gray-500 text-xs mt-1">*Для точного расчета оставьте заявку ниже</p>
                 </>
               ) : (
@@ -1837,6 +2363,10 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
                 testSamplePrice={clientData.testSamplePrice}
                 testSampleWithCardDiscount={clientData.testSampleWithCardDiscount}
                 timestamp={getEkaterinburgTime()}
+                contourArea={contourArea}
+                actualWidth={actualWidth}
+                actualHeight={actualHeight}
+                thickness={thickness}
               />
             </>
           )}
