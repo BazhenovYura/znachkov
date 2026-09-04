@@ -1782,165 +1782,191 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
               </div>
               
               {calculatorData.type === 'custom' && (
-                <div className="space-y-4">
-                  <div className="grid grid-cols-3 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => handleShapeSelect('rectangle')}
-                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
-                        calculatorData.shape === 'rectangle'
-                          ? `${theme.bgLight} ${theme.border}`
-                          : 'bg-dark border-gray-700 hover:border-gold/50'
-                      }`}
-                    >
-                      <Square className={`w-5 h-5 ${calculatorData.shape === 'rectangle' ? theme.text : 'text-gray-400'}`} />
-                      <span className="text-xs">Прямые углы</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleShapeSelect('rounded')}
-                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
-                        calculatorData.shape === 'rounded'
-                          ? `${theme.bgLight} ${theme.border}`
-                          : 'bg-dark border-gray-700 hover:border-gold/50'
-                      }`}
-                    >
-                      <div className="w-5 h-5 relative">
-                        <Square className={`w-5 h-5 absolute ${calculatorData.shape === 'rounded' ? theme.text : 'text-gray-400'}`} style={{ borderRadius: '4px' }} />
-                      </div>
-                      <span className="text-xs">Скругленные</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleShapeSelect('circle')}
-                      className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
-                        calculatorData.shape === 'circle'
-                          ? `${theme.bgLight} ${theme.border}`
-                          : 'bg-dark border-gray-700 hover:border-gold/50'
-                      }`}
-                    >
-                      <Circle className={`w-5 h-5 ${calculatorData.shape === 'circle' ? theme.text : 'text-gray-400'}`} />
-                      <span className="text-xs">Круг</span>
-                    </button>
-                    
-                    {/* Кнопка "Криволинейный" — видна ТОЛЬКО менеджеру */}
-                    {mode === 'manager' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalculatorData(prev => ({
-                            ...prev,
-                            type: 'custom',
-                            shape: 'custom' as any,
-                          }));
-                          sendMetrikaEvent('calculator_param_change', { param: 'shape', value: 'custom' });
-                        }}
-                        className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
-                          calculatorData.shape === 'custom'
-                            ? `${theme.bgLight} ${theme.border}`
-                            : 'bg-dark border-gray-700 hover:border-gold/50'
-                        }`}
-                      >
-                        <ImageIcon className={`w-5 h-5 ${calculatorData.shape === 'custom' ? theme.text : 'text-gray-400'}`} />
-                        <span className="text-xs">Криволинейный</span>
-                      </button>
-                    )}
-                  </div>
+  <div className="space-y-4">
+    <div className="grid grid-cols-3 gap-3">
+      <button
+        type="button"
+        onClick={() => handleShapeSelect('rectangle')}
+        className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+          calculatorData.shape === 'rectangle'
+            ? `${theme.bgLight} ${theme.border}`
+            : 'bg-dark border-gray-700 hover:border-gold/50'
+        }`}
+      >
+        <Square className={`w-5 h-5 ${calculatorData.shape === 'rectangle' ? theme.text : 'text-gray-400'}`} />
+        <span className="text-xs">Прямые углы</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => handleShapeSelect('rounded')}
+        className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+          calculatorData.shape === 'rounded'
+            ? `${theme.bgLight} ${theme.border}`
+            : 'bg-dark border-gray-700 hover:border-gold/50'
+        }`}
+      >
+        <div className="w-5 h-5 relative">
+          <Square className={`w-5 h-5 absolute ${calculatorData.shape === 'rounded' ? theme.text : 'text-gray-400'}`} style={{ borderRadius: '4px' }} />
+        </div>
+        <span className="text-xs">Скругленные</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => handleShapeSelect('circle')}
+        className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+          calculatorData.shape === 'circle'
+            ? `${theme.bgLight} ${theme.border}`
+            : 'bg-dark border-gray-700 hover:border-gold/50'
+        }`}
+      >
+        <Circle className={`w-5 h-5 ${calculatorData.shape === 'circle' ? theme.text : 'text-gray-400'}`} />
+        <span className="text-xs">Круг</span>
+      </button>
+      
+      {/* Кнопка "Криволинейный" — видна ТОЛЬКО менеджеру */}
+      {mode === 'manager' && (
+        <button
+          type="button"
+          onClick={() => {
+            setCalculatorData(prev => ({
+              ...prev,
+              type: 'custom',
+              shape: 'custom' as any,
+            }));
+            sendMetrikaEvent('calculator_param_change', { param: 'shape', value: 'custom' });
+          }}
+          className={`p-3 rounded-xl border transition-all duration-300 text-center flex flex-col items-center justify-center gap-1 ${
+            calculatorData.shape === 'custom'
+              ? `${theme.bgLight} ${theme.border}`
+              : 'bg-dark border-gray-700 hover:border-gold/50'
+          }`}
+        >
+          <ImageIcon className={`w-5 h-5 ${calculatorData.shape === 'custom' ? theme.text : 'text-gray-400'}`} />
+          <span className="text-xs">Криволинейный</span>
+        </button>
+      )}
+    </div>
 
-                  <div>
-                    <div className="flex justify-between text-sm mb-2">
-                      <span className="text-gray-400">
-                        {calculatorData.shape === 'circle' ? 'Диаметр, мм' : 'Ширина, мм'}
-                      </span>
-                      <span className={theme.text}>{calculatorData.width} мм</span>
-                    </div>
-                    <input
-                      type="range"
-                      min="5"
-                      max="50"
-                      step="1"
-                      value={calculatorData.width}
-                      onChange={(e) => handleWidthChange(parseInt(e.target.value))}
-                      className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500 mt-1">
-                      <span>5</span>
-                      <span>30</span>
-                      <span>50</span>
-                    </div>
-                  </div>
+    {/* --- ПОЛЗУНКИ ДЛЯ РАЗНЫХ ТИПОВ ФОРМ --- */}
+    
+    {/* Для КРУГА — только один ползунок (диаметр) */}
+    {calculatorData.shape === 'circle' && (
+      <div>
+        <div className="flex justify-between text-sm mb-2">
+          <span className="text-gray-400">Диаметр, мм</span>
+          <span className={theme.text}>{calculatorData.width} мм</span>
+        </div>
+        <input
+          type="range"
+          min="5"
+          max="50"
+          step="1"
+          value={calculatorData.width}
+          onChange={(e) => handleWidthChange(parseInt(e.target.value))}
+          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+        />
+        <div className="flex justify-between text-xs text-gray-500 mt-1">
+          <span>5</span>
+          <span>30</span>
+          <span>50</span>
+        </div>
+      </div>
+    )}
 
-                  {calculatorData.shape !== 'circle' && calculatorData.shape !== 'custom' && (
-                    <div>
-                      <div className="flex justify-between text-sm mb-2">
-                        <span className="text-gray-400">Высота, мм</span>
-                        <span className={theme.text}>{calculatorData.height} мм</span>
-                      </div>
-                      <input
-                        type="range"
-                        min="5"
-                        max="50"
-                        step="1"
-                        value={calculatorData.height}
-                        onChange={(e) => handleHeightChange(parseInt(e.target.value))}
-                        className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>5</span>
-                        <span>30</span>
-                        <span>50</span>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {/* Для криволинейного контура показываем оба ползунка для габаритов */}
-                  {calculatorData.shape === 'custom' && (
-                    <>
-                      <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className="text-gray-400">Ширина (габарит), мм</span>
-                          <span className={theme.text}>{calculatorData.width} мм</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="5"
-                          max="50"
-                          step="1"
-                          value={calculatorData.width}
-                          onChange={(e) => handleWidthChange(parseInt(e.target.value))}
-                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500 mt-1">
-                          <span>5</span>
-                          <span>30</span>
-                          <span>50</span>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm mb-2">
-                          <span className="text-gray-400">Высота (габарит), мм</span>
-                          <span className={theme.text}>{calculatorData.height} мм</span>
-                        </div>
-                        <input
-                          type="range"
-                          min="5"
-                          max="50"
-                          step="1"
-                          value={calculatorData.height}
-                          onChange={(e) => handleHeightChange(parseInt(e.target.value))}
-                          className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
-                        />
-                        <div className="flex justify-between text-xs text-gray-500 mt-1">
-                          <span>5</span>
-                          <span>30</span>
-                          <span>50</span>
-                        </div>
-                      </div>
-                      <p className="text-gray-500 text-xs">Изображение будет вписано пропорционально в указанные габариты</p>
-                    </>
-                  )}
-                </div>
-              )}
+    {/* Для ПРЯМОУГОЛЬНОЙ и СКРУГЛЕННОЙ формы — ширина и высота */}
+    {(calculatorData.shape === 'rectangle' || calculatorData.shape === 'rounded') && (
+      <>
+        <div>
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-gray-400">Ширина, мм</span>
+            <span className={theme.text}>{calculatorData.width} мм</span>
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="50"
+            step="1"
+            value={calculatorData.width}
+            onChange={(e) => handleWidthChange(parseInt(e.target.value))}
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>5</span>
+            <span>30</span>
+            <span>50</span>
+          </div>
+        </div>
+        <div>
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-gray-400">Высота, мм</span>
+            <span className={theme.text}>{calculatorData.height} мм</span>
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="50"
+            step="1"
+            value={calculatorData.height}
+            onChange={(e) => handleHeightChange(parseInt(e.target.value))}
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>5</span>
+            <span>30</span>
+            <span>50</span>
+          </div>
+        </div>
+      </>
+    )}
+
+    {/* Для КРИВОЛИНЕЙНОЙ формы — габаритные ширина и высота */}
+    {calculatorData.shape === 'custom' && (
+      <>
+        <div>
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-gray-400">Ширина (габарит), мм</span>
+            <span className={theme.text}>{calculatorData.width} мм</span>
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="50"
+            step="1"
+            value={calculatorData.width}
+            onChange={(e) => handleWidthChange(parseInt(e.target.value))}
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>5</span>
+            <span>30</span>
+            <span>50</span>
+          </div>
+        </div>
+        <div>
+          <div className="flex justify-between text-sm mb-2">
+            <span className="text-gray-400">Высота (габарит), мм</span>
+            <span className={theme.text}>{calculatorData.height} мм</span>
+          </div>
+          <input
+            type="range"
+            min="5"
+            max="50"
+            step="1"
+            value={calculatorData.height}
+            onChange={(e) => handleHeightChange(parseInt(e.target.value))}
+            className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-gold"
+          />
+          <div className="flex justify-between text-xs text-gray-500 mt-1">
+            <span>5</span>
+            <span>30</span>
+            <span>50</span>
+          </div>
+        </div>
+        <p className="text-gray-500 text-xs">Изображение будет вписано пропорционально в указанные габариты</p>
+      </>
+    )}
+  </div>
+)}
             </div>
 
             {/* --- ЗАГРУЗКА ИЗОБРАЖЕНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА (ТОЛЬКО ДЛЯ МЕНЕДЖЕРА) --- */}
