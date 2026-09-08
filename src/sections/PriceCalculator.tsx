@@ -776,85 +776,85 @@ const PriceCalculator = () => {
     });
   };
 
-  // --- ОБРАБОТКА ИЗОБРАЖЕНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА ---
-const processContourImage = async () => {
-  if (!uploadedContourImage) return;
-  
-  setIsProcessingContour(true);
-  setContourError(null);
-  
-  try {
-    console.log('🔄 Начинаем удаление фона...');
-    console.log('📁 Файл:', uploadedContourImage.name, uploadedContourImage.size, 'bytes');
+  // --- ОБРАБОТКА ИЗОБРАЖЕНИЯ ДЛЯ КРИВОЛИНЕЙНОГО КОНТУРА (с удалением фона) ---
+  const processContourImage = async () => {
+    if (!uploadedContourImage) return;
     
-    // Настройки для removeBackground
-    const config = {
-      output: {
-        format: 'image/png' as const,
-      },
-      progress: (key: string, current: number, total: number) => {
-        console.log(`Обработка: ${key} ${current}/${total}`);
-      },
-      // Путь к файлам модели (папка public/models/background-removal/)
-      publicPath: '/models/background-removal/',
-      // Используем CPU для стабильности
-      device: 'cpu' as const,
-    };
+    setIsProcessingContour(true);
+    setContourError(null);
     
-    console.log('🔄 Удаление фона через @imgly/background-removal...');
-    
-    // Удаляем фон
-    const blob = await removeBackground(uploadedContourImage, config);
-    
-    console.log('✅ Фон удалён, размер результата:', blob.size, 'bytes');
-    
-    // Создаём URL для результата
-    const resultUrl = URL.createObjectURL(blob);
-    setContourMask(resultUrl);
-    
-    // Загружаем изображение на canvas для анализа
-    const img = await loadImageToCanvas(resultUrl);
-    
-    console.log('📐 Размер изображения:', img.width, 'x', img.height);
-    
-    // Создаём canvas для анализа пикселей
-    const canvas = document.createElement('canvas');
-    canvas.width = img.width;
-    canvas.height = img.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Не удалось создать canvas');
-    
-    ctx.drawImage(img, 0, 0);
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    
-    // Рассчитываем площадь
-    const { areaMm2, actualWidth: actW, actualHeight: actH } = calculateContourArea(
-      imageData,
-      calculatorData.width,
-      calculatorData.height
-    );
-    
-    setContourArea(areaMm2);
-    setActualWidth(actW);
-    setActualHeight(actH);
-    
-    console.log(`📐 Площадь фигуры: ${areaMm2.toFixed(2)} мм²`);
-    console.log(`📏 Фактические размеры: ${actW.toFixed(1)}×${actH.toFixed(1)} мм`);
-    
-    sendMetrikaEvent('contour_calculated', {
-      area: areaMm2,
-      actualWidth: actW,
-      actualHeight: actH,
-      thickness: thickness,
-    });
-    
-  } catch (error) {
-    console.error('❌ Ошибка обработки изображения:', error);
-    setContourError(error instanceof Error ? error.message : 'Неизвестная ошибка при удалении фона. Попробуйте другое изображение.');
-  } finally {
-    setIsProcessingContour(false);
-  }
-};
+    try {
+      console.log('🔄 Начинаем удаление фона...');
+      console.log('📁 Файл:', uploadedContourImage.name, uploadedContourImage.size, 'bytes');
+      
+      // Настройки для removeBackground
+      const config = {
+        output: {
+          format: 'image/png' as const,
+        },
+        progress: (key: string, current: number, total: number) => {
+          console.log(`Обработка: ${key} ${current}/${total}`);
+        },
+        // Путь к файлам модели (папка public/models/background-removal/)
+        publicPath: '/models/background-removal/',
+        // Используем CPU для стабильности
+        device: 'cpu' as const,
+      };
+      
+      console.log('🔄 Удаление фона через @imgly/background-removal...');
+      
+      // Удаляем фон
+      const blob = await removeBackground(uploadedContourImage, config);
+      
+      console.log('✅ Фон удалён, размер результата:', blob.size, 'bytes');
+      
+      // Создаём URL для результата
+      const resultUrl = URL.createObjectURL(blob);
+      setContourMask(resultUrl);
+      
+      // Загружаем изображение на canvas для анализа
+      const img = await loadImageToCanvas(resultUrl);
+      
+      console.log('📐 Размер изображения:', img.width, 'x', img.height);
+      
+      // Создаём canvas для анализа пикселей
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Не удалось создать canvas');
+      
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      
+      // Рассчитываем площадь
+      const { areaMm2, actualWidth: actW, actualHeight: actH } = calculateContourArea(
+        imageData,
+        calculatorData.width,
+        calculatorData.height
+      );
+      
+      setContourArea(areaMm2);
+      setActualWidth(actW);
+      setActualHeight(actH);
+      
+      console.log(`📐 Площадь фигуры: ${areaMm2.toFixed(2)} мм²`);
+      console.log(`📏 Фактические размеры: ${actW.toFixed(1)}×${actH.toFixed(1)} мм`);
+      
+      sendMetrikaEvent('contour_calculated', {
+        area: areaMm2,
+        actualWidth: actW,
+        actualHeight: actH,
+        thickness: thickness,
+      });
+      
+    } catch (error) {
+      console.error('❌ Ошибка обработки изображения:', error);
+      setContourError(error instanceof Error ? error.message : 'Неизвестная ошибка при удалении фона. Попробуйте другое изображение.');
+    } finally {
+      setIsProcessingContour(false);
+    }
+  };
 
   const calculatePrice = () => {
     const isGold = calculatorData.material === 'gold';
@@ -1971,7 +1971,7 @@ ${formData.comment ? `• Комментарий: ${formData.comment}` : ''}
             {mode === 'manager' && calculatorData.shape === 'custom' && (
               <div className="mb-6 p-4 bg-dark/30 rounded-xl border border-gray-800">
                 <label className="block text-gray-400 text-sm mb-3">
-                  Загрузите изображение для криволинейного контура (PNG с прозрачностью)
+                  Загрузите изображение для криволинейного контура
                 </label>
                 
                 {!uploadedContourImage ? (
