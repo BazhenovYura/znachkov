@@ -34,14 +34,27 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // ПРИНУДИТЕЛЬНО УКАЗЫВАЕМ React — ЭТО РЕШАЕТ ПРОБЛЕМУ С forwardRef
+      "react": path.resolve(__dirname, "./node_modules/react"),
+      "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
     },
   },
   optimizeDeps: {
+    include: ['react', 'react-dom', 'lucide-react'], // ДОБАВЛЯЕМ include
     exclude: ['onnxruntime-web'],
   },
   build: {
     commonjsOptions: {
       include: [/onnxruntime-web/, /@imgly\/background-removal/],
+    },
+    // ДОБАВЛЯЕМ НАСТРОЙКУ ДЛЯ lucide-react
+    rollupOptions: {
+      external: [],
+      output: {
+        manualChunks: {
+          'lucide-react': ['lucide-react'],
+        },
+      },
     },
   },
 });
