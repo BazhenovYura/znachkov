@@ -6,7 +6,7 @@ import {
   Scan, 
   ShieldCheck, 
   Package 
-} from '../components/icons';
+} from 'lucide-react';
 
 interface Advantage {
   icon: React.ElementType;
