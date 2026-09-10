@@ -2,7 +2,6 @@ import path from "path"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
 
-
 let wasmPlugin: any = null;
 let topLevelAwaitPlugin: any = null;
 
@@ -22,7 +21,7 @@ try {
 
 export default defineConfig({
   base: './',
-  plugins: [    
+  plugins: [
     react(),
     wasmPlugin && wasmPlugin(),
     topLevelAwaitPlugin && topLevelAwaitPlugin(),
