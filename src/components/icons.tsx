@@ -1,44 +1,42 @@
 // src/components/icons.tsx
-// Централизованный экспорт иконок через react-icons (совместимо с React 19)
-export {
-  FaPaperPlane as Send,
-  FaUpload as Upload,
-  FaTimes as X,
-  FaCalculator as Calculator,
-  FaGift as Gift,
-  FaChartLine as TrendingUp,
-  FaCheck as Check,
-  FaBolt as Zap,
-  FaClock as Clock,
-  FaAward as Award,
-  FaUsers as Users,
-  FaBox as Package,
-  FaShareAlt as Share2,
-  FaSync as RefreshCw,
-  FaSquare as Square,
-  FaCircle as Circle,
-  FaFileAlt as FileText,
-  FaCopy as Copy,
-  FaImage as Image,
-  FaPhone as Phone,
-  FaEnvelope as Mail,
-  FaMapMarkerAlt as MapPin,
-  FaBars as Menu,
-  FaHome as Home,
-  FaArrowRight as ArrowRight,
-  FaArrowLeft as ArrowLeft,
-  FaCalendarAlt as Calendar,
-  FaShieldAlt as Shield,
-  FaTruck as Truck,
-  FaComment as MessageSquare,
-  FaMagic as Sparkles,
-  FaPercent as Percent,
-  FaCheckCircle as CheckCircle,
-  FaExclamationCircle as AlertCircle,
-  FaMinus as Minus,
-  FaPlus as Plus,
-  FaSearchPlus as ZoomIn,
-  FaPiggyBank as PiggyBank,
-  FaHeart as Heart,
-  FaHandshake as Handshake,
-} from 'react-icons/fa6';
+// Централизованный экспорт иконок через @react-icons/all-files
+export { FaPaperPlane as Send } from '@react-icons/all-files/fa/FaPaperPlane';
+export { FaUpload as Upload } from '@react-icons/all-files/fa/FaUpload';
+export { FaTimes as X } from '@react-icons/all-files/fa/FaTimes';
+export { FaCalculator as Calculator } from '@react-icons/all-files/fa/FaCalculator';
+export { FaGift as Gift } from '@react-icons/all-files/fa/FaGift';
+export { FaChartLine as TrendingUp } from '@react-icons/all-files/fa/FaChartLine';
+export { FaCheck as Check } from '@react-icons/all-files/fa/FaCheck';
+export { FaBolt as Zap } from '@react-icons/all-files/fa/FaBolt';
+export { FaClock as Clock } from '@react-icons/all-files/fa/FaClock';
+export { FaAward as Award } from '@react-icons/all-files/fa/FaAward';
+export { FaUsers as Users } from '@react-icons/all-files/fa/FaUsers';
+export { FaBox as Package } from '@react-icons/all-files/fa/FaBox';
+export { FaShareAlt as Share2 } from '@react-icons/all-files/fa/FaShareAlt';
+export { FaSync as RefreshCw } from '@react-icons/all-files/fa/FaSync';
+export { FaSquare as Square } from '@react-icons/all-files/fa/FaSquare';
+export { FaCircle as Circle } from '@react-icons/all-files/fa/FaCircle';
+export { FaFileAlt as FileText } from '@react-icons/all-files/fa/FaFileAlt';
+export { FaCopy as Copy } from '@react-icons/all-files/fa/FaCopy';
+export { FaImage as Image } from '@react-icons/all-files/fa/FaImage';
+export { FaPhone as Phone } from '@react-icons/all-files/fa/FaPhone';
+export { FaEnvelope as Mail } from '@react-icons/all-files/fa/FaEnvelope';
+export { FaMapMarkerAlt as MapPin } from '@react-icons/all-files/fa/FaMapMarkerAlt';
+export { FaBars as Menu } from '@react-icons/all-files/fa/FaBars';
+export { FaHome as Home } from '@react-icons/all-files/fa/FaHome';
+export { FaArrowRight as ArrowRight } from '@react-icons/all-files/fa/FaArrowRight';
+export { FaArrowLeft as ArrowLeft } from '@react-icons/all-files/fa/FaArrowLeft';
+export { FaCalendarAlt as Calendar } from '@react-icons/all-files/fa/FaCalendarAlt';
+export { FaShieldAlt as Shield } from '@react-icons/all-files/fa/FaShieldAlt';
+export { FaTruck as Truck } from '@react-icons/all-files/fa/FaTruck';
+export { FaComment as MessageSquare } from '@react-icons/all-files/fa/FaComment';
+export { FaMagic as Sparkles } from '@react-icons/all-files/fa/FaMagic';
+export { FaPercent as Percent } from '@react-icons/all-files/fa/FaPercent';
+export { FaCheckCircle as CheckCircle } from '@react-icons/all-files/fa/FaCheckCircle';
+export { FaExclamationCircle as AlertCircle } from '@react-icons/all-files/fa/FaExclamationCircle';
+export { FaMinus as Minus } from '@react-icons/all-files/fa/FaMinus';
+export { FaPlus as Plus } from '@react-icons/all-files/fa/FaPlus';
+export { FaSearchPlus as ZoomIn } from '@react-icons/all-files/fa/FaSearchPlus';
+export { FaPiggyBank as PiggyBank } from '@react-icons/all-files/fa/FaPiggyBank';
+export { FaHeart as Heart } from '@react-icons/all-files/fa/FaHeart';
+export { FaHandshake as Handshake } from '@react-icons/all-files/fa/FaHandshake';
