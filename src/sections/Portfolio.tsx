@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { useSwipeable } from 'react-swipeable';
-import { X, Minus, Plus, Upload, ZoomIn, ArrowLeft } from 'lucide-react';
+import { X, Minus, Plus, Upload, ZoomIn, ArrowLeft } from '../components/icons';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Единая функция для MAX (как в Hero блоке)
