@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Calendar, Clock, Shield, Truck, X, Upload } from 'lucide-react';
+import { ArrowRight, Calendar, Clock, Shield, Truck, X, Upload } from '../components/icons';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константа с URL вашей Яндекс Функции для MAX
