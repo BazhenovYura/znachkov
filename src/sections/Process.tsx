@@ -8,7 +8,7 @@ import {
   Camera, 
   CheckCircle, 
   Truck 
-} from 'lucide-react';
+} from '../components/icons';
 
 interface ProcessStep {
   number: string;
