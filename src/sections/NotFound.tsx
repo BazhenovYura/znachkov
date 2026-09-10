@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router';
-import { Home, ArrowLeft, AlertCircle, MessageSquare, Sparkles, Calculator, Zap } from '../components/icons';
+import { Home, ArrowLeft, AlertCircle, MessageSquare, Sparkles, Calculator, Zap } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 const NotFound = () => {
