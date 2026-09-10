@@ -37,8 +37,7 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      'react-router',
-      'react-icons',
+      'react-router',      
       'cookie',
     ],
     exclude: ['onnxruntime-web'],
