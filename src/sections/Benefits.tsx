@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { PiggyBank, Heart, Gift, Handshake } from 'lucide-react';
+import { PiggyBank, Heart, Gift, Handshake } from '../components/icons';
 
 interface Benefit {
   number: string;
