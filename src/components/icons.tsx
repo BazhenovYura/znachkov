@@ -24,7 +24,39 @@ import {
   FileText as LucideFileText,
   Copy as LucideCopy,
   Image as LucideImage,
-  // Добавьте сюда все остальные иконки, которые используются в проекте
+  Phone as LucidePhone,
+  Mail as LucideMail,
+  MapPin as LucideMapPin,
+  Menu as LucideMenu,
+  Home as LucideHome,
+  ArrowRight as LucideArrowRight,
+  ArrowLeft as LucideArrowLeft,
+  Calendar as LucideCalendar,
+  Shield as LucideShield,
+  Truck as LucideTruck,
+  MessageSquare as LucideMessageSquare,
+  Sparkles as LucideSparkles,
+  Percent as LucidePercent,
+  CheckCircle as LucideCheckCircle,
+  AlertCircle as LucideAlertCircle,
+  Minus as LucideMinus,
+  Plus as LucidePlus,
+  ZoomIn as LucideZoomIn,
+  PiggyBank as LucidePiggyBank,
+  Heart as LucideHeart,
+  Handshake as LucideHandshake,
+  Loader2 as LucideLoader2,
+  PanelLeft as LucidePanelLeft,
+  Search as LucideSearch,
+  ChevronDown as LucideChevronDown,
+  ChevronUp as LucideChevronUp,
+  ChevronRight as LucideChevronRight,
+  Circle as LucideCircleIcon,
+  Check as LucideCheckIcon,
+  X as LucideXIcon,
+  Minus as LucideMinusIcon,
+  GripVertical as LucideGripVertical,
+  MoreHorizontal as LucideMoreHorizontal,
 } from 'lucide-react';
 
 // Реэкспортируем как ComponentType (совместимо с React 19)
@@ -47,3 +79,39 @@ export const Circle: ComponentType<LucideProps> = LucideCircle;
 export const FileText: ComponentType<LucideProps> = LucideFileText;
 export const Copy: ComponentType<LucideProps> = LucideCopy;
 export const Image: ComponentType<LucideProps> = LucideImage;
+export const Phone: ComponentType<LucideProps> = LucidePhone;
+export const Mail: ComponentType<LucideProps> = LucideMail;
+export const MapPin: ComponentType<LucideProps> = LucideMapPin;
+export const Menu: ComponentType<LucideProps> = LucideMenu;
+export const Home: ComponentType<LucideProps> = LucideHome;
+export const ArrowRight: ComponentType<LucideProps> = LucideArrowRight;
+export const ArrowLeft: ComponentType<LucideProps> = LucideArrowLeft;
+export const Calendar: ComponentType<LucideProps> = LucideCalendar;
+export const Shield: ComponentType<LucideProps> = LucideShield;
+export const Truck: ComponentType<LucideProps> = LucideTruck;
+export const MessageSquare: ComponentType<LucideProps> = LucideMessageSquare;
+export const Sparkles: ComponentType<LucideProps> = LucideSparkles;
+export const Percent: ComponentType<LucideProps> = LucidePercent;
+export const CheckCircle: ComponentType<LucideProps> = LucideCheckCircle;
+export const AlertCircle: ComponentType<LucideProps> = LucideAlertCircle;
+export const Minus: ComponentType<LucideProps> = LucideMinus;
+export const Plus: ComponentType<LucideProps> = LucidePlus;
+export const ZoomIn: ComponentType<LucideProps> = LucideZoomIn;
+export const PiggyBank: ComponentType<LucideProps> = LucidePiggyBank;
+export const Heart: ComponentType<LucideProps> = LucideHeart;
+export const Handshake: ComponentType<LucideProps> = LucideHandshake;
+export const Loader2: ComponentType<LucideProps> = LucideLoader2;
+export const PanelLeft: ComponentType<LucideProps> = LucidePanelLeft;
+export const Search: ComponentType<LucideProps> = LucideSearch;
+export const ChevronDown: ComponentType<LucideProps> = LucideChevronDown;
+export const ChevronUp: ComponentType<LucideProps> = LucideChevronUp;
+export const ChevronRight: ComponentType<LucideProps> = LucideChevronRight;
+export const CircleIcon: ComponentType<LucideProps> = LucideCircleIcon;
+export const CheckIcon: ComponentType<LucideProps> = LucideCheckIcon;
+export const XIcon: ComponentType<LucideProps> = LucideXIcon;
+export const MinusIcon: ComponentType<LucideProps> = LucideMinusIcon;
+export const GripVertical: ComponentType<LucideProps> = LucideGripVertical;
+export const MoreHorizontal: ComponentType<LucideProps> = LucideMoreHorizontal;
+
+// Экспортируем тип LucideProps для использования в других файлах
+export type { LucideProps };
