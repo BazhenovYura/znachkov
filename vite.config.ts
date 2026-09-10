@@ -37,23 +37,26 @@ export default defineConfig({
     include: [
       'react',
       'react-dom',
-      'react-router',      
+      'react-router-dom',
+      'lucide-react',
       'cookie',
     ],
     exclude: ['onnxruntime-web'],
+    // Для Rolldown используем rolldownOptions вместо rollupOptions
+    rolldownOptions: {
+      transformMixedEsModules: true,
+    },
   },
   build: {
     commonjsOptions: {
+      transformMixedEsModules: true,
       include: [
         /onnxruntime-web/,
         /@imgly\/background-removal/,
-        /react-router/,
+        /react-router-dom/,
+        /lucide-react/,
         /cookie/,
       ],
-      transformMixedEsModules: true,
-    },
-    rollupOptions: {
-      external: [],
     },
   },
 });
