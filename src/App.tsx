@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, useLocation, useNavigate } from 'react-router';
 import { sendMetrikaHit } from './utils/metrika';
 import Header from './components/Header';
 import Hero from './sections/Hero';
