@@ -41,7 +41,7 @@ export default defineConfig({
       'react',
       'react-dom',
       'react-router',
-      'react-router-dom',
+      'react-icons',
       'cookie',
       'lucide-react',
     ],
