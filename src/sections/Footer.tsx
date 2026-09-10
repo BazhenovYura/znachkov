@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Phone, Mail, MapPin } from 'lucide-react';
+import { Phone, Mail, MapPin } from '../components/icons';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 const Footer = () => {
