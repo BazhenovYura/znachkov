@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { X, Upload } from '../components/icons';
+import { X, Upload } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Единая функция для MAX (как в Hero и Portfolio блоках)
