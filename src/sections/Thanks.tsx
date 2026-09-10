@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router';
 import { CheckCircle, Phone, Mail, ArrowRight, MessageSquare, Sparkles, Package, Percent } from 'lucide-react';
 
 const ThanksPage = () => {
