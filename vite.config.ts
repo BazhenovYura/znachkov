@@ -30,13 +30,25 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // ⚠️ ДОБАВЛЕНО: Форсируем использование CJS-версий, которые Rollup сможет обработать
+    dedupe: ['react', 'react-dom'],
   },
   optimizeDeps: {
     exclude: ['onnxruntime-web'],
+    // ⚠️ ДОБАВЛЕНО: Форсируем предобработку React
+    include: ['react', 'react-dom', 'react-router-dom', 'react/jsx-runtime', 'react/jsx-dev-runtime'],
   },
   build: {
     commonjsOptions: {
-      include: [/onnxruntime-web/, /@imgly\/background-removal/],
+      // ⚠️ ДОБАВЛЕНО: Явно указываем, какие модули конвертировать
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
+    rollupOptions: {
+      // ⚠️ ДОБАВЛЕНО: Помогаем Rollup найти правильные экспорты
+      treeshake: {
+        moduleSideEffects: 'no-external',
+      },
     },
   },
 });
