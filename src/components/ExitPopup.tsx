@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { X, Upload, Send, AlertCircle, Gift } from 'lucide-react';
+import { X, Upload, Send, AlertCircle, Gift } from '../components/icons';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
 // Константы с URL ваших Яндекс Функций
