@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router';
 import { Home, ArrowLeft, AlertCircle, MessageSquare, Sparkles, Calculator, Zap } from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 
