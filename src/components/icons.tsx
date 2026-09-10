@@ -40,3 +40,12 @@ export { FaSearchPlus as ZoomIn } from '@react-icons/all-files/fa/FaSearchPlus';
 export { FaPiggyBank as PiggyBank } from '@react-icons/all-files/fa/FaPiggyBank';
 export { FaHeart as Heart } from '@react-icons/all-files/fa/FaHeart';
 export { FaHandshake as Handshake } from '@react-icons/all-files/fa/FaHandshake';
+// Новые иконки
+export { FaScroll as ScrollText } from '@react-icons/all-files/fa/FaScroll';
+export { FaCreditCard } from '@react-icons/all-files/fa/FaCreditCard';
+export { FaHammer } from '@react-icons/all-files/fa/FaHammer';
+export { FaCamera } from '@react-icons/all-files/fa/FaCamera';
+export { FaPalette } from '@react-icons/all-files/fa/FaPalette';
+export { FaIndustry as Factory } from '@react-icons/all-files/fa/FaIndustry';
+export { FaBarcode as Scan } from '@react-icons/all-files/fa/FaBarcode';
+export { FaShieldAlt as ShieldCheck } from '@react-icons/all-files/fa/FaShieldAlt';
