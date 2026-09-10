@@ -4,7 +4,7 @@ import {
   Send, Upload, X, Calculator, Gift, TrendingUp, 
   Check, Zap, Clock, Award, Users, Package, Share2, RefreshCw,
   Square, Circle, FileText, Copy, Image as ImageIcon
-} from '../components/icons';
+} from 'lucide-react';
 import { sendMetrikaGoal, sendMetrikaEvent } from '../utils/metrika';
 import { removeBackground } from '@imgly/background-removal';
 
