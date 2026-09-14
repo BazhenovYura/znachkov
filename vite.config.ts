@@ -27,14 +27,13 @@ export default defineConfig({
     topLevelAwaitPlugin && topLevelAwaitPlugin(),
   ].filter(Boolean),
   resolve: {
-    alias: {
-      "@": path.resolve(__dirname, "./src"),
-      // ⚠️ ГЛАВНОЕ: указываем конкретные CJS-файлы
-      'react': path.resolve(__dirname, './node_modules/react/cjs/react.production.min.js'),
-      'react-dom': path.resolve(__dirname, './node_modules/react-dom/cjs/react-dom.production.min.js'),
-      'react/jsx-runtime': path.resolve(__dirname, './node_modules/react/cjs/react-jsx-runtime.production.min.js'),
-      'react/jsx-dev-runtime': path.resolve(__dirname, './node_modules/react/cjs/react-jsx-dev-runtime.production.min.js'),
-    },
+    alias: [
+      { find: /^react$/, replacement: path.resolve(__dirname, './node_modules/react/cjs/react.production.min.js') },
+      { find: /^react-dom$/, replacement: path.resolve(__dirname, './node_modules/react-dom/cjs/react-dom.production.min.js') },
+      { find: /^react\/jsx-runtime$/, replacement: path.resolve(__dirname, './node_modules/react/cjs/react-jsx-runtime.production.min.js') },
+      { find: /^react\/jsx-dev-runtime$/, replacement: path.resolve(__dirname, './node_modules/react/cjs/react-jsx-dev-runtime.production.min.js') },
+      { find: '@', replacement: path.resolve(__dirname, './src') },
+    ],
   },
   optimizeDeps: {
     exclude: ['onnxruntime-web'],
